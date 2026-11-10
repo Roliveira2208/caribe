@@ -17,6 +17,13 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
 - `audit`: se implementa y se añade el requisito de acciones de plataforma (`tenant_id` NULL, legible
   solo por el rol de plataforma). Delta en `specs/audit/spec.md`.
 
+## Decisiones
+- T-F0-8 entrega el mecanismo completo en la API (guard, 403 `TWO_FACTOR_REQUIRED`, inventario de rutas
+  en tests); la pantalla de activación de TOTP se construye en T-F0-10 junto al shell con login, que
+  redirige a la activación cuando la API responde 403 `TWO_FACTOR_REQUIRED` (decisión del dueño,
+  2026-11-10). Precedente: T-F0-6b/7.
+- T-F0-7: `audit_logs` nace con `tenant_id` + RLS; la inmutabilidad queda en T-F0-9 (decisión del dueño).
+
 ## Preguntas abiertas
 - ¿Hosting definitivo de la API y la base de datos (planes gratuitos con arranque en frío)?
 - ¿Se verificó el registro en Duffel y LiteAPI desde Venezuela? (no bloquea F0)

@@ -233,5 +233,44 @@ sistema): statements vacíos; su acceso a reservas/pagos/documentos es por sesi�
   T-F0-6; `database.test.ts` valida además el SQL de la migración (RLS+FORCE, políticas con GUC y
   fallo cerrado, WITH CHECK en ambas).
 
+## Decisiones técnicas de T-F0-8 (segundo factor en la API)
+
+- **Subclase del `AuthGuard` de la lib:** `AdminTwoFactorGuard` extiende el `AuthGuard` exportado por
+  `@thallesp/nestjs-better-auth` (constructor público `(reflector, options)`); el `app.module`
+  registra la lib con `disableGlobalAuthGuard: true` y `AdminModule` provee la subclase como único
+  guard global (`APP_GUARD`). Sesión, permisos y rutas públicas siguen siendo los de la lib, con el
+  check de TOTP añadido; `super()` recibe el mismo singleton `auth` del módulo.
+- **El check de 2FA corre antes que `super.canActivate`** (deliberado): un rol administrativo sin TOTP
+  recibe siempre 403 `TWO_FACTOR_REQUIRED`, aunque además le falte el permiso de la ruta (p. ej. un
+  `super_admin` sin `exchange-rate:update`), para que la UI pueda llevarlo a la pantalla de
+  activación y no a un 403 opaco. Sin sesión responde 401 el `AuthGuard`; los roles no
+  administrativos reciben su 403 normal; la activación vive en `/api/auth/*` (middleware de Better
+  Auth, sin guards de Nest) y queda accesible.
+- **Clasificación de ruta administrativa como función pura** (`src/admin/admin-route.ts`), compartida
+  por el guard y los tests: prefijo `/admin`, permiso exclusivo de owner/admin/super_admin — calculado
+  desde la matriz de `access.ts`, no a mano, para que un cambio de matriz recalibre qué rutas exigen
+  TOTP — o rol administrativo exigido con `@Roles`/`@OrgRoles` (más estricto que la spec, nunca
+  menos). `admin-route.test.ts` fija esos exclusivos contra la matriz aprobada en T-F0-6.
+- **Claves de metadata de la lib duplicadas en `AUTH_METADATA_KEYS`** (`ROLES`, `ORG_ROLES`,
+  `USER_HAS_PERMISSION`, `MEMBER_HAS_PERMISSION`): la lib no las exporta. Si una versión futura las
+  cambia, el guard dejaría de verlas y el inventario e2e falla: esa es la red de seguridad.
+- **Rol del miembro activo por Prisma** (`member.findFirst({ userId, organizationId })`): Better Auth
+  1.7.18 no expone `getActiveMemberRole`/`getActiveMember` (la lib cae en undefined). La organización
+  activa la verificó Better Auth al fijarla.
+- **Stub `PUT /api/v1/admin/exchange-rates/override`** (SDD, tabla de endpoints, permiso
+  `exchange-rate:update`): endpoint real bajo `/admin` para ejercitar el guard; specs/payments (F2)
+  lo sustituye (TODO(F2)).
+- **Tests sin dependencias nuevas:** el TOTP se calcula a mano en `test/auth-helpers.ts` (RFC 6238,
+  HMAC-SHA-1 + base32 con `node:crypto`); los helpers de alta de usuarios/agencias se movieron ahí
+  desde `auth.e2e.ts` para compartirlos. `verify-totp` rota la sesión (crea una nueva y fija cookie
+  nueva): el e2e se queda con la cookie de la respuesta.
+- **Pruebas (`test/two-factor.e2e.ts`):** inventario de rutas registradas (DiscoveryService +
+  metadata de Nest, clasificadas con la misma función del guard) llamadas por HTTP con un admin sin
+  TOTP: toda administrativa debe responder 403 `TWO_FACTOR_REQUIRED`; además cubre admin sin TOTP en
+  endpoint no administrativo → 2xx, rol no administrativo → 403 normal (sin el código), super_admin
+  sin TOTP, 401 sin sesión y el flujo completo enable → verify-totp → 2xx.
+- **Pantalla de activación:** se construye en T-F0-10 junto al shell con login, que redirige ante el
+  403 `TWO_FACTOR_REQUIRED` (decisión del dueño del 2026-11-10, anotada en `proposal.md`).
+
 
 
