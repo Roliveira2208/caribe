@@ -16,6 +16,8 @@ comportamiento: `openspec/specs/`. Si el código contradice una spec, el código
 - `pnpm db:generate` · `pnpm db:migrate:dev` · `pnpm db:migrate:deploy` (Prisma en `apps/api`;
   migraciones SQL versionadas, nunca `db push`)
 - `pnpm db:app-password` (contraseña local del rol `caribe_app`: lee `CARIBE_APP_DB_PASSWORD` de `.env`)
+- `pnpm db:seed` (datos de demostración: una agencia y un usuario por rol; idempotente, necesita el
+  mismo entorno de la API: `DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`)
 - Antes de dar algo por terminado: lint + typecheck + test en verde.
 
 ## Reglas que no se negocian

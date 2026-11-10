@@ -17,6 +17,7 @@
     "db:generate": "pnpm --filter @caribe/api generate",
     "db:migrate:dev": "pnpm --filter @caribe/api migrate:dev",
     "db:migrate:deploy": "pnpm --filter @caribe/api migrate:deploy",
+    "db:seed": "turbo run build --filter=@caribe/api && pnpm --filter @caribe/api seed",
     "db:app-password": "node scripts/set-caribe-app-password.mjs"
   },
   "devDependencies": {

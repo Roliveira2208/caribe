@@ -11,7 +11,7 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
   - Prueba: auth-access › "Ruta protegida sin sesión", "Catálogo público".
 - [x] T-F0-6 Definir roles y permisos (agent, provider, owner/admin, super_admin) y guards por permiso; documentar la matriz en `design.md`.
   - Prueba: auth-access › escenarios de Proveedor y Cliente.
-- [ ] T-F0-6b Script de seed de demostración (una agencia, un usuario por rol, inventario básico); los tests automáticos crean sus propios datos.
+- [x] T-F0-6b Script de seed de demostración (una agencia, un usuario por rol, inventario básico); los tests automáticos crean sus propios datos.
   - Prueba: seed idempotente y pipeline en verde.
 - [ ] T-F0-7 `TenantModule`: resolver tenant, `SET LOCAL app.tenant_id`, políticas RLS en las tablas base.
   - Prueba: auth-access › "Admin de otra agencia" con dos tenants.

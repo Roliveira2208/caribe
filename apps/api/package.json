@@ -12,6 +12,7 @@
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:status": "prisma migrate status",
+    "seed": "node dist/seed-main.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

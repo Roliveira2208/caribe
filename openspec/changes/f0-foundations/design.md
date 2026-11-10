@@ -167,3 +167,31 @@ sistema): statements vacíos; su acceso a reservas/pagos/documentos es por sesi�
   limita a 5/min por IP y crear datos no es el comportamiento bajo prueba; el inicio de sesión sí va
   por HTTP para ejercitar la cookie real (9 inicios, bajo el límite de 10/min).
 
+## Decisiones técnicas de T-F0-6b (seed de demostración)
+
+- **Lógica y CLI separados:** `src/seed.ts` exporta `seedDemo()` (datos fijos, sin consola ni procesos)
+  y `src/seed-main.ts` es solo la entrada que imprime el resumen. `test/seed.e2e.ts` importa `seedDemo`
+  y prueba la idempotencia sin depender del CLI.
+- **Vías de alta idénticas a las del sistema:** usuarios por `auth.api.signUpEmail` (API de servidor),
+  agencia como acción de sistema (`auth.api.createOrganization` con `userId`, sin sesión) y membresías
+  directas por Prisma generando `id`/`createdAt` a mano (el modelo no tiene defaults de BD; Better
+  Auth los genera en la capa de aplicación). El rol `super_admin` se fija por update directo: no hay
+  endpoint de servidor para cambiar roles.
+- **Idempotencia por búsqueda previa** de cada entidad (email, slug, par organization+user), no por
+  "limpiar y recrear": el e2e corre el seed dos veces y exige que la segunda sea un no-op completo y
+  que usuarios y membresías conserven sus ids. No asume una BD limpia: si los datos ya existen de una
+  corrida anterior, completa lo que falte.
+- **Alcance:** solo identidad (una agencia, owner/admin/agent/provider como miembros, cliente y
+  super_admin sueltos). El "inventario básico" de la tarea no puede existir aún: F0 no tiene tablas de
+  catálogo (fuera de alcance de la change) y se añadirá al seed cuando llegue specs/catalog en F1.
+  Decisión del dueño del 2026-11-10, anotada como pregunta abierta en la propuesta.
+- **Contraseña fija de demostración** (`DEMO_PASSWORD`, exportada y documentada en el propio archivo):
+  dato público de la BD local de desarrollo, no un secreto de entorno; la BD de demostración no es de
+  producción y el seed no debe correrse allí. Los datos fijos usan `caribe-demo.example.com`, dominio
+  reservado para documentación, para no chocar con correos reales.
+- **Ejecución:** `pnpm db:seed` = `turbo run build --filter=@caribe/api` + `node dist/seed-main.js`
+  (mismo vehículo que `pnpm start`, dist/). Necesita el entorno de la API (`DATABASE_URL`,
+  `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`) porque importa `auth.ts`: las credenciales solo se crean
+  por las vías del sistema, nunca con INSERT a mano de cuentas.
+
+

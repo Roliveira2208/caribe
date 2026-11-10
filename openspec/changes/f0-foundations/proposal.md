@@ -21,6 +21,9 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
 - ¿Hosting definitivo de la API y la base de datos (planes gratuitos con arranque en frío)?
 - ¿Se verificó el registro en Duffel y LiteAPI desde Venezuela? (no bloquea F0)
 - Horas semanales y fecha objetivo del desarrollador (SDD §13).
+- ¿Qué inventario básico debe crear el seed de demostración? F0 no tiene tablas de catálogo (fuera del
+  alcance de esta change): el seed crea solo identidad y el inventario se añade cuando llegue
+  specs/catalog en F1 (decisión del dueño, 2026-11-10).
 
 ## Fuera de alcance
 Catálogo, reservas, pagos y tasas (F1 y F2).
