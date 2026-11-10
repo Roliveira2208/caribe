@@ -35,7 +35,11 @@ import {
  * su tenant y nunca las filas de plataforma, super admin todo), la accion de
  * plataforma con tenant_id NULL (delta "Super Admin crea una agencia") con
  * actor/IP/fecha tomados de la sesion y no del body, la misma transaccion de
- * operacion y auditoria, y la inmutabilidad de BD (permisos + trigger).
+ * operacion y auditoria, la inmutabilidad de BD (permisos + trigger,
+ * ejecutada como caribe_app siempre que el rol la puede ejercitar; el caso
+ * "incluso el dueno" queda como dueno) y la igualdad de las filas de
+ * POST /admin/organizations con las de createOrganization de Better Auth
+ * (refuerzo pedido por el dueno tras aprobar T-F0-9).
  */
 describe("audit: rastro inmutable (T-F0-9)", () => {
   let app: ApiApplication;
@@ -307,6 +311,72 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
     });
   });
 
+  describe("divergencia con createOrganization de Better Auth", () => {
+    /**
+     * El endpoint replica a mano los INSERT de la lib (que usa su propia
+     * conexion y no puede entrar en la transaccion de auditoria). Si una
+     * actualizacion de better-auth cambiara lo que escribe createOrganization,
+     * este test rompe y toca alinear el endpoint: se crea una agencia por cada
+     * via con el mismo creador y se comparan las filas de organization y
+     * member en forma (columnas pobladas, tipos, rol del creador, un solo
+     * miembro), no en valores (nombre/slug/id son distintos por definicion).
+     */
+    it("POST /admin/organizations deja las mismas filas que auth.api.createOrganization", async () => {
+      const res = await fetch(`${baseUrl}/api/v1/admin/organizations`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: superCookie, origin: authOrigin },
+        body: JSON.stringify({
+          name: `Agencia Divergencia HTTP ${suffix}`,
+          slug: `agencia-div-http-${suffix}`,
+        }),
+      });
+      expect(res.status).toBe(201);
+      const { id: orgHttpId } = (await res.json()) as { id: string };
+
+      const orgLib = await createAgency(
+        superAdminId,
+        `Agencia Divergencia Lib ${suffix}`,
+        `agencia-div-lib-${suffix}`,
+      );
+
+      const orgs = await Promise.all([
+        prisma.organization.findUniqueOrThrow({ where: { id: orgHttpId } }),
+        prisma.organization.findUniqueOrThrow({ where: { id: orgLib.id } }),
+      ]);
+      expect(orgShape(orgs[0])).toEqual(orgShape(orgs[1]));
+
+      const members = await Promise.all([
+        prisma.member.findFirstOrThrow({ where: { organizationId: orgHttpId } }),
+        prisma.member.findFirstOrThrow({ where: { organizationId: orgLib.id } }),
+      ]);
+      expect(memberShape(members[0])).toEqual(memberShape(members[1]));
+      expect(members[0].role).toBe("owner");
+      expect(members[1].role).toBe("owner");
+
+      // Ninguna de las dos vias deja miembros extra (equipos, invitaciones).
+      expect(await prisma.member.count({ where: { organizationId: orgHttpId } })).toBe(1);
+      expect(await prisma.member.count({ where: { organizationId: orgLib.id } })).toBe(1);
+    });
+
+    /** Forma comparable de una fila de organization (logo/metadata van NULL). */
+    function orgShape(org: { logo: string | null; metadata: string | null; createdAt: Date }) {
+      return {
+        logo: org.logo,
+        metadata: org.metadata,
+        createdAt: org.createdAt instanceof Date,
+      };
+    }
+
+    /** Forma comparable de una fila de member (mismo creador y rol en ambas). */
+    function memberShape(member: { role: string; userId: string; createdAt: Date }) {
+      return {
+        role: member.role,
+        userId: member.userId,
+        createdAt: member.createdAt instanceof Date,
+      };
+    }
+  });
+
   describe("auditoria y operacion comparten transaccion", () => {
     const auditService = new AuditService();
 
@@ -399,7 +469,51 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
       }
     });
 
+    it("el trigger rechaza UPDATE y DELETE para caribe_app si recibiera privilegios (GRANT solo dentro de la transaccion)", async () => {
+      const id = randomUUID();
+      try {
+        await client.query("RESET ROLE");
+        await client.query("BEGIN");
+        // Con el REVOKE vigente, caribe_app recibe permission denied y nunca
+        // llega al trigger (primera capa funcionando, probada arriba). Para
+        // ejercitar la SEGUNDA capa con el rol real de la aplicacion se le
+        // devuelve el privilegio solo dentro de esta transaccion: es el
+        // escenario de un GRANT accidental que el trigger tiene que seguir
+        // bloqueando. El ROLLBACK final deshace el GRANT.
+        await client.query("GRANT UPDATE, DELETE ON audit_logs TO caribe_app");
+        await client.query("SET ROLE caribe_app");
+        await client.query("SELECT set_config('app.platform', 'on', true)");
+        await client.query(
+          "INSERT INTO audit_logs (id, tenant_id, action, entity, entity_id) VALUES ($1, NULL, 'test.grant', 'test', $2)",
+          [id, `grant-${suffix}`],
+        );
+        await client.query("SAVEPOINT upd");
+        await expect(
+          client.query("UPDATE audit_logs SET action = 'test.tamper' WHERE id = $1", [id]),
+        ).rejects.toThrow(/audit_logs es inmutable/i);
+        await client.query("ROLLBACK TO SAVEPOINT upd");
+        await client.query("SAVEPOINT del");
+        await expect(client.query("DELETE FROM audit_logs WHERE id = $1", [id])).rejects.toThrow(
+          /audit_logs es inmutable/i,
+        );
+        await client.query("ROLLBACK TO SAVEPOINT del");
+      } finally {
+        await client.query("ROLLBACK");
+        await client.query("RESET ROLE");
+      }
+      // El GRANT transitorio quedo deshecho: el rol vuelve a estar sin UPDATE.
+      const restored = await client.query<{ ok: boolean }>(
+        "SELECT has_table_privilege('caribe_app', 'audit_logs', 'UPDATE') AS ok",
+      );
+      expect(restored.rows[0]?.ok).toBe(false);
+    });
+
     it("el trigger rechaza UPDATE y DELETE incluso para el dueno de la tabla", async () => {
+      // El unico caso que no puede ejecutar como caribe_app: el dueno de la
+      // tabla es el rol con privilegios estables, la clase de rol que el
+      // trigger defiende (caribe_app sin privilegios la prueba arriba, y con
+      // un GRANT accidental, en el test anterior). Cada capa se prueba con
+      // el rol que la alcanza.
       const id = randomUUID();
       try {
         await client.query("BEGIN");

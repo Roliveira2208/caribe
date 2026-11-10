@@ -318,7 +318,8 @@ sistema): statements vacíos; su acceso a reservas/pagos/documentos es por sesi�
   su tenant y nunca filas NULL; super admin crea agencia → fila NULL + spoof de actor/ip/at en el
   body ignorado; super admin ve NULL + ambas agencias; integración: si `record` falla dentro de la
   transacción, la operación no se confirma) y bloque de BD con `SET ROLE caribe_app`
-  (INSERT/SELECT ok; UPDATE/DELETE rechazados; el trigger también rechaza al dueño).
+  (INSERT/SELECT ok; UPDATE/DELETE rechazados; el trigger también rechaza al dueño). Reforzadas
+  en el commit aparte posterior (ver «Refuerzo de T-F0-9»).
 
 ## Fix de infraestructura: shadow database de prisma migrate (2026-11-10)
 
@@ -355,6 +356,47 @@ especificado). Cierra la pregunta abierta de la propuesta sobre `migrate dev`.
 - **Verificado:** `migrate diff` → «No difference detected» (exit 0); `migrate status` → «Database
   schema is up to date»; `migrate dev` → «Already in sync» sin tocar la BD local (conteos de
   `audit_logs`/`user`/`organization` intactos antes y después).
+
+## Refuerzo de T-F0-9: pruebas como caribe_app y notas para F1/F2 (2026-11-10)
+
+Commit aparte pedido por el dueño tras aprobar T-F0-9, fuera de `tasks.md`. No cambia
+comportamiento especificado: refuerza pruebas y deja anotadas dos decisiones para F1/F2.
+
+- **Las pruebas de BD ejecutan como el rol real de la aplicación.** Todo lo que `caribe_app`
+  (NOBYPASSRLS, sin contraseña en el repositorio) puede ejercitar se prueba con `SET ROLE
+  caribe_app`; una prueba fija la precondición en `pg_roles` (ni superusuario ni `BYPASSRLS`)
+  para que, si alguien alterara el rol, el patrón deje de pasar en vez de dejar de probar RLS.
+  El montaje y la verificación de datos por Prisma siguen siendo del dueño: montar filas de
+  cualquier tenant lo exige. Como el REVOKE detiene a `caribe_app` con `permission denied`
+  antes de que corra el trigger, la capa del trigger se prueba con un GRANT transitorio (abajo)
+  y, en su variante «incluso el dueño», como dueño de la tabla.
+- **RLS aísla por sí sola (sin `where tenant_id`).** Prueba nueva en `tenant.e2e.ts`: como
+  `caribe_app` con contexto de la agencia A, `SELECT tenant_id FROM audit_logs` sin ningún
+  predicado devuelve solo filas de A. El `where tenant_id` de los handlers es defensa en
+  profundidad, no sustituto de la política.
+- **El trigger, también como `caribe_app` (GRANT transitorio).** Para ejercitar la segunda capa
+  con el rol real, el test le devuelve UPDATE/DELETE con un `GRANT` que vive solo dentro de la
+  transacción de la prueba (deshecho por ROLLBACK y verificado después con
+  `has_table_privilege`): modela el mal otorgamiento accidental que el trigger tiene que seguir
+  bloqueando. El caso «incluso el dueño» se prueba como dueño de la tabla, el único rol con
+  privilegios estables.
+- **Divergencia con Better Auth.** `POST /admin/organizations` replica a mano los INSERT de
+  `createOrganization`; un test crea una agencia por cada vía (mismo creador) y compara las
+  filas de `organization` y `member` en forma: columnas pobladas (`logo`/`metadata` NULL),
+  `createdAt` fecha, rol owner, un solo miembro. Si una actualización de better-auth cambia lo
+  que escribe la lib (nuevas columnas, otro `creatorRole`, filas extra), el test rompe y toca
+  alinear el endpoint.
+- **Nota para F1/F2: sanitizador por allowlist en acciones críticas.** La denylist de T-F0-9
+  (redactar de más es seguro) vale para acciones genéricas, pero las acciones críticas de F1/F2
+  (pagos, reservas, tasas) deben construir su payload de auditoría por allowlist: solo entran
+  en `before`/`after` las claves que la acción declara explícitamente; cualquier clave fuera de
+  la lista no se registra.
+- **Nota para F1/F2: la transacción de auditoría no abarca llamadas a proveedores externos.**
+  Los handlers de F1/F2 que llamen a proveedores externos (Duffel, LiteAPI, DolarAPI, SMTP) no
+  pueden mantener abierta la transacción del `AuditInterceptor` durante esas llamadas: una
+  transacción larga con I/O externo acapara conexiones y locks del pool. La operación se
+  confirma con sus efectos locales y su auditoría en una transacción; la interacción con el
+  proveedor se audita en su propia fila/transacción cuando la llamada vuelve.
 
 
 

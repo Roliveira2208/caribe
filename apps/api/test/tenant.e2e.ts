@@ -21,6 +21,11 @@ import { TenantService } from "../src/tenant/tenant.service.js";
  * llega con el catalogo en F1; hoy se prueba el mismo mecanismo sobre
  * audit_logs, la unica tabla con tenant_id de F0, y el 404 traduce en la
  * capa de servicio de T-F0-9/F1.
+ *
+ * Una prueba consulta audit_logs sin ningun predicado de tenant: la politica
+ * RLS aísla por si sola y el `where tenant_id` de los handlers queda como
+ * defensa en profundidad, no como sustituto (refuerzo pedido por el dueno
+ * tras aprobar T-F0-9).
  */
 describe("aislamiento entre tenants (RLS)", () => {
   const password = "Password123!";
@@ -106,6 +111,17 @@ describe("aislamiento entre tenants (RLS)", () => {
   }
 
   describe("lectura filtrada por RLS", () => {
+    it("caribe_app es NOBYPASSRLS y no superusuario: las politicas siempre le aplican", async () => {
+      // Precondicion del patron SET ROLE: si alguien alterara el rol
+      // (BYPASSRLS, superusuario), el resto del archivo dejaria de probar
+      // RLS sin fallar, asi que se fija en pg_roles.
+      const { rows } = await client.query<{ rolsuper: boolean; rolbypassrls: boolean }>(
+        "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user",
+      );
+      expect(rows[0]?.rolsuper).toBe(false);
+      expect(rows[0]?.rolbypassrls).toBe(false);
+    });
+
     it("el contexto de la agencia A solo ve las filas de A", async () => {
       const rows = await asCaribeApp({ tenantId: orgA }, runRows);
       expect(rows.sort()).toEqual([rowA1, rowA2].sort());
@@ -114,6 +130,19 @@ describe("aislamiento entre tenants (RLS)", () => {
     it("el contexto de la agencia B solo ve las filas de B", async () => {
       const rows = await asCaribeApp({ tenantId: orgB }, runRows);
       expect(rows).toEqual([rowB]);
+    });
+
+    it("sin where de tenant: la politica RLS aísla por si sola", async () => {
+      // Los handlers consultan con `where tenant_id` como defensa en
+      // profundidad; aqui no hay ningun predicado (ni de tenant ni otro):
+      // la unica barrera es la politica de PostgreSQL y aun asi solo salen
+      // las filas de la agencia del contexto.
+      const tenants = await asCaribeApp({ tenantId: orgA }, async (c) => {
+        const result = await c.query<{ tenant_id: string }>("SELECT tenant_id FROM audit_logs");
+        return result.rows.map((row) => row.tenant_id);
+      });
+      expect(tenants.length).toBeGreaterThan(0);
+      expect([...new Set(tenants)]).toEqual([orgA]);
     });
 
     it("una fila de B por id es invisible para la agencia A (404 en la capa de servicio)", async () => {
