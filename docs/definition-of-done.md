@@ -14,7 +14,7 @@ Una funcionalidad está terminada cuando **todas** las casillas aplicables está
 - [ ] Tests unitarios y de integración en verde.
 - [ ] Cobertura ≥ 70 % si la funcionalidad toca reservas, tasas o pagos.
 - [ ] Sin `any` injustificados, sin `console.log` ni código muerto.
-- [ ] Commits con Conventional Commits y emoji, uno por tarea.
+- [ ] Commits con Conventional Commits, uno por tarea.
 
 ## Dinero, datos y tenant (si aplica)
 - [ ] Sin `float` para dinero; montos recalculados en el servidor.
