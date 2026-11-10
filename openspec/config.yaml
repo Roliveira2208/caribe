@@ -1,0 +1,9 @@
+schema: spec-driven
+context: |
+  OTA Venezuela, MVP de portafolio. Lee AGENTS.md y docs/sdd/SDD.md antes de proponer cambios.
+  Stack: pnpm + Turborepo, Next.js (web con shadcn/ui, admin con Ant Design), NestJS, PostgreSQL + Prisma,
+  Redis + BullMQ, Better Auth. Idiomas es/en.
+rules:
+  proposal: ["Enlaza la sección del SDD que implementa", "Lista preguntas abiertas en vez de suponer"]
+  specs: ["Escenarios GIVEN/WHEN/THEN", "Casos límite explícitos", "Sin detalles de implementación"]
+  tasks: ["Tareas de 1 a 2 horas", "Cada tarea nombra el escenario que la prueba", "Un commit por tarea"]
