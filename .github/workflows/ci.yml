@@ -1,0 +1,75 @@
+# Verificación continua: lint, typecheck, tests y validación de specs.
+# Servicios igual que docker compose local: PostgreSQL 17 y Redis 7.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ota_ci
+          POSTGRES_PASSWORD: ota_ci_password
+          POSTGRES_DB: ota_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ota_ci -d ota_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ota_ci:ota_ci_password@localhost:5432/ota_ci?schema=public
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # La versión de pnpm sale de packageManager en package.json (12.18.0).
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v6.1.1
+
+      # Node fijado a la misma versión del entorno de desarrollo; engines exige >=24.
+      - name: Instalar Node
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.16.0
+          cache: pnpm
+
+      - name: Instalar dependencias (lockfile congelado)
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Validar specs
+        run: node scripts/check-specs.mjs
