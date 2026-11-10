@@ -1,4 +1,4 @@
-import { LOCALES, WEB_PORT } from "@ota/shared";
+import { LOCALES, WEB_PORT } from "@caribe/shared";
 
 export const webConfig = {
   port: WEB_PORT,

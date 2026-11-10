@@ -1,4 +1,4 @@
-import { API_PORT } from "@ota/shared";
+import { API_PORT } from "@caribe/shared";
 
 export const apiConfig = {
   port: API_PORT,

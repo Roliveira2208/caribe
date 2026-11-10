@@ -1,12 +1,12 @@
 {
-  "extends": "@ota/tsconfig/nestjs.json",
+  "extends": "@caribe/tsconfig/nestjs.json",
   "compilerOptions": {
     "noEmit": true,
     // El cliente generado por Prisma 7 importa con extension .ts; al compilar
     // se reescriben a .js (decision documentada en design.md de f0-foundations).
     "rewriteRelativeImportExtensions": true,
     "paths": {
-      "@ota/shared": ["../../packages/shared/src"]
+      "@caribe/shared": ["../../packages/shared/src"]
     }
   },
   "include": ["src", "test"]

@@ -20,13 +20,13 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: ota_ci
-          POSTGRES_PASSWORD: ota_ci_password
-          POSTGRES_DB: ota_ci
+          POSTGRES_USER: caribe_ci
+          POSTGRES_PASSWORD: caribe_ci_password
+          POSTGRES_DB: caribe_ci
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U ota_ci -d ota_ci"
+          --health-cmd "pg_isready -U caribe_ci -d caribe_ci"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -41,7 +41,7 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://ota_ci:ota_ci_password@localhost:5432/ota_ci?schema=public
+      DATABASE_URL: postgresql://caribe_ci:caribe_ci_password@localhost:5432/caribe_ci?schema=public
       REDIS_URL: redis://localhost:6379
 
     steps:

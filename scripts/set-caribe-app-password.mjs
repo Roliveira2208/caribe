@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Asigna la contrasena del rol restringido ota_app (migracion
+// Asigna la contrasena del rol restringido caribe_app (migracion
 // 20261110022152_restricted_app_role). El rol nace sin contrasena y esta nunca
-// se versiona: se lee OTA_APP_DB_PASSWORD del entorno o del .env de la raiz
+// se versiona: se lee CARIBE_APP_DB_PASSWORD del entorno o del .env de la raiz
 // (el entorno gana), se ejecuta ALTER ROLE dentro del contenedor de compose y
 // se verifica el login por scram desde el host, como hara la aplicacion.
 //
-// Uso: pnpm db:app-password   (o: node scripts/set-ota-app-password.mjs)
+// Uso: pnpm db:app-password   (o: node scripts/set-caribe-app-password.mjs)
 // Requiere: pnpm db:up y las migraciones aplicadas (pnpm db:migrate:dev).
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -41,14 +41,17 @@ async function readEnvFile(name) {
 }
 
 async function main() {
-  const password = process.env.OTA_APP_DB_PASSWORD ?? (await readEnvFile("OTA_APP_DB_PASSWORD"));
+  const password =
+    process.env.CARIBE_APP_DB_PASSWORD ?? (await readEnvFile("CARIBE_APP_DB_PASSWORD"));
   if (!password) {
-    console.error("Falta OTA_APP_DB_PASSWORD: definela en el .env de la raiz (ver .env.example).");
+    console.error(
+      "Falta CARIBE_APP_DB_PASSWORD: definela en el .env de la raiz (ver .env.example).",
+    );
     process.exit(1);
   }
 
-  const pgUser = process.env.POSTGRES_USER ?? (await readEnvFile("POSTGRES_USER")) ?? "ota_dev";
-  const pgDb = process.env.POSTGRES_DB ?? (await readEnvFile("POSTGRES_DB")) ?? "ota_dev";
+  const pgUser = process.env.POSTGRES_USER ?? (await readEnvFile("POSTGRES_USER")) ?? "caribe_dev";
+  const pgDb = process.env.POSTGRES_DB ?? (await readEnvFile("POSTGRES_DB")) ?? "caribe_dev";
   const pgPort = Number(process.env.POSTGRES_PORT ?? (await readEnvFile("POSTGRES_PORT")) ?? 5433);
 
   // ALTER ROLE como dueno dentro del contenedor (socket local). La contrasena
@@ -56,7 +59,7 @@ async function main() {
   // execFileSync con input es la via soportada de escribir stdin; la variante
   // asincrona ignora `input` y dejaria a psql esperando EOF para siempre.
   const escaped = password.replace(/'/g, "''");
-  const sql = `ALTER ROLE ota_app WITH PASSWORD '${escaped}';\n`;
+  const sql = `ALTER ROLE caribe_app WITH PASSWORD '${escaped}';\n`;
   try {
     execFileSync(
       "docker",
@@ -91,7 +94,7 @@ async function main() {
     const client = new Client({
       host: "localhost",
       port: pgPort,
-      user: "ota_app",
+      user: "caribe_app",
       password,
       database: pgDb,
     });
@@ -103,7 +106,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`OK: ota_app autentica por scram en localhost:${pgPort}.`);
+  console.log(`OK: caribe_app autentica por scram en localhost:${pgPort}.`);
 }
 
 await main();

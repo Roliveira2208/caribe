@@ -1,4 +1,4 @@
-# SDD – OTA Venezuela (MVP de portafolio)
+# SDD – Caribe (MVP de portafolio)
 
 Nov 9, 2026 · @Rodrigo
 

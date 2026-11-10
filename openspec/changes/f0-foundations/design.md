@@ -42,7 +42,7 @@
   carga el `.env` del paquete y luego el del monorepo, sin sobrescribir variables existentes.
 - **Migraciones SQL versionadas** con `prisma migrate dev` (nunca `db push`): una para las tablas de
   Better Auth y otra aparte para el rol. El esquema de RLS/tenant de negocio llega en F0 posteriores.
-- **Rol de BD restringido `ota_app`**, en migración propia: LOGIN sin contraseña (se asigna fuera de
+- **Rol de BD restringido `caribe_app`**, en migración propia: LOGIN sin contraseña (se asigna fuera de
   bandas con `ALTER ROLE` leyendo una variable de entorno; jamás en el repo), `NOBYPASSRLS`, sin
   SUPERUSER/CREATEDB/CREATEROLE, DML básico (SELECT/INSERT/UPDATE/DELETE) sobre las tablas y
   USAGE/SELECT en secuencias, `ALTER DEFAULT PRIVILEGES` para tablas futuras y `REVOKE` total sobre
@@ -90,11 +90,11 @@
   local. El e2e monta la app real (`createApp`) en puerto aleatorio y crea datos con sufijos únicos en
   vez de limpiar; cubre 401 sin sesión, catálogo público 200 y 403 al leer la organización de otra
   agencia (`get-full-organization`).
-- **Build:** `tsconfig.build.json` emite a `dist` con `paths` vacío (`@ota/shared` se resuelve por
+- **Build:** `tsconfig.build.json` emite a `dist` con `paths` vacío (`@caribe/shared` se resuelve por
   node_modules hacia su dist, que turbo construye antes con `^build`). Scripts `build` y `start` en
   `apps/api`.
-- **Contraseña de `ota_app`:** variable `OTA_APP_DB_PASSWORD` en `.env` (sin valor en `.env.example`) y
-  script local `scripts/set-ota-app-password.mjs` (`pnpm db:app-password`): ejecuta `ALTER ROLE`
+- **Contraseña de `caribe_app`:** variable `CARIBE_APP_DB_PASSWORD` en `.env` (sin valor en `.env.example`) y
+  script local `scripts/set-caribe-app-password.mjs` (`pnpm db:app-password`): ejecuta `ALTER ROLE`
   dentro del contenedor y verifica el login por scram desde el host; nunca imprime el valor.
 - **CI:** `pnpm test` ahora incluye e2e que necesitan las tablas; el workflow aplica las migraciones
   (`pnpm db:migrate:deploy`) antes de los tests sobre el servicio de PostgreSQL.

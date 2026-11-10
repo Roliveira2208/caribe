@@ -1,5 +1,5 @@
 {
-  "name": "@ota/eslint-config",
+  "name": "@caribe/eslint-config",
   "version": "0.1.0",
   "private": true,
   "type": "module",

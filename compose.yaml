@@ -1,20 +1,21 @@
 # Servicios locales de desarrollo: PostgreSQL y Redis.
 # Las apps corren aparte con pnpm dev; esto solo levanta los almacenes.
-name: ota-venezuela
+name: caribe
 
 services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-ota_dev}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ota_dev_password}
-      POSTGRES_DB: ${POSTGRES_DB:-ota_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-caribe_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-caribe_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-caribe_dev}
     ports:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ota_dev} -d ${POSTGRES_DB:-ota_dev}"]
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-caribe_dev} -d ${POSTGRES_DB:-caribe_dev}"]
       interval: 5s
       timeout: 3s
       retries: 10

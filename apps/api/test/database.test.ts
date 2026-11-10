@@ -18,7 +18,7 @@ const betterAuthTables = [
   "twoFactor",
 ] as const;
 
-const restrictedRole = "ota_app";
+const restrictedRole = "caribe_app";
 
 interface Migration {
   name: string;
@@ -120,12 +120,12 @@ describe("prisma/migrations", () => {
   it("el rol solo recibe DML basico, nunca GRANT ALL", () => {
     const role = findRoleMigration(readMigrations());
     const sql = stripSqlComments(role?.sql ?? "");
-    expect(sql).toContain("GRANT USAGE ON SCHEMA public TO ota_app");
+    expect(sql).toContain("GRANT USAGE ON SCHEMA public TO caribe_app");
     expect(sql).toContain(
-      "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ota_app",
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO caribe_app",
     );
-    expect(sql).toContain("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ota_app");
-    expect(sql).toContain('REVOKE ALL PRIVILEGES ON TABLE "_prisma_migrations" FROM ota_app');
+    expect(sql).toContain("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO caribe_app");
+    expect(sql).toContain('REVOKE ALL PRIVILEGES ON TABLE "_prisma_migrations" FROM caribe_app');
     expect(sql).not.toMatch(/GRANT ALL/);
   });
 
@@ -133,10 +133,10 @@ describe("prisma/migrations", () => {
     const role = findRoleMigration(readMigrations());
     const sql = stripSqlComments(role?.sql ?? "");
     expect(sql).toContain(
-      "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ota_app",
+      "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO caribe_app",
     );
     expect(sql).toContain(
-      "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ota_app",
+      "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO caribe_app",
     );
   });
 

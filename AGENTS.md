@@ -1,4 +1,4 @@
-# OTA Venezuela — contexto del proyecto para agentes
+# Caribe — contexto del proyecto para agentes
 
 MVP de portafolio de una agencia de viajes en línea (OTA) para Venezuela. Un solo desarrollador.
 Fuente de verdad del diseño: `docs/sdd/SDD.md` (Software Design Document). Fuente de verdad del
@@ -15,7 +15,7 @@ comportamiento: `openspec/specs/`. Si el código contradice una spec, el código
 - `pnpm db:up` · `pnpm db:down` (PostgreSQL y Redis locales vía Docker Compose)
 - `pnpm db:generate` · `pnpm db:migrate:dev` · `pnpm db:migrate:deploy` (Prisma en `apps/api`;
   migraciones SQL versionadas, nunca `db push`)
-- `pnpm db:app-password` (contraseña local del rol `ota_app`: lee `OTA_APP_DB_PASSWORD` de `.env`)
+- `pnpm db:app-password` (contraseña local del rol `caribe_app`: lee `CARIBE_APP_DB_PASSWORD` de `.env`)
 - Antes de dar algo por terminado: lint + typecheck + test en verde.
 
 ## Reglas que no se negocian

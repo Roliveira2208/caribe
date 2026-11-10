@@ -1,5 +1,5 @@
 {
-  "name": "@ota/shared",
+  "name": "@caribe/shared",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -17,8 +17,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@ota/eslint-config": "workspace:*",
-    "@ota/tsconfig": "workspace:*",
+    "@caribe/eslint-config": "workspace:*",
+    "@caribe/tsconfig": "workspace:*",
     "eslint": "^10.14.0",
     "typescript": "~5.9.3",
     "vitest": "^5.1.0"

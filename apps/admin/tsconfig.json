@@ -1,8 +1,8 @@
 {
-  "extends": "@ota/tsconfig/nextjs.json",
+  "extends": "@caribe/tsconfig/nextjs.json",
   "compilerOptions": {
     "paths": {
-      "@ota/shared": ["../../packages/shared/src"]
+      "@caribe/shared": ["../../packages/shared/src"]
     }
   },
   "include": ["src", "test"]

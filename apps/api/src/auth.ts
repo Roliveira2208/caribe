@@ -22,7 +22,7 @@ const isProduction = process.env.NODE_ENV === "production";
  *   conocida usa un bucket compartido por ruta y lo avisa en el log.
  */
 export const auth = betterAuth({
-  appName: "OTA Venezuela",
+  appName: "Caribe",
   baseURL: requiredEnv("BETTER_AUTH_URL"),
   secret: requiredEnv("BETTER_AUTH_SECRET"),
   trustedOrigins: (process.env["TRUSTED_ORIGINS"] ?? "")
@@ -48,6 +48,6 @@ export const auth = betterAuth({
     // "admin" y alta como "user" (= Cliente de la spec). T-F0-6 sustituye
     // esto por la matriz real de roles/permisos con createAccessControl.
     admin(),
-    twoFactor({ issuer: "OTA Venezuela" }),
+    twoFactor({ issuer: "Caribe" }),
   ],
 });

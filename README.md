@@ -1,4 +1,4 @@
-# OTA Venezuela
+# Caribe
 
 MVP de portafolio de una agencia de viajes en línea para Venezuela. Este repositorio arranca con el kit de
 desarrollo asistido por IA (Spec Driven Development). Empieza por `docs/workflow.md`.
@@ -9,5 +9,5 @@ desarrollo asistido por IA (Spec Driven Development). Empieza por `docs/workflow
 ## Base de datos local
 
 `pnpm db:up` levanta PostgreSQL 17 y Redis 7 (puertos 5433/6380) y `pnpm db:migrate:dev` aplica las
-migraciones. El rol restringido `ota_app` nace sin contraseña: define `OTA_APP_DB_PASSWORD` en tu
+migraciones. El rol restringido `caribe_app` nace sin contraseña: define `CARIBE_APP_DB_PASSWORD` en tu
 `.env` (ver `.env.example`) y asígnala con `pnpm db:app-password`.

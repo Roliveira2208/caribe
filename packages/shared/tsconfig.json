@@ -1,5 +1,5 @@
 {
-  "extends": "@ota/tsconfig/library.json",
+  "extends": "@caribe/tsconfig/library.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"

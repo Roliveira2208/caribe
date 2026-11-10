@@ -1,4 +1,4 @@
-import config from "@ota/eslint-config";
+import config from "@caribe/eslint-config";
 
 export default [
   {

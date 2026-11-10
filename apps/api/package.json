@@ -1,5 +1,5 @@
 {
-  "name": "@ota/api",
+  "name": "@caribe/api",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -18,7 +18,7 @@
     "@nestjs/common": "12.3.3",
     "@nestjs/core": "12.3.3",
     "@nestjs/platform-express": "12.3.3",
-    "@ota/shared": "workspace:*",
+    "@caribe/shared": "workspace:*",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "@thallesp/nestjs-better-auth": "2.8.0",
@@ -29,8 +29,8 @@
     "rxjs": "7.8.2"
   },
   "devDependencies": {
-    "@ota/eslint-config": "workspace:*",
-    "@ota/tsconfig": "workspace:*",
+    "@caribe/eslint-config": "workspace:*",
+    "@caribe/tsconfig": "workspace:*",
     "@types/pg": "8.23.1",
     "eslint": "^10.14.0",
     "prisma": "7.10.1",

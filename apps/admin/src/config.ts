@@ -1,4 +1,4 @@
-import { ADMIN_PORT, LOCALES } from "@ota/shared";
+import { ADMIN_PORT, LOCALES } from "@caribe/shared";
 
 export const adminConfig = {
   port: ADMIN_PORT,

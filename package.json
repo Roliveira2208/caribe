@@ -1,5 +1,5 @@
 {
-  "name": "ota-venezuela",
+  "name": "caribe",
   "private": true,
   "packageManager": "pnpm@12.18.0",
   "engines": {
@@ -14,13 +14,13 @@
     "format:check": "prettier --check .",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
-    "db:generate": "pnpm --filter @ota/api generate",
-    "db:migrate:dev": "pnpm --filter @ota/api migrate:dev",
-    "db:migrate:deploy": "pnpm --filter @ota/api migrate:deploy",
-    "db:app-password": "node scripts/set-ota-app-password.mjs"
+    "db:generate": "pnpm --filter @caribe/api generate",
+    "db:migrate:dev": "pnpm --filter @caribe/api migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @caribe/api migrate:deploy",
+    "db:app-password": "node scripts/set-caribe-app-password.mjs"
   },
   "devDependencies": {
-    "@ota/eslint-config": "workspace:*",
+    "@caribe/eslint-config": "workspace:*",
     "eslint": "^10.14.0",
     "prettier": "^3.9.10",
     "turbo": "^2.11.10",

@@ -1,4 +1,4 @@
-import config from "@ota/eslint-config";
+import config from "@caribe/eslint-config";
 
 // La raíz solo lintea sus propios archivos; cada paquete lint su código con su config.
 export default [

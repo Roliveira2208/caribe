@@ -1,5 +1,5 @@
 {
-  "name": "@ota/admin",
+  "name": "@caribe/admin",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,11 +8,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ota/shared": "workspace:*"
+    "@caribe/shared": "workspace:*"
   },
   "devDependencies": {
-    "@ota/eslint-config": "workspace:*",
-    "@ota/tsconfig": "workspace:*",
+    "@caribe/eslint-config": "workspace:*",
+    "@caribe/tsconfig": "workspace:*",
     "eslint": "^10.14.0",
     "typescript": "~5.9.3",
     "vitest": "^5.1.0"

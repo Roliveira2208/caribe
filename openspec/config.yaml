@@ -1,6 +1,6 @@
 schema: spec-driven
 context: |
-  OTA Venezuela, MVP de portafolio. Lee AGENTS.md y docs/sdd/SDD.md antes de proponer cambios.
+  Caribe, MVP de portafolio. Lee AGENTS.md y docs/sdd/SDD.md antes de proponer cambios.
   Stack: pnpm + Turborepo, Next.js (web con shadcn/ui, admin con Ant Design), NestJS, PostgreSQL + Prisma,
   Redis + BullMQ, Better Auth. Idiomas es/en.
 rules:

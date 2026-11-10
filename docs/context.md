@@ -2,6 +2,10 @@
 
 Cuatro bloques que un agente no puede adivinar leyendo el código. Se actualiza cuando cambia el dominio.
 
+## Nombre del proyecto
+- El proyecto se llama **Caribe**. "OTA" se usa solo como concepto de dominio (agencia de viajes en línea), nunca como nombre del proyecto.
+- Consecuencias del nombre: paquetes del monorepo con prefijo `@caribe/*`, proyecto de Docker Compose `caribe`, base de datos local `caribe_dev` y rol restringido de PostgreSQL `caribe_app`.
+
 ## Dominio
 - Venezuela: la moneda de referencia legal es el bolívar (VES), pero los precios de viaje se fijan en USD. El BCV publica una tasa oficial por día hábil con una fecha valor; en fines de semana y feriados rige la última fecha valor publicada.
 - Pago Móvil (VES), Zelle (USD), Binance Pay (USDT) y tarjeta se **simulan**. No hay cobros reales.

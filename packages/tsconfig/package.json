@@ -1,5 +1,5 @@
 {
-  "name": "@ota/tsconfig",
+  "name": "@caribe/tsconfig",
   "version": "0.1.0",
   "private": true,
   "files": [
