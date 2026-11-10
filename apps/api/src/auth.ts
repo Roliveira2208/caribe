@@ -1,6 +1,16 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin, organization, twoFactor } from "better-auth/plugins";
+import {
+  accessControl,
+  adminRole,
+  agentRole,
+  memberRole,
+  ownerRole,
+  providerRole,
+  superAdminRole,
+  systemUserRole,
+} from "./access.js";
 import { requiredEnv } from "./env.js";
 import { prisma } from "./prisma.js";
 
@@ -43,11 +53,29 @@ export const auth = betterAuth({
     },
   },
   plugins: [
-    organization(),
-    // El plugin admin va con sus valores por defecto en F0: rol de sistema
-    // "admin" y alta como "user" (= Cliente de la spec). T-F0-6 sustituye
-    // esto por la matriz real de roles/permisos con createAccessControl.
-    admin(),
+    // Matriz T-F0-6 (src/access.ts). organization() mezcla estos roles con
+    // sus defaults: member se neutraliza con permisos vacios y las agencias
+    // solo se crean como accion de sistema (userId, sin sesion), nunca por
+    // HTTP desde una sesion de usuario.
+    organization({
+      ac: accessControl,
+      roles: {
+        owner: ownerRole,
+        admin: adminRole,
+        agent: agentRole,
+        provider: providerRole,
+        member: memberRole,
+      },
+      creatorRole: "owner",
+      allowUserToCreateOrganization: false,
+    }),
+    // admin() REEMPLAZA sus defaults al recibir roles: el rol de sistema
+    // "admin" desaparece; quedan user (Cliente, sin permisos) y super_admin.
+    admin({
+      defaultRole: "user",
+      adminRoles: ["super_admin"],
+      roles: { user: systemUserRole, super_admin: superAdminRole },
+    }),
     twoFactor({ issuer: "Caribe" }),
   ],
 });

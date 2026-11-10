@@ -98,3 +98,72 @@
   dentro del contenedor y verifica el login por scram desde el host; nunca imprime el valor.
 - **CI:** `pnpm test` ahora incluye e2e que necesitan las tablas; el workflow aplica las migraciones
   (`pnpm db:migrate:deploy`) antes de los tests sobre el servicio de PostgreSQL.
+
+## Decisiones técnicas de T-F0-6 (roles y permisos)
+
+- **Un solo archivo de access control** (`apps/api/src/access.ts`): define el universo de recursos y
+  acciones y, a partir de él, los roles de las dos capas. TypeScript solo acepta acciones del universo
+  al declarar un rol; `test/access.test.ts` recorre cada celda del universo contra cada rol y falla ante
+  cualquier concesión o denegación fuera de la matriz aprobada.
+- **Diferencia entre capas (verificada contra better-auth 1.7.18):** el mapa de `roles` de `admin()`
+  REEMPLAZA sus defaults (el rol de sistema `admin` que trae todo dejó de existir; quedan `user` y
+  `super_admin`); el de `organization()` SE MEZCLA con los defaults (por eso `member` se redefine con
+  permisos vacíos: una membresía sin rol conocido no concede nada).
+- **Guards sin dependencias nuevas:** `@MemberHasPermission` (agencia, `member.role`), `@UserHasPermission`
+  (sistema, `user.role`), `@Roles`, `@OrgRoles` y `@RequireActiveOrg` de `@thallesp/nestjs-better-auth`
+  2.8.0, ya instalado. Ningún rol hereda del otro y las capas no se cruzan: un permiso declarado en una
+  no autoriza en la otra.
+- **Alta de agencias solo como acción de sistema** (`allowUserToCreateOrganization: false`): sin sesión
+  y con `userId` en el body es la única vía que queda (verificado en `crud-org.mjs` de 1.7.18:
+  `isSystemAction = !session && ctx.body.userId`). El e2e la usa y el seed de T-F0-6b la usará; el
+  endpoint del panel llega con su propia change.
+
+### Matriz aprobada (2026-11-10)
+
+**Negocio** (agencia: `member.role`; plataforma: `user.role`):
+
+| Recurso | `agent` | `provider` | `owner`/`admin` | `super_admin` | Cliente |
+|---|---|---|---|---|---|
+| product | — | create, read, update, delete (solo suyos, F1) | create, read, update, delete | read | catálogo público |
+| booking | create, read | read (solo de sus productos, F1) | create, read, update, cancel | read | sesión + propiedad (404 ajena) |
+| payment | read | — | read, **review** | read | sesión + propiedad |
+| exchange-rate | — | — | read, **update** (override con motivo) | read | tasa actual pública |
+| report | — | — | read | read | — |
+| audit | — | — | read (su tenant) | read (plataforma + tenants) | — |
+
+- `review` = aprobar/rechazar; revisor siempre distinto de quien reportó (delta de payments en esta
+  change). super_admin es de solo lectura en negocio: nadie más que owner/admin revisa pagos.
+- `exchange-rate` update = ajuste manual solo owner/admin, con motivo obligatorio y auditoría
+  (spec `exchange-rates`); el invariante "nadie aprueba su propio pago" y el alcance de auditoría de
+  super_admin quedaron como deltas de `payments` y `audit` en esta change.
+- audit: nadie tiene update/delete; la BD limitará `audit_logs` a INSERT/SELECT para `caribe_app` (T-F0-9).
+
+**Gestión de la agencia** (organization, `member.role`):
+
+| Recurso | `owner` | `admin` | `agent` | `provider` | `member` |
+|---|---|---|---|---|---|
+| organization | update, **delete** | update | — | — | — |
+| member | create, update, delete | create, update, delete | — | — | — |
+| invitation | create, cancel | create, cancel | — | — | — |
+| team / ac (roles dinámicos) | — | — | — | — | — |
+
+**Plataforma** (`super_admin`, `user.role`): organization create/read/update (sin delete físico: se
+desactiva), user create/list/get/update/set-role/ban/set-password, session list/revoke. **Sin
+impersonate ni delete de usuarios** (tampoco set-email/set-phone): son acciones que los endpoints de
+Better Auth exigen pero que ningún rol declara, así que quedan denegados para todos por siempre. Cliente (`user` de
+sistema): statements vacíos; su acceso a reservas/pagos/documentos es por sesión + propiedad de fila
+(404 si ajeno), sin RBAC. Provider no reserva ni paga: denegación por rol en la capa de servicio
+(cuando lleguen esas rutas en F1/F2, sus specs fijan el mapeo fino).
+
+### Pruebas de T-F0-6
+
+- **Unitarias** (`test/access.test.ts`): las 7 filas de la matriz (user, super_admin, owner, admin,
+  agent, provider, member neutralizado) contra cada celda del universo de permisos.
+- **E2E** (`test/auth.e2e.ts`): stub `PUT /api/v1/products/:id` con `@MemberHasPermission` → provider
+  200, agent 403, cliente 403, sin sesión 401; invitaciones reales → owner 200, provider 403; un
+  usuario no crea agencias por HTTP (403) ni accede a `GET /api/auth/admin/list-users` (403). La
+  propiedad de fila (producto ajeno, reserva ajena) llega con datos reales en F1 (T-F1-7).
+- El alta de usuarios del e2e va por la API de servidor (`auth.api.signUpEmail`): el HTTP de registro
+  limita a 5/min por IP y crear datos no es el comportamiento bajo prueba; el inicio de sesión sí va
+  por HTTP para ejercitar la cookie real (9 inicios, bajo el límite de 10/min).
+

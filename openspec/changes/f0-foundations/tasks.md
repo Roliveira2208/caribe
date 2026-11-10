@@ -9,7 +9,7 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
 - [x] T-F0-4 Prisma en `apps/api`: tablas de Better Auth (user, session, account, verification, organization, member, invitation, twoFactor) vía su CLI de migración.
 - [x] T-F0-5 Montar Better Auth en NestJS con los plugins Organization, Admin y Two-Factor; guard global y decorador de rutas públicas. Incluye stubs `GET /api/v1/products` (público) y `GET /api/v1/bookings/:id` (protegido) marcados `TODO(F1)`; F1 los elimina.
   - Prueba: auth-access › "Ruta protegida sin sesión", "Catálogo público".
-- [ ] T-F0-6 Definir roles y permisos (agent, provider, owner/admin, super_admin) y guards por permiso; documentar la matriz en `design.md`.
+- [x] T-F0-6 Definir roles y permisos (agent, provider, owner/admin, super_admin) y guards por permiso; documentar la matriz en `design.md`.
   - Prueba: auth-access › escenarios de Proveedor y Cliente.
 - [ ] T-F0-6b Script de seed de demostración (una agencia, un usuario por rol, inventario básico); los tests automáticos crean sus propios datos.
   - Prueba: seed idempotente y pipeline en verde.
