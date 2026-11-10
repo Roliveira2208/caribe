@@ -1,0 +1,26 @@
+{
+  "name": "@ota/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@ota/eslint-config": "workspace:*",
+    "@ota/tsconfig": "workspace:*",
+    "eslint": "^10.14.0",
+    "typescript": "~5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

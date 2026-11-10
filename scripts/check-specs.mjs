@@ -6,14 +6,24 @@ import { join } from "node:path";
 const root = "openspec";
 const errors = [];
 const err = (f, m) => errors.push(`${f}: ${m}`);
-const dirs = (p) => (existsSync(p) ? readdirSync(p).filter((d) => statSync(join(p, d)).isDirectory()) : []);
+const dirs = (p) =>
+  existsSync(p) ? readdirSync(p).filter((d) => statSync(join(p, d)).isDirectory()) : [];
 
-const baseBlocks = ["## Purpose", "## Requirements", "## Casos límite", "## Acceptance", "## Out of scope"];
+const baseBlocks = [
+  "## Purpose",
+  "## Requirements",
+  "## Casos límite",
+  "## Acceptance",
+  "## Out of scope",
+];
 const specIds = new Set(dirs(join(root, "specs")));
 
 for (const d of specIds) {
   const f = join(root, "specs", d, "spec.md");
-  if (!existsSync(f)) { err(f, "falta spec.md"); continue; }
+  if (!existsSync(f)) {
+    err(f, "falta spec.md");
+    continue;
+  }
   const t = readFileSync(f, "utf8");
   for (const b of baseBlocks) if (!t.includes(b)) err(f, `falta el bloque "${b}"`);
   const reqs = t.split(/^### Requirement:/m).slice(1);
@@ -43,5 +53,8 @@ for (const c of dirs(join(root, "changes")).filter((c) => c !== "archive")) {
   }
 }
 
-if (errors.length) { console.error(errors.join("\n")); process.exit(1); }
+if (errors.length) {
+  console.error(errors.join("\n"));
+  process.exit(1);
+}
 console.log(`OK: ${specIds.size} specs válidas`);

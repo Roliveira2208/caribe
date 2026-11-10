@@ -1,0 +1,20 @@
+{
+  "name": "@ota/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ota/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@ota/eslint-config": "workspace:*",
+    "@ota/tsconfig": "workspace:*",
+    "eslint": "^10.14.0",
+    "typescript": "~5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

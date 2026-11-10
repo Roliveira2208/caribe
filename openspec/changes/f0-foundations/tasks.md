@@ -3,7 +3,7 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
 
 - [x] T-F0-0a Delta de spec `auth-access`: el TOTP se exige también en la API (403 `TWO_FACTOR_REQUIRED`).  Prueba: revisión del dueño (delta de spec, sin código).
 - [x] T-F0-0b Delta de spec `audit`: acciones de plataforma con `tenant_id` NULL, legibles solo desde el rol de plataforma.  Prueba: revisión del dueño (delta de spec, sin código).
-- [ ] T-F0-1 Crear monorepo pnpm + Turborepo con las 4 carpetas, TypeScript estricto, ESLint y Prettier compartidos.
+- [x] T-F0-1 Crear monorepo pnpm + Turborepo con las 4 carpetas, TypeScript estricto, ESLint y Prettier compartidos.
 - [ ] T-F0-2 Docker Compose local con PostgreSQL y Redis; `.env.example` con todas las variables (sin valores reales).
 - [ ] T-F0-3 CI (GitHub Actions): install, lint, typecheck, test y `node scripts/check-specs.mjs`.
 - [ ] T-F0-4 Prisma en `apps/api`: tablas de Better Auth (user, session, account, verification, organization, member, invitation, twoFactor) vía su CLI de migración.

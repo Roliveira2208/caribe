@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# esbuild (usado por vitest/vite) necesita su script de instalación aprobado.
+onlyBuiltDependencies:
+  - esbuild

@@ -1,0 +1,10 @@
+{
+  "extends": "@ota/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@ota/shared": ["../../packages/shared/src"]
+    }
+  },
+  "include": ["src", "test"]
+}
