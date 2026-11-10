@@ -40,7 +40,7 @@ export class TenantService {
       throw new ForbiddenException("El identificador de agencia no puede estar vacío");
     }
     return prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config(${TENANT_GUC}, ${tenantId}, true)`;
+      await this.bindContext({ kind: "tenant", tenantId }, tx);
       return fn(tx);
     });
   }
@@ -52,11 +52,29 @@ export class TenantService {
    */
   async withPlatform<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return prisma.$transaction(async (tx) => {
-      // "on" como bind parameter: con comillas dobles seria un identificador
-      // SQL (columna) y no un literal, igual que tenantId en withTenant.
-      await tx.$executeRaw`SELECT set_config(${PLATFORM_GUC}, ${"on"}, true)`;
+      await this.bindContext({ kind: "platform" }, tx);
       return fn(tx);
     });
+  }
+
+  /**
+   * Fija los GUC del contexto en una transaccion ya abierta. Lo usa el
+   * interceptor de auditoria (T-F0-9) para que la fila de audit_logs pase
+   * las politicas RLS dentro de la MISMA transaccion de la operacion;
+   * withTenant y withPlatform delegan aqui para no duplicar la logica.
+   */
+  async bindContext(context: TenantContext, tx: Prisma.TransactionClient): Promise<void> {
+    if (context.kind === "tenant") {
+      // Bind parameters: con comillas dobles serian identificadores SQL
+      // (columnas) y no literales.
+      await tx.$executeRaw`SELECT set_config(${TENANT_GUC}, ${context.tenantId}, true)`;
+    } else if (context.kind === "platform") {
+      await tx.$executeRaw`SELECT set_config(${PLATFORM_GUC}, ${"on"}, true)`;
+    } else {
+      throw new ForbiddenException(
+        "La operación requiere una agencia activa o el rol de plataforma",
+      );
+    }
   }
 
   /**

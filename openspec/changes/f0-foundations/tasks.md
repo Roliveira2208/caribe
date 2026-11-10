@@ -20,7 +20,7 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
   - Prueba: auth-access › "Admin sin TOTP en un endpoint no administrativo".
   - Prueba: auth-access › "Ruta administrativa sin exigencia de segundo factor" (inventario de rutas).
   - La pantalla de activación pasa a T-F0-10 junto al shell (decisión del dueño, 2026-11-10).
-- [ ] T-F0-9 `audit_logs` inmutable (permisos de BD) e interceptor `AuditModule` con un endpoint de ejemplo.
+- [x] T-F0-9 `audit_logs` inmutable (permisos de BD) e interceptor `AuditModule` con un endpoint de ejemplo.
   - Prueba: audit › "Intento de borrado", "Admin aprueba un pago" (con acción de ejemplo).
 - [ ] T-F0-10 `next-intl` en web y admin con es/en y rutas `/es` `/en`; shell de cada app con login.
   - Incluye la pantalla de activación de TOTP de T-F0-8 (redirige ante 403 `TWO_FACTOR_REQUIRED`).

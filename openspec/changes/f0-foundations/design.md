@@ -272,6 +272,54 @@ sistema): statements vacíos; su acceso a reservas/pagos/documentos es por sesi�
 - **Pantalla de activación:** se construye en T-F0-10 junto al shell con login, que redirige ante el
   403 `TWO_FACTOR_REQUIRED` (decisión del dueño del 2026-11-10, anotada en `proposal.md`).
 
+## Decisiones técnicas de T-F0-9 (auditoría inmutable + AuditModule)
+
+- **Inmutabilidad en dos capas (migración `audit_logs_immutable`):** `REVOKE UPDATE, DELETE ON
+  audit_logs FROM caribe_app` (al rol de aplicación solo le quedan INSERT y SELECT, como pide el
+  SDD) **y** un trigger `BEFORE UPDATE OR DELETE` que lanza excepción para cualquier rol. El REVOKE
+  quita el privilegio; el trigger es defensa en profundidad: aunque un rol con privilegios (o el
+  dueño de la tabla) intente modificar, la BD lo rechaza. `TRUNCATE` no se bloquea: `caribe_app`
+  nunca lo recibió por GRANT y la spec solo nombra UPDATE/DELETE.
+- **El interceptor es dueño de la transacción (spec audit, casos límite):** `AuditInterceptor`
+  (APP_INTERCEPTOR del `AuditModule`) abre `prisma.$transaction`, ejecuta el handler DENTRO con un
+  `AsyncLocalStorage` (`attachAuditData`/`currentAuditTx`) y escribe la fila de auditoría en esa
+  MISMA transacción al final: si la auditoría falla, la operación se revierte. Solo actúa en rutas
+  con `@Auditable({ action, entity, platform? })`; el resto pasa de largo.
+- **Actor, IP y fecha nunca del body:** el interceptor los toma de la sesión verificada
+  (`request.session.user.id`, fijada por el guard), de `request.ip` y del reloj del servidor. El
+  handler solo aporta `entityId`/`before`/`after` vía `attachAuditData`; si un handler auditable no
+  aporta `entityId`, el interceptor falla (fallo cerrado) y la transacción no se confirma.
+- **Contexto de tenant reutilizado:** para fijar los GUC en la transacción del interceptor,
+  `TenantService` gana `bindContext(tx, context)` y `withTenant`/`withPlatform`/`withContext`
+  delegan en él (misma lógica, sin duplicar). Las acciones `platform: true` (crear agencia) auditan
+  con `tenant_id` NULL bajo `app.platform`; las de agencia exigen contexto tenant (403 si no).
+- **Alcance de lectura (`GET /admin/audit-logs`) resuelto en el handler:** la lib AND-evalúa
+  `@UserHasPermission` y `@MemberHasPermission` (verificado en su código), así que "owner/admin de
+  agencia **o** super_admin" no es expresable con decoradores. El handler resuelve: rol de
+  plataforma → contexto plataforma (filas NULL + todas las agencias, delta de audit); si no,
+  miembro owner/admin de la org activa → contexto tenant; cualquier otro caso → 403. Los roles con
+  `audit:read` de agencia se calculan desde la matriz de `access.ts` (hoy owner y admin) y un test
+  fija esa correspondencia. Además del RLS, la consulta de agencia lleva `where tenant_id`:
+  defensa en profundidad (en pruebas la API conecta como superusuario de PostgreSQL, a quien RLS
+  no aplica; con el rol de aplicación ambas capas coinciden).
+- **Endpoints de ejemplo:** `PUT /admin/exchange-rates/override` (stub existente, acción
+  `exchange-rate.override`, "fijar tasas" está en la lista de la spec; `before` NULL porque F0 no
+  tiene tabla de tasas — F2 la sustituye con estado real) y `POST /admin/organizations` (acción real
+  de plataforma `organization.create`, delta "Super Admin crea una agencia": replica los INSERT de
+  `createOrganization` de Better Auth —organization + member owner— dentro de la transacción del
+  interceptor, precedente del seed; el creador queda owner, validación manual de name/slug sin zod).
+- **Sanitizador (`sanitizeAuditPayload`):** denylist por clave normalizada (minúsculas, sin
+  separadores: password, token, secret, cvv, cvc, card, cardnumber, …) aplicada recursivamente a
+  `before`/`after` dentro de `AuditService.record`; los valores sensibles se sustituyen por
+  `[redacted]`. Redactar de más es seguro; redactar de menos es un fuga. `AuditService.record`
+  nunca abre su propia transacción: recibe la del llamador.
+- **Pruebas:** `test/audit-sanitize.test.ts` (unitario), `test/audit.e2e.ts` (HTTP: acción de
+  agencia con TOTP → fila con actor/acción/antes/después/IP; agente → 403; admin de agencia solo ve
+  su tenant y nunca filas NULL; super admin crea agencia → fila NULL + spoof de actor/ip/at en el
+  body ignorado; super admin ve NULL + ambas agencias; integración: si `record` falla dentro de la
+  transacción, la operación no se confirma) y bloque de BD con `SET ROLE caribe_app`
+  (INSERT/SELECT ok; UPDATE/DELETE rechazados; el trigger también rechaza al dueño).
+
 ## Fix de infraestructura: shadow database de prisma migrate (2026-11-10)
 
 Fix pedido por el dueño tras aprobar T-F0-8, fuera de `tasks.md` (no cambia comportamiento
