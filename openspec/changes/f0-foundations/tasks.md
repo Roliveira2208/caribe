@@ -13,7 +13,7 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
   - Prueba: auth-access › escenarios de Proveedor y Cliente.
 - [x] T-F0-6b Script de seed de demostración (una agencia, un usuario por rol, inventario básico); los tests automáticos crean sus propios datos.
   - Prueba: seed idempotente y pipeline en verde.
-- [ ] T-F0-7 `TenantModule`: resolver tenant, `SET LOCAL app.tenant_id`, políticas RLS en las tablas base.
+- [x] T-F0-7 `TenantModule`: resolver tenant, `SET LOCAL app.tenant_id`, políticas RLS en las tablas base.
   - Prueba: auth-access › "Admin de otra agencia" con dos tenants.
 - [ ] T-F0-8 TOTP obligatorio para owner/admin/super_admin y pantalla de activación, en UI y API (delta de `auth-access`).
   - Prueba: auth-access › "Admin sin TOTP" (incluye 403 `TWO_FACTOR_REQUIRED`).

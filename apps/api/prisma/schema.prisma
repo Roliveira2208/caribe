@@ -153,3 +153,31 @@ model TwoFactor {
   @@index([userId])
   @@map("twoFactor")
 }
+
+// Tabla propia de Caribe (no de Better Auth): rastro inmutable de acciones
+// sensibles (specs/audit). Sin relaciones Prisma a User/Organization a
+// proposito: la historia de auditoria sobrevive al borrado de usuarios y
+// agencias, y tocar los modelos generados por el CLI de Better Auth los
+// haria perder campos en la proxima regeneracion. La coherencia de
+// tenant_id/actor_id la garantiza la capa de aplicacion (interceptor de
+// T-F0-9), que toma la organizacion activa de la sesion verificada.
+//
+// RLS (migracion SQL, invisible para Prisma): las politicas comparan
+// tenant_id con el GUC app.tenant_id que fija TenantService por
+// transaccion; app.platform='on' habilita el contexto de plataforma.
+// caribe_app (NOBYPASSRLS, no duena) siempre respeta las politicas.
+model AuditLog {
+  id       String   @id
+  tenantId String?  @map("tenant_id")
+  actorId  String?  @map("actor_id")
+  action   String
+  entity   String
+  entityId String   @map("entity_id")
+  before   Json?
+  after    Json?
+  ip       String?
+  at       DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("audit_logs")
+}

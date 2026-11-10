@@ -194,4 +194,44 @@ sistema): statements vacíos; su acceso a reservas/pagos/documentos es por sesi�
   `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`) porque importa `auth.ts`: las credenciales solo se crean
   por las vías del sistema, nunca con INSERT a mano de cuentas.
 
+## Decisiones técnicas de T-F0-7 (TenantModule, SET LOCAL y RLS)
+
+- **`audit_logs` nace aquí y no en T-F0-9** (decisión del dueño, 2026-11-10): era la única tabla con
+  `tenant_id` dentro del alcance de la change y las políticas RLS necesitaban una tabla real que
+  filtrar. T-F0-9 queda con la inmutabilidad (INSERT/SELECT para `caribe_app`), el interceptor de
+  auditoría y el endpoint de ejemplo. El catálogo (F1) y las reservas heredarán el mismo patrón.
+- **Modelo Prisma `AuditLog` sin relaciones** a `User`/`Organization` a propósito: la historia de
+  auditoría sobrevive al borrado de agencias y usuarios (dueño disuelve la agencia ↔ audit inmutable),
+  y tocar los modelos generados por el CLI de Better Auth los haría perder campos en la próxima
+  regeneración. `tenant_id`/`actor_id` los fija la capa de aplicación desde la sesión verificada.
+- **Políticas RLS** (migración `20261110061923_audit_logs_tenant_rls`, SQL propio): `audit_logs_tenant`
+  compara `tenant_id = current_setting('app.tenant_id', true)` en USING y WITH CHECK (ni leer ni
+  escribir fuera del tenant); `audit_logs_platform` exige `app.platform = 'on'` (Super Admin sin
+  agencia activa: filas de todas las agencias y las de plataforma con `tenant_id` NULL). Sin GUC
+  fijado, `current_setting(..., true)` devuelve NULL y ninguna política otorga filas: **fallo
+  cerrado**. `FORCE ROW LEVEL SECURITY` extiende las políticas también al rol dueño por si una
+  conexión no superusuario llegara a usarlo.
+- **`TenantService`** (`src/tenant/`): la resolución es una función pura (`tenant-context.ts`) sobre
+  la organización activa y el rol de sistema — la org activa gana al rol de plataforma; Cliente sin
+  membresía queda en "none" y RLS no le otorga nada. `withTenant`/`withPlatform` ejecutan dentro de
+  una transacción interactiva de Prisma con `set_config(..., true)` (equivalente a `SET LOCAL`, pero
+  parametrizable: `SET` no acepta bind parameters); `withContext` despacha según el contexto y
+  rechaza "none" con 403. Todo acceso a datos con `tenant_id` de la app pasa por este módulo.
+- **Migración creada a mano y aplicada con `migrate deploy`:** `migrate dev` no puede reproducir en
+  su shadow database la migración del rol restringido (el `REVOKE` sobre `_prisma_migrations`, que
+  allí no existe; preexistente de T-F0-4). El CREATE TABLE replica lo que generaría el CLI y se
+  verificó con `prisma migrate diff --from-config-datasource --to-schema`: diff vacío. Pregunta
+  abierta en la propuesta.
+- **Pruebas de RLS como el rol real, sin secretos:** `tenant.e2e.ts` monta dos agencias y filas por
+  tenant/plataforma, y consulta con `SET ROLE caribe_app` (NOBYPASSRLS, no dueño: las políticas siempre
+  aplican) sobre la conexión de `DATABASE_URL` — funciona igual en local (`caribe_dev`) y CI
+  (`caribe_ci`), ambas superusuario, sin contraseñas en el repo. Cubre: lectura filtrada por tenant,
+  fila ajena por id invisible (el 404 de la capa de servicio traduce ese vacío), lectura de
+  plataforma, fallo cerrado sin contexto, y WITH CHECK (no escribir filas de otro tenant, sí las
+  propias y las de plataforma con `tenant_id` NULL). El escenario HTTP literal ("producto de otra
+  agencia → 404") llega con el catálogo en F1, igual que la propiedad de fila quedó anotada en
+  T-F0-6; `database.test.ts` valida además el SQL de la migración (RLS+FORCE, políticas con GUC y
+  fallo cerrado, WITH CHECK en ambas).
+
+
 

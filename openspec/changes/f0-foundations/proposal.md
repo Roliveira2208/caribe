@@ -24,6 +24,11 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
 - ¿Qué inventario básico debe crear el seed de demostración? F0 no tiene tablas de catálogo (fuera del
   alcance de esta change): el seed crea solo identidad y el inventario se añade cuando llegue
   specs/catalog en F1 (decisión del dueño, 2026-11-10).
+- `prisma migrate dev` falla al reproducir la migración del rol restringido en su shadow database
+  (`REVOKE` sobre `_prisma_migrations`, que allí no existe; preexistente de T-F0-4). Mientras, las
+  migraciones con SQL propio se escriben a mano y se aplican con `migrate deploy` (verificado con
+  `migrate diff`). ¿Se arregla la migración del rol (condicional en el REVOKE) aceptando el
+  re-baseline local, o se documenta como vía permanente?
 
 ## Fuera de alcance
 Catálogo, reservas, pagos y tasas (F1 y F2).

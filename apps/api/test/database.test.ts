@@ -55,6 +55,10 @@ function findRoleMigration(migrations: Migration[]): Migration | undefined {
   );
 }
 
+function findAuditMigration(migrations: Migration[]): Migration | undefined {
+  return migrations.find(({ sql }) => sql.includes('CREATE TABLE "audit_logs"'));
+}
+
 describe("prisma/schema.prisma", () => {
   it("declara las 8 tablas de better auth con nombre en minusculas", () => {
     expect(existsSync(schemaPath)).toBe(true);
@@ -74,6 +78,13 @@ describe("prisma/schema.prisma", () => {
   it("no decla el tipo Float para ningun campo", () => {
     const schema = readFileSync(schemaPath, "utf-8");
     expect(schema).not.toMatch(/\bFloat\b/);
+  });
+
+  it("declara el modelo AuditLog mapeado a audit_logs con tenant_id", () => {
+    const schema = readFileSync(schemaPath, "utf-8");
+    expect(schema).toContain("model AuditLog");
+    expect(schema).toContain('@@map("audit_logs")');
+    expect(schema).toMatch(/tenantId\s+String\?\s+@map\("tenant_id"\)/);
   });
 });
 
@@ -145,6 +156,35 @@ describe("prisma/migrations", () => {
     const sql = stripSqlComments(role?.sql ?? "");
     expect(sql).toContain("pg_roles");
     expect(sql).not.toMatch(/PASSWORD/i);
+  });
+
+  it("crea audit_logs con tenant_id y activa RLS con FORCE", () => {
+    const audit = findAuditMigration(readMigrations());
+    expect(audit).toBeDefined();
+    const sql = stripSqlComments(audit?.sql ?? "");
+    expect(sql).toContain('CREATE TABLE "audit_logs"');
+    expect(sql).toContain('"tenant_id" TEXT');
+    expect(sql).toContain("ENABLE ROW LEVEL SECURITY");
+    expect(sql).toContain("FORCE ROW LEVEL SECURITY");
+    // Se aplica despues de la del rol restringido: RLS protege a caribe_app.
+    const names = readMigrations().map(({ name }) => name);
+    expect(names.indexOf(audit?.name ?? "")).toBeGreaterThan(
+      names.indexOf(findRoleMigration(readMigrations())?.name ?? ""),
+    );
+  });
+
+  it("las politicas de audit_logs filtran por el GUC y con fallo cerrado", () => {
+    const audit = findAuditMigration(readMigrations());
+    expect(audit).toBeDefined();
+    const sql = stripSqlComments(audit?.sql ?? "");
+    expect(sql).toContain('CREATE POLICY "audit_logs_tenant"');
+    expect(sql).toContain('CREATE POLICY "audit_logs_platform"');
+    // missing_ok (true): sin GUC, current_setting devuelve NULL y la fila no
+    // pasa la politica; el 404/403 de la capa de servicio traduce ese vacio.
+    expect(sql).toContain("current_setting('app.tenant_id', true)");
+    expect(sql).toContain("current_setting('app.platform', true)");
+    // WITH CHECK en ambas: ni escribir filas de otro tenant ni fuera de contexto.
+    expect(sql.match(/WITH CHECK/g)?.length).toBe(2);
   });
 });
 
