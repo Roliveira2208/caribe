@@ -12,6 +12,7 @@ comportamiento: `openspec/specs/`. Si el código contradice una spec, el código
 
 ## Comandos (ajusta aquí cuando existan)
 - `pnpm install` · `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm test:e2e`
+- `pnpm db:up` · `pnpm db:down` (PostgreSQL y Redis locales vía Docker Compose)
 - Antes de dar algo por terminado: lint + typecheck + test en verde.
 
 ## Reglas que no se negocian
