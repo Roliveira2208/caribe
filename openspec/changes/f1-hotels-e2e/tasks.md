@@ -8,6 +8,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [ ] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo y override con auditoría.  Prueba: exchange-rates (todos).
 - [ ] T-F1-6 Precio VES informativo en catálogo con la tasa vigente.  Prueba: catalog › "Sin tasa disponible".
 - [ ] T-F1-7 `BookingModule`: crear reserva con retención e `Idempotency-Key`.  Prueba: booking › cupo, concurrencia, idempotencia.
+- [ ] T-F1-7b Eliminar los stubs `TODO(F1)` de products/bookings creados en F0.  Prueba: auth-access › "Ruta protegida sin sesión", "Catálogo público" con los endpoints reales.
 - [ ] T-F1-8 Trabajo de expiración de reservas.  Prueba: booking › "Vence sin pago", "Pago tardío".
 - [ ] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, monto calculado en servidor.  Prueba: payments (creación y modo).
 - [ ] T-F1-10 Cancelación y reembolso con `policy_snapshot` y tasa congelada.  Prueba: booking › Cancelación; payments › Reembolso.

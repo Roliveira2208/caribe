@@ -12,7 +12,10 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
 - i18n es/en y wireframes de las pantallas clave (entregable de diseño).
 
 ## Impacto en specs
-`auth-access` y `audit` pasan de contrato a implementados; el resto no se toca.
+- `auth-access`: se implementa y se modifica el requisito del segundo factor: TOTP exigido también en la
+  API (403 `TWO_FACTOR_REQUIRED`). Delta en `specs/auth-access/spec.md`.
+- `audit`: se implementa y se añade el requisito de acciones de plataforma (`tenant_id` NULL, legible
+  solo por el rol de plataforma). Delta en `specs/audit/spec.md`.
 
 ## Preguntas abiertas
 - ¿Hosting definitivo de la API y la base de datos (planes gratuitos con arranque en frío)?
