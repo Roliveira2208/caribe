@@ -11,4 +11,8 @@ la base de datos; Row-Level Security SHALL impedir que el rol de aplicación de 
 - GIVEN un Super Admin autenticado sin organización activa
 - WHEN crea una agencia
 - THEN existe una fila de auditoría con `tenant_id` NULL, actor, acción y estados antes y después
-- AND un admin de agencia no puede leer esa fila
+
+#### Scenario: Agencia no lee auditoría de plataforma
+- GIVEN filas de auditoría con `tenant_id` NULL
+- WHEN el rol de aplicación de una agencia consulta `audit_logs`
+- THEN obtiene cero resultados
