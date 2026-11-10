@@ -68,6 +68,11 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Los e2e de la API (Better Auth) necesitan las tablas: la BD del servicio
+      # arranca vacia y las migraciones son la unica via de crear el esquema.
+      - name: Aplicar migraciones
+        run: pnpm db:migrate:deploy
+
       - name: Tests
         run: pnpm test
 

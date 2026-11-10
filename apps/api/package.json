@@ -6,6 +6,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
     "generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
@@ -13,16 +15,23 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@nestjs/common": "12.3.3",
+    "@nestjs/core": "12.3.3",
+    "@nestjs/platform-express": "12.3.3",
     "@ota/shared": "workspace:*",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
-    "pg": "8.23.1"
+    "@thallesp/nestjs-better-auth": "2.8.0",
+    "better-auth": "1.7.18",
+    "dotenv": "18.0.9",
+    "pg": "8.23.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
   },
   "devDependencies": {
     "@ota/eslint-config": "workspace:*",
     "@ota/tsconfig": "workspace:*",
     "@types/pg": "8.23.1",
-    "dotenv": "18.0.9",
     "eslint": "^10.14.0",
     "prisma": "7.10.1",
     "typescript": "~5.9.3",

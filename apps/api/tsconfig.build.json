@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Compilar a dist para ejecutar con node (scripts build y start).
+    // Sin "paths": @ota/shared se resuelve por node_modules hacia su dist,
+    // que turbo construye antes (dependsOn ^build); con paths apuntando al
+    // src del paquete, tsc intentaria emitir archivos fuera de rootDir.
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {},
+    "sourceMap": true
+  },
+  "include": ["src"]
+}

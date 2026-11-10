@@ -15,6 +15,7 @@ comportamiento: `openspec/specs/`. Si el código contradice una spec, el código
 - `pnpm db:up` · `pnpm db:down` (PostgreSQL y Redis locales vía Docker Compose)
 - `pnpm db:generate` · `pnpm db:migrate:dev` · `pnpm db:migrate:deploy` (Prisma en `apps/api`;
   migraciones SQL versionadas, nunca `db push`)
+- `pnpm db:app-password` (contraseña local del rol `ota_app`: lee `OTA_APP_DB_PASSWORD` de `.env`)
 - Antes de dar algo por terminado: lint + typecheck + test en verde.
 
 ## Reglas que no se negocian
@@ -55,3 +56,6 @@ Detalle en `docs/workflow.md`. Resumen:
 - No mezcles Ant Design en `apps/web` ni shadcn/ui en `apps/admin`.
 - No guardes número de tarjeta ni CVV. Los pagos son simulados en el MVP.
 - No cambies decisiones D1–D15 del SDD; propón un cambio en `openspec/changes/`.
+- No uses `pnpm approve-builds` sin revisar `pnpm-workspace.yaml` después: pnpm 12 lo reescribe al
+  formato `allowBuilds` y puede perder aprobaciones previas (ya perdimos la de `esbuild`); revísalo
+  también tras `pnpm add` o `pnpm install`.

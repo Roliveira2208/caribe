@@ -1,12 +1,8 @@
 import { PrismaPg } from "@prisma/adapter-pg";
+import { requiredEnv } from "./env.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL no esta definida. Copia .env.example a .env y ajusta los valores.");
-}
-
-const adapter = new PrismaPg({ connectionString });
+const adapter = new PrismaPg({ connectionString: requiredEnv("DATABASE_URL") });
 
 /**
  * Cliente Prisma unico del proceso. Prisma 7 exige un driver adapter; con el

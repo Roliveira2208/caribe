@@ -16,7 +16,8 @@
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @ota/api generate",
     "db:migrate:dev": "pnpm --filter @ota/api migrate:dev",
-    "db:migrate:deploy": "pnpm --filter @ota/api migrate:deploy"
+    "db:migrate:deploy": "pnpm --filter @ota/api migrate:deploy",
+    "db:app-password": "node scripts/set-ota-app-password.mjs"
   },
   "devDependencies": {
     "@ota/eslint-config": "workspace:*",

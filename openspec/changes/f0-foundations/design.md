@@ -58,3 +58,43 @@
   `onlyBuiltDependencies` (lista) y su `approve-builds` reescribió el yaml perdiendo la aprobación de
   `esbuild`; se restauró en el formato nuevo para que la CI no falle en un install limpio.
 - **Comandos raíz nuevos:** `pnpm db:generate`, `pnpm db:migrate:dev`, `pnpm db:migrate:deploy`.
+
+## Decisiones técnicas de T-F0-5 (Better Auth en NestJS)
+- **Dependencias (pines exactos):** Nest 12.3.3 (`@nestjs/common`, `@nestjs/core`,
+  `@nestjs/platform-express`) — la 12.4 salió el mismo día y cae fuera de la política de
+  `minimumReleaseAge` de pnpm —, `@thallesp/nestjs-better-auth` 2.8.0, `better-auth` 1.7.18, `rxjs`
+  7.8.2 y `reflect-metadata` 0.2.2. Los peers graphql/websockets/express de la lib comunitaria son
+  opcionales y no se instalan. `dotenv` pasa de devDep a dependency (lo lee `src/env.ts` en runtime).
+- **Versión del esquema verificada:** la sonda que generó `schema.prisma` con el CLI corría
+  `better-auth@1.7.18`, la misma versión instalada; el CLI solo carga esa instancia para derivar las
+  tablas. Además se comparó `getAuthTables` del paquete instalado contra la instancia real: los 8
+  modelos y sus campos coinciden con `schema.prisma`. No hacía falta regenerar.
+- **Guard global y rutas públicas:** `AuthModule.forRoot({ auth })` monta el handler de Better Auth en
+  `/api/auth` (fuera del versionado, D15) y su `AuthGuard` global deniega por defecto; solo
+  `GET /api/v1/products` se marca `@AllowAnonymous`. `bodyParser: false` porque Better Auth lee el
+  cuerpo crudo; la lib re-agrega los parsers para el resto de las rutas.
+- **Cookies y secreto:** httpOnly + SameSite=Lax por defecto de Better Auth; `advanced.useSecureCookies`
+  solo con `NODE_ENV=production` (prefijo `__Secure-`). El secreto solo llega por `BETTER_AUTH_SECRET`.
+- **Rate limit:** activo siempre (por defecto solo en producción) con `customRules` más estrictas en
+  `/sign-in/email` (60 s/10), `/sign-up/email` (60 s/5) y `/forget-password` (60 s/5); las rutas son
+  relativas al basePath de Better Auth. La IP del cliente: en desarrollo/test resuelve `127.0.0.1`;
+  en producción, tras decidir el hosting (pregunta abierta), hay que fijar
+  `advanced.ipAddress.trustedProxies` para leer `x-forwarded-for` de forma segura — sin proxies
+  configurados solo acepta un valor único, no falseable, y sin IP cae a un bucket compartido por ruta
+  con un warning en el log (falla cerrado, no abierto).
+- **`admin()` con defaults** (rol de sistema `admin`, alta como `user` = Cliente de la spec): 1.7.18
+  valida `adminRoles` contra el access control de `roles`; la matriz real llega en T-F0-6.
+- **Nest 12** ya no exporta `INestApplication` desde su índice; `bootstrap.ts` exporta
+  `type ApiApplication = Awaited<ReturnType<typeof createApp>>` para `main.ts` y los tests.
+- **Tests:** `vitest.config.mts` con include de `*.test.ts` y `*.e2e.ts` y defaults de env hacia la BD
+  local. El e2e monta la app real (`createApp`) en puerto aleatorio y crea datos con sufijos únicos en
+  vez de limpiar; cubre 401 sin sesión, catálogo público 200 y 403 al leer la organización de otra
+  agencia (`get-full-organization`).
+- **Build:** `tsconfig.build.json` emite a `dist` con `paths` vacío (`@ota/shared` se resuelve por
+  node_modules hacia su dist, que turbo construye antes con `^build`). Scripts `build` y `start` en
+  `apps/api`.
+- **Contraseña de `ota_app`:** variable `OTA_APP_DB_PASSWORD` en `.env` (sin valor en `.env.example`) y
+  script local `scripts/set-ota-app-password.mjs` (`pnpm db:app-password`): ejecuta `ALTER ROLE`
+  dentro del contenedor y verifica el login por scram desde el host; nunca imprime el valor.
+- **CI:** `pnpm test` ahora incluye e2e que necesitan las tablas; el workflow aplica las migraciones
+  (`pnpm db:migrate:deploy`) antes de los tests sobre el servicio de PostgreSQL.
