@@ -9,3 +9,5 @@ openspec
 .claude
 .opencode
 *.md
+# Cliente de Prisma generado (pnpm --filter @ota/api generate); no se edita a mano.
+apps/api/src/generated/

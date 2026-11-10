@@ -13,7 +13,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:up": "docker compose up -d --wait",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @ota/api generate",
+    "db:migrate:dev": "pnpm --filter @ota/api migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @ota/api migrate:deploy"
   },
   "devDependencies": {
     "@ota/eslint-config": "workspace:*",

@@ -2,6 +2,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+apps/api/src/generated/
 .next/
 dist/
 coverage/
