@@ -3,9 +3,10 @@
 -- El CREATE TABLE y el indice replican lo que generaria el CLI de Prisma
 -- para el modelo AuditLog de schema.prisma (columnas mapeadas a snake_case
 -- igual que el resto de la BD); la parte de RLS es SQL propio que Prisma no
--- modela. Esta migracion se creo a mano y se aplica con migrate deploy:
--- migrate dev no puede reproducir en su shadow database la migracion del rol
--- restringido (el REVOKE sobre _prisma_migrations, que alli no existe).
+-- modela. Se escribio a mano porque por entonces migrate dev no podia
+-- replayear la migracion del rol restringido en su shadow database (REVOKE
+-- sobre _prisma_migrations); ese replay quedo arreglado el 2026-11-10 con el
+-- REVOKE condicional y migrate dev vuelve a estar disponible.
 
 -- CreateTable
 CREATE TABLE "audit_logs" (

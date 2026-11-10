@@ -272,5 +272,41 @@ sistema): statements vacíos; su acceso a reservas/pagos/documentos es por sesi�
 - **Pantalla de activación:** se construye en T-F0-10 junto al shell con login, que redirige ante el
   403 `TWO_FACTOR_REQUIRED` (decisión del dueño del 2026-11-10, anotada en `proposal.md`).
 
+## Fix de infraestructura: shadow database de prisma migrate (2026-11-10)
+
+Fix pedido por el dueño tras aprobar T-F0-8, fuera de `tasks.md` (no cambia comportamiento
+especificado). Cierra la pregunta abierta de la propuesta sobre `migrate dev`.
+
+- **Causa (P3006):** la migración del rol restringido ejecutaba `REVOKE ALL PRIVILEGES ON TABLE
+  "_prisma_migrations" FROM caribe_app`, y en la shadow database esa tabla no existe durante el
+  replay (Prisma aplica los SQL de las migraciones sin registrarlas allí). `migrate dev`/`migrate
+  diff` replayean TODAS las migraciones en una BD vacía: cualquier SQL no ejecutable desde cero
+  rompe el flujo para siempre. `caribe_dev` ya tenía CREATEDB (es el `POSTGRES_USER` del compose,
+  superusuario): el problema nunca fue de permisos, por eso las opciones CREATEDB/shadowDatabaseUrl
+  no bastaban solas.
+- **Fix:** el REVOKE queda condicionado a la existencia de la tabla (DO block con
+  `information_schema.tables`). En la BD real aplica exactamente igual (la tabla existe allí) y
+  en la shadow es un no-op. De las opciones de la pregunta abierta, la elegida fue «arreglar la
+  migración del rol aceptando el re-baseline local».
+- **Re-baseline local:** editar una migración ya aplicada cambia su checksum (SHA-256 del archivo);
+  `migrate deploy`/`status` fallan con P3007 hasta actualizarlo. Se recalculó a mano en la BD local
+  (una sola vez; la CI y los futuros entornos aplican migraciones desde cero y no lo notan):
+  `UPDATE _prisma_migrations SET checksum = '<sha256>' WHERE migration_name = '...'` para
+  `20261110022152_restricted_app_role` y `20261110061923_audit_logs_tenant_rls` (la segunda solo
+  cambió su comentario de cabecera, que describía el problema como vigente).
+- **Shadow en Prisma 7:** `datasource.shadowDatabaseUrl` vive en `prisma7.config.ts` y lee
+  `SHADOW_DATABASE_URL` (opcional; documentada en `.env.example` con la BD local `caribe_shadow`,
+  creada una vez — el CLI la resetea en cada uso, nunca apunta a la BD de desarrollo). `migrate
+  diff --from-migrations` la exige siempre; `migrate dev` solo la necesita cuando debe generar o
+  comparar migraciones (si no está, `caribe_dev` puede auto-crearla al ser superusuario).
+- **Comprobación de divergencia en CI:** nuevo step que crea `caribe_ci_shadow` y corre
+  `prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma
+  --exit-code` (en Prisma 7: exit 0 = sin diferencia, 2 = divergen, 1 = error; el step falla en
+  ambos casos no cero). Cualquier cambio de schema sin su migración (o migración que no refleje el
+  schema) rompe la CI antes de aplicar nada.
+- **Verificado:** `migrate diff` → «No difference detected» (exit 0); `migrate status` → «Database
+  schema is up to date»; `migrate dev` → «Already in sync» sin tocar la BD local (conteos de
+  `audit_logs`/`user`/`organization` intactos antes y después).
+
 
 

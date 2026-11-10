@@ -17,5 +17,11 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
+    // BD vacia para el replay de migraciones (migrate dev / migrate diff).
+    // Opcional: sin esta variable el CLI crea y borra una shadow automatica,
+    // lo que exige CREATEDB en el rol de migraciones (cierto en local y CI,
+    // superusuario del contenedor/servicio). Los hostings gestionados suelen
+    // dar roles sin CREATEDB: alli se apunta a una BD vacia dedicada.
+    shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"],
   },
 });

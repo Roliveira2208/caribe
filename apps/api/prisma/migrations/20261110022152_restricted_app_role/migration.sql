@@ -17,8 +17,21 @@ GRANT USAGE ON SCHEMA public TO caribe_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO caribe_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO caribe_app;
 
--- La tabla interna de control de prisma no es de la aplicacion.
-REVOKE ALL PRIVILEGES ON TABLE "_prisma_migrations" FROM caribe_app;
+-- La tabla interna de control de prisma no es de la aplicacion. En la shadow
+-- database esa tabla no existe durante el replay de migraciones (Prisma aplica
+-- los SQL tal cual, sin registrarlos alli), asi que el REVOKE queda
+-- condicionado a su existencia: en la BD real aplica igual y en la shadow es
+-- un no-op que permite volver a usar migrate dev (fix del 2026-11-10).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = '_prisma_migrations'
+  ) THEN
+    REVOKE ALL PRIVILEGES ON TABLE "_prisma_migrations" FROM caribe_app;
+  END IF;
+END
+$$;
 
 -- Tablas y secuencias creadas despues (p. ej. audit_logs en F0) heredan los
 -- mismos permisos DML; T-F0-6 recortara audit_logs a INSERT/SELECT.

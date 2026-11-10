@@ -23,6 +23,10 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
   redirige a la activación cuando la API responde 403 `TWO_FACTOR_REQUIRED` (decisión del dueño,
   2026-11-10). Precedente: T-F0-6b/7.
 - T-F0-7: `audit_logs` nace con `tenant_id` + RLS; la inmutabilidad queda en T-F0-9 (decisión del dueño).
+- Fix de infraestructura (2026-11-10, pedido por el dueño tras T-F0-8, fuera de `tasks.md`): el replay de
+  la shadow database quedó arreglado (REVOKE condicional en la migración del rol + re-baseline del
+  checksum local), `migrate dev` vuelve a estar disponible y la CI comprueba con `prisma migrate diff`
+  que `schema.prisma` y las migraciones no divergen. Ver `design.md`.
 
 ## Preguntas abiertas
 - ¿Hosting definitivo de la API y la base de datos (planes gratuitos con arranque en frío)?
@@ -31,11 +35,6 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
 - ¿Qué inventario básico debe crear el seed de demostración? F0 no tiene tablas de catálogo (fuera del
   alcance de esta change): el seed crea solo identidad y el inventario se añade cuando llegue
   specs/catalog en F1 (decisión del dueño, 2026-11-10).
-- `prisma migrate dev` falla al reproducir la migración del rol restringido en su shadow database
-  (`REVOKE` sobre `_prisma_migrations`, que allí no existe; preexistente de T-F0-4). Mientras, las
-  migraciones con SQL propio se escriben a mano y se aplican con `migrate deploy` (verificado con
-  `migrate diff`). ¿Se arregla la migración del rol (condicional en el REVOKE) aceptando el
-  re-baseline local, o se documenta como vía permanente?
 
 ## Fuera de alcance
 Catálogo, reservas, pagos y tasas (F1 y F2).
