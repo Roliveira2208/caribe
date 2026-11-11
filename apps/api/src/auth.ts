@@ -163,7 +163,8 @@ export const auth = betterAuth({
      * esta confirmada: se deja el fallo en el log y la respuesta pasa.
      */
     after: createAuthMiddleware(async (ctx) => {
-      const audit = betterAuthAdminRouteOf(ctx.path)?.audit;
+      const route = betterAuthAdminRouteOf(ctx.path);
+      const audit = route?.audit;
       if (!audit) return;
 
       const returned = ctx.context.returned;
@@ -192,6 +193,10 @@ export const auth = betterAuth({
             body,
             ctx.query as Record<string, unknown> | undefined,
             session.session.activeOrganizationId,
+            // En las rutas "unknown" (cancel-invitation) el cuerpo no puede
+            // imputar la fila: la lib lo ignora y un organizationId ajeno
+            // desviaria la auditoria a otra agencia (T-F0-19).
+            route?.targetOrganization,
           );
       if (tenantId === undefined) {
         ctx.context.logger.error(`auditoría de ${ctx.path}: sin agencia a la que imputar la fila`);

@@ -5,6 +5,7 @@ import {
   mergeRoutePermissions,
   requiresAdminExclusivePermission,
   targetOrganizationIdOf,
+  tenantOrganizationIdOf,
 } from "../src/admin/admin-route.js";
 
 /**
@@ -104,5 +105,61 @@ describe("clasificación de rutas administrativas (T-F0-8)", () => {
     expect(targetOrganizationIdOf(undefined, { organizationId: "ajena" }, undefined, "activa")).toBe(
       null,
     );
+  });
+
+  it("la auditoría no imputa por el cuerpo en rutas con agencia objetivo desconocida", () => {
+    // "request": el cuerpo/query es la agencia afectada (invite-member...).
+    expect(
+      tenantOrganizationIdOf(
+        "invitation",
+        { id: "inv", organizationId: "devuelta" },
+        { organizationId: "cuerpo" },
+        undefined,
+        "activa",
+        "request",
+      ),
+    ).toBe("cuerpo");
+
+    // "unknown" (cancel-invitation): el cuerpo lo ve el hook crudo y la lib lo
+    // ignora; la fila va a la agencia de la invitación devuelta (T-F0-19).
+    expect(
+      tenantOrganizationIdOf(
+        "invitation",
+        { id: "inv", organizationId: "de-la-invitacion" },
+        { organizationId: "ajena" },
+        { organizationId: "ajena" },
+        "activa",
+        "unknown",
+      ),
+    ).toBe("de-la-invitacion");
+
+    // La entidad devuelta puede venir anidada (remove-member -> { member }).
+    expect(
+      tenantOrganizationIdOf(
+        "member",
+        { member: { id: "m", organizationId: "de-la-membresia" } },
+        { organizationId: "ajena" },
+        undefined,
+        "activa",
+        "unknown",
+      ),
+    ).toBe("de-la-membresia");
+
+    // Sin entidad devuelta con agencia, "unknown" cae a la activa (no al
+    // cuerpo): imputar a una agencia inventada por el cliente nunca.
+    expect(
+      tenantOrganizationIdOf("invitation", {}, { organizationId: "ajena" }, undefined, "activa", "unknown"),
+    ).toBe("activa");
+    // Y "request" mantiene el respaldo entidad -> activa sin cuerpo.
+    expect(
+      tenantOrganizationIdOf(
+        "invitation",
+        { organizationId: "devuelta" },
+        {},
+        undefined,
+        "activa",
+        "request",
+      ),
+    ).toBe("devuelta");
   });
 });

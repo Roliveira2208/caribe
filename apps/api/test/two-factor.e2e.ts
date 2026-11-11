@@ -8,6 +8,7 @@ import { apiConfig } from "../src/config.js";
 import { auth } from "../src/auth.js";
 import { prisma } from "../src/prisma.js";
 import {
+  BETTER_AUTH_ADMIN_ROUTES,
   BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS,
   betterAuthAdminRouteOf,
   AUTH_METADATA_KEYS,
@@ -172,7 +173,28 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     // peticion o no puede conocerse antes de ejecutar (fail-closed). Sin
     // declaracion, una ruta nueva que ignore organizationId podria volver a
     // abrir el bypass de cancel-invitation.
-    const missingTarget = adminRoutes.filter((route) => {
+    const organizationAdminRoutes = adminRoutes.filter(
+      (route) => betterAuthAdminRouteOf(route.path)?.authorization === "organization",
+    );
+    // La comprobacion no puede pasar en vacio: el inventario tiene que ver las
+    // rutas de organizacion reales de la lib...
+    expect(
+      organizationAdminRoutes.length,
+      "el inventario no encontro rutas de organizacion en auth.api",
+    ).toBeGreaterThan(0);
+    // ...y toda ruta declarada como de organizacion tiene que aparecer en el
+    // inventario (una declaracion huerfana tampoco protege de una ruta nueva).
+    const declaredOrganization = BETTER_AUTH_ADMIN_ROUTES.filter(
+      (route) => route.authorization === "organization",
+    );
+    const orphanDeclarations = declaredOrganization.filter(
+      (declared) => !organizationAdminRoutes.some((route) => route.path === declared.path),
+    );
+    expect(
+      orphanDeclarations.map((route) => route.path),
+      "rutas de organizacion declaradas que el inventario no encontro en auth.api",
+    ).toEqual([]);
+    const missingTarget = organizationAdminRoutes.filter((route) => {
       const declared = betterAuthAdminRouteOf(route.path);
       return declared?.authorization === "organization" && declared.targetOrganization === undefined;
     });

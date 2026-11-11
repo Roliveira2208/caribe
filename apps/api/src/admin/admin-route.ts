@@ -540,6 +540,13 @@ export function targetOrganizationIdOf(
  * cuerpo: la invitacion devuelta (que no se borra, se marca canceled) la
  * trae. /organization/update y delete devuelven la propia organizacion, cuyo
  * id ES el tenant.
+ *
+ * `targetOrganization` decide si el cuerpo/query puede usarse para imputar
+ * (T-F0-19): solo cuando la ruta declara que su agencia objetivo sale de la
+ * peticion ("request"). En las rutas "unknown" (cancel-invitation) el hook
+ * after ve el cuerpo crudo antes de que la lib lo valide e ignore el campo,
+ * asi que un `organizationId` de otra agencia desviaria la fila a un tenant
+ * ajeno; ahi manda la entidad devuelta.
  */
 export function tenantOrganizationIdOf(
   entity: string,
@@ -547,8 +554,10 @@ export function tenantOrganizationIdOf(
   body: Record<string, unknown> | undefined,
   query: Record<string, unknown> | undefined,
   activeOrganizationId: string | null | undefined,
+  targetOrganization: "request" | "unknown" | undefined,
 ): string | undefined {
-  const fromInputs = organizationIdFromInputs(body, query);
+  const fromInputs =
+    targetOrganization === "request" ? organizationIdFromInputs(body, query) : undefined;
   if (fromInputs) return fromInputs;
 
   if (entity === "organization") return idOf(returned);

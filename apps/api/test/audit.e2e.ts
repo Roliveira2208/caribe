@@ -40,7 +40,9 @@ import {
  * verificacion f0-foundations, la auditoria de las escrituras
  * administrativas del middleware de Better Auth (delta "Auditoria de las
  * escrituras administrativas de Better Auth": invite-member del owner deja
- * fila con su agencia como tenant).
+ * fila con su agencia como tenant, y cancel-invitation con un
+ * organizationId ajeno en el cuerpo la deja en la agencia de la invitacion,
+ * no en la del cuerpo: T-F0-19).
  */
 describe("audit: rastro inmutable (T-F0-9)", () => {
   let app: ApiApplication;
@@ -322,6 +324,54 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
       expect(row.after).toMatchObject({ id: invitation.id });
       expect(row.ip).toBeTruthy();
       expect(row.at.getTime()).toBeGreaterThanOrEqual(startedAt);
+    });
+
+    it("cancel-invitation con organizationId ajeno en el cuerpo imputa la fila a la agencia de la invitación", async () => {
+      // T-F0-19: con TOTP y sin organización activa, el cuerpo crudo puede
+      // traer un organizationId de otra agencia que la lib ignora. No debe
+      // desviar la fila: manda la agencia de la invitación devuelta.
+      //
+      // Se reutiliza el super admin con TOTP y sin organización activa (el
+      // plugin 2FA limita /two-factor/* a 3 peticiones por 10 s y la suite ya
+      // gasta tres activaciones). Como owner de la agencia nueva, la lib
+      // autoriza la cancelación por la agencia de la invitación.
+      const org = await createAgency(
+        superAdminId,
+        `Agencia CANCEL ${suffix}`,
+        `agencia-cancel-${suffix}`,
+      );
+      const invitationId = randomUUID();
+      await prisma.invitation.create({
+        data: {
+          id: invitationId,
+          organizationId: org.id,
+          email: `invitado-cancel-${suffix}@example.com`,
+          role: "provider",
+          status: "pending",
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          inviterId: superAdminId,
+        },
+      });
+
+      const res = await fetch(`${baseUrl}/api/auth/organization/cancel-invitation`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: superCookie, origin: authOrigin },
+        body: JSON.stringify({ invitationId, organizationId: orgB }),
+      });
+      expect(res.status).toBe(200);
+      const invitation = await prisma.invitation.findUniqueOrThrow({ where: { id: invitationId } });
+      expect(invitation.status).toBe("canceled");
+
+      const row = await prisma.auditLog.findFirstOrThrow({
+        where: { action: "auth.organization.cancel-invitation", entityId: invitationId },
+      });
+      expect(row.tenantId).toBe(org.id);
+      expect(row.actorId).toBe(superAdminId);
+      expect(row.entity).toBe("invitation");
+      // Y ninguna fila imputada a la agencia del cuerpo.
+      expect(
+        await prisma.auditLog.count({ where: { tenantId: orgB, entityId: invitationId } }),
+      ).toBe(0);
     });
   });
 
