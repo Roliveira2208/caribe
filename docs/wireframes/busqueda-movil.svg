@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 900" width="820" height="900" role="img" aria-labelledby="wf-title wf-desc">
+  <title id="wf-title">Búsqueda — móvil</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad de la búsqueda en móvil: buscador colapsado, filtros como chips y tarjetas apiladas con precio en USD y equivalente en VES con fecha de la tasa.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 17px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 700; }
+    .lbl { font-size: 11px; fill: #555; }
+    .val { font-size: 11px; fill: #333; }
+    .price { font-size: 14px; font-weight: 700; }
+    .ves { font-size: 10px; fill: #555; }
+    .btn { font-size: 11px; font-weight: 600; fill: #333; }
+    .phone { fill: #fff; stroke: #666; stroke-width: 1.6; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .ph { fill: #f2f2f2; stroke: #bbb; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1; }
+    .chip { fill: #fff; stroke: #777; stroke-width: 1; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .mark { fill: #fff; stroke: #666; stroke-width: 1.2; }
+    .marktxt { font-size: 12px; font-weight: 700; }
+    .x { stroke: #ccc; stroke-width: 1; }
+    .bar { fill: #fff; stroke: #999; stroke-width: 1; }
+  </style>
+
+  <text x="16" y="28" class="cap">Caribe · Web — Búsqueda · móvil · wireframe de baja fidelidad · es</text>
+
+  <!-- Teléfono -->
+  <rect x="30" y="48" width="390" height="790" rx="24" class="phone"/>
+  <rect x="46" y="64" width="358" height="44" class="bar"/>
+  <text x="60" y="92" class="h1">Caribe</text>
+  <text x="370" y="92" class="lbl" text-anchor="end">ES</text>
+
+  <!-- Buscador colapsado -->
+  <rect x="46" y="120" width="358" height="44" class="field"/>
+  <circle cx="68" cy="142" r="7" class="chip"/>
+  <line x1="73" y1="147" x2="78" y2="152" class="x"/>
+  <text x="90" y="146" class="lbl">Buscar destino · fechas · personas</text>
+
+  <!-- Chips de filtros -->
+  <rect x="46" y="176" width="62" height="26" class="chip"/>
+  <text x="77" y="193" class="btn" text-anchor="middle">Tour</text>
+  <rect x="114" y="176" width="64" height="26" class="chip"/>
+  <text x="146" y="193" class="btn" text-anchor="middle">Hotel</text>
+  <rect x="184" y="176" width="72" height="26" class="chip"/>
+  <text x="220" y="193" class="btn" text-anchor="middle">Paquete</text>
+  <rect x="262" y="176" width="62" height="26" class="chip"/>
+  <text x="293" y="193" class="btn" text-anchor="middle">Vuelo</text>
+  <rect x="330" y="176" width="74" height="26" class="chip"/>
+  <text x="367" y="193" class="btn" text-anchor="middle">Filtros ▾</text>
+
+  <text x="46" y="232" class="lbl">23 resultados · Los Roques</text>
+  <text x="404" y="232" class="lbl" text-anchor="end">precio ▾</text>
+
+  <!-- Tarjeta 1 -->
+  <rect x="46" y="244" width="358" height="168" class="box"/>
+  <rect x="60" y="258" width="150" height="96" class="ph"/>
+  <line x1="60" y1="258" x2="210" y2="354" class="x"/>
+  <line x1="210" y1="258" x2="60" y2="354" class="x"/>
+  <text x="224" y="272" class="h2">Tour Cayo de Agua</text>
+  <text x="224" y="290" class="lbl">Los Roques · Tour · 1 día</text>
+  <text x="224" y="316" class="price">$120 USD</text>
+  <text x="224" y="332" class="ves">≈ 4.320,00 Bs · tasa BCV 10/11/2026</text>
+  <rect x="224" y="342" width="90" height="28" class="btnbox"/>
+  <text x="269" y="360" class="btn" text-anchor="middle">Ver detalle</text>
+  <circle cx="74" cy="382" r="11" class="mark"/>
+  <text x="74" y="386" class="marktxt" text-anchor="middle">1</text>
+  <text x="92" y="386" class="note">mismo dato de precio que escritorio</text>
+
+  <!-- Tarjeta 2 (esqueleto) -->
+  <rect x="46" y="424" width="358" height="168" class="box"/>
+  <rect x="60" y="438" width="150" height="96" class="ph"/>
+  <line x1="60" y1="438" x2="210" y2="534" class="x"/>
+  <line x1="210" y1="438" x2="60" y2="534" class="x"/>
+  <rect x="224" y="452" width="150" height="12" class="line"/>
+  <rect x="224" y="472" width="120" height="8" class="line"/>
+  <text x="224" y="500" class="price">$95 USD</text>
+  <text x="224" y="516" class="ves">≈ 3.420,00 Bs · tasa BCV 10/11/2026</text>
+  <rect x="224" y="526" width="90" height="28" class="btnbox"/>
+  <text x="269" y="544" class="btn" text-anchor="middle">Ver detalle</text>
+
+  <!-- Tarjeta 3 (esqueleto) -->
+  <rect x="46" y="604" width="358" height="150" class="box"/>
+  <rect x="60" y="618" width="150" height="96" class="ph"/>
+  <line x1="60" y1="618" x2="210" y2="714" class="x"/>
+  <line x1="210" y1="618" x2="60" y2="714" class="x"/>
+  <rect x="224" y="632" width="140" height="12" class="line"/>
+  <rect x="224" y="652" width="110" height="8" class="line"/>
+  <text x="224" y="680" class="price">$60 USD</text>
+  <text x="224" y="696" class="ves">≈ 2.160,00 Bs · tasa BCV 10/11/2026</text>
+
+  <!-- Navegación inferior -->
+  <rect x="46" y="768" width="358" height="52" class="bar"/>
+  <text x="105" y="799" class="btn" text-anchor="middle">Inicio</text>
+  <text x="225" y="799" class="btn" text-anchor="middle">Buscar</text>
+  <text x="345" y="799" class="btn" text-anchor="middle">Mis reservas</text>
+
+  <!-- Notas -->
+  <rect x="450" y="48" width="354" height="790" class="notes"/>
+  <text x="466" y="76" class="notetitle">Reglas visibles en esta pantalla</text>
+  <text x="466" y="102" class="note">[1] Cada tarjeta muestra el precio en USD con el equivalente en VES</text>
+  <text x="466" y="120" class="note">a la tasa BCV vigente y su fecha valor. El equivalente es informativo.</text>
+  <text x="466" y="148" class="note">[2] Mobile-first: columna única, filtros como chips horizontales y</text>
+  <text x="466" y="166" class="note">orden por precio accesible desde la cabecera de resultados.</text>
+  <text x="466" y="194" class="note">[3] Navegación inferior persistente: Inicio · Buscar · Mis reservas.</text>
+  <text x="466" y="222" class="note">[4] Mis reservas se consultan sin conexión (PWA); crear y pagar exige</text>
+  <text x="466" y="240" class="note">conexión y la interfaz lo indica.</text>
+</svg>

@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 1010" width="830" height="1010" role="img" aria-labelledby="wf-title wf-desc">
+  <title id="wf-title">Checkout — móvil</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad del checkout en móvil: paso 2 de pago con temporizador de retención del cupo y monto en bolívares, y paso 3 de confirmación con voucher, estado del pago en revisión y leyenda de documento no fiscal.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 17px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 700; }
+    .lbl { font-size: 11px; fill: #555; }
+    .val { font-size: 11px; fill: #333; }
+    .price { font-size: 14px; font-weight: 700; }
+    .ves { font-size: 10px; fill: #555; }
+    .btn { font-size: 11px; font-weight: 600; fill: #333; }
+    .phone { fill: #fff; stroke: #666; stroke-width: 1.6; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .ph { fill: #f2f2f2; stroke: #bbb; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1; }
+    .chip { fill: #fff; stroke: #777; stroke-width: 1; }
+    .radio { fill: #fff; stroke: #777; stroke-width: 1.2; }
+    .rDot { fill: #555; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .mark { fill: #fff; stroke: #666; stroke-width: 1.2; }
+    .marktxt { font-size: 12px; font-weight: 700; }
+    .x { stroke: #ccc; stroke-width: 1; }
+    .sep { stroke: #ddd; stroke-width: 1; }
+    .progress { fill: #ccc; }
+    .bar { fill: #fff; stroke: #999; stroke-width: 1; }
+  </style>
+
+  <text x="16" y="28" class="cap">Caribe · Web — Checkout · móvil · pasos 2 y 3 · wireframe de baja fidelidad · es</text>
+
+  <!-- Teléfono 1: paso 2 · pago -->
+  <rect x="20" y="48" width="390" height="780" rx="24" class="phone"/>
+  <rect x="36" y="64" width="358" height="44" class="bar"/>
+  <text x="52" y="92" class="h2">2 de 3 · Pago</text>
+  <text x="380" y="92" class="lbl" text-anchor="end">ES</text>
+
+  <rect x="36" y="120" width="358" height="72" class="panel"/>
+  <circle cx="52" cy="140" r="11" class="mark"/>
+  <text x="52" y="144" class="marktxt" text-anchor="middle">2</text>
+  <text x="68" y="144" class="h2">Cupo retenido · 29:41</text>
+  <rect x="68" y="156" width="300" height="10" class="field"/>
+  <rect x="68" y="156" width="296" height="10" class="progress"/>
+  <text x="68" y="180" class="note">Retención de 30 min; al vencer, la reserva EXPIRED.</text>
+
+  <rect x="36" y="204" width="358" height="60" class="panel"/>
+  <text x="52" y="226" class="price">Monto a pagar: 8.640,00 Bs</text>
+  <circle cx="376" cy="222" r="11" class="mark"/>
+  <text x="376" y="226" class="marktxt" text-anchor="middle">1</text>
+  <text x="52" y="248" class="note">USD 240,00 · tasa BCV 10/11/2026 (congelada)</text>
+
+  <text x="36" y="288" class="lbl">Método de pago (simulado)</text>
+  <circle cx="44" cy="308" r="7" class="radio"/>
+  <circle cx="44" cy="308" r="3" class="rDot"/>
+  <text x="58" y="312" class="lbl">Pago Móvil</text>
+  <circle cx="170" cy="308" r="7" class="radio"/>
+  <text x="184" y="312" class="lbl">Zelle</text>
+  <circle cx="44" cy="332" r="7" class="radio"/>
+  <text x="58" y="336" class="lbl">Binance Pay</text>
+  <circle cx="170" cy="332" r="7" class="radio"/>
+  <text x="184" y="336" class="lbl">Tarjeta</text>
+
+  <text x="36" y="368" class="lbl">Banco</text>
+  <rect x="36" y="376" width="358" height="34" class="field"/>
+  <text x="48" y="398" class="val">Banco de Venezuela</text>
+  <text x="36" y="432" class="lbl">Teléfono</text>
+  <rect x="36" y="440" width="358" height="34" class="field"/>
+  <text x="48" y="462" class="val">+58 412 0000000</text>
+  <text x="36" y="496" class="lbl">Referencia</text>
+  <rect x="36" y="504" width="358" height="34" class="field"/>
+  <rect x="48" y="516" width="130" height="8" class="line"/>
+
+  <rect x="36" y="560" width="358" height="40" class="btnbox"/>
+  <text x="215" y="585" class="btn" text-anchor="middle">Reportar pago</text>
+  <text x="36" y="620" class="note">El pago queda en revisión (IN_REVIEW).</text>
+
+  <rect x="36" y="640" width="358" height="120" class="box"/>
+  <text x="52" y="664" class="h2">Resumen</text>
+  <text x="52" y="686" class="lbl">Tour Cayo de Agua · Los Roques</text>
+  <text x="52" y="704" class="lbl">15/11/2026 · 2 adultos</text>
+  <text x="52" y="730" class="price">$240 USD</text>
+  <text x="52" y="748" class="ves">≈ 8.640,00 Bs · tasa BCV 10/11/2026</text>
+
+  <rect x="36" y="770" width="358" height="42" class="bar"/>
+  <text x="215" y="796" class="btn" text-anchor="middle">‹ Volver</text>
+
+  <!-- Teléfono 2: paso 3 · confirmación -->
+  <rect x="440" y="48" width="390" height="780" rx="24" class="phone"/>
+  <rect x="456" y="64" width="358" height="44" class="bar"/>
+  <text x="472" y="92" class="h2">3 de 3 · Confirmación</text>
+  <text x="800" y="92" class="lbl" text-anchor="end">ES</text>
+
+  <rect x="456" y="120" width="236" height="28" class="chip"/>
+  <text x="468" y="139" class="lbl">Pago en revisión · IN_REVIEW</text>
+  <circle cx="712" cy="134" r="11" class="mark"/>
+  <text x="712" y="138" class="marktxt" text-anchor="middle">3</text>
+  <text x="456" y="170" class="note">AUTO aprueba al instante · MANUAL lo revisa un admin</text>
+
+  <rect x="456" y="188" width="358" height="270" class="box"/>
+  <text x="472" y="216" class="h2">VOUCHER DE RESERVA</text>
+  <text x="472" y="238" class="lbl">Código: CR-2026-0001</text>
+  <rect x="700" y="204" width="96" height="96" class="ph"/>
+  <line x1="700" y1="204" x2="796" y2="300" class="x"/>
+  <line x1="796" y1="204" x2="700" y2="300" class="x"/>
+  <text x="748" y="256" class="lbl" text-anchor="middle">QR</text>
+  <line x1="472" y1="310" x2="798" y2="310" class="sep"/>
+  <text x="472" y="332" class="lbl">Tour Cayo de Agua · Los Roques</text>
+  <text x="472" y="350" class="lbl">15/11/2026 · 2 adultos</text>
+  <text x="472" y="368" class="lbl">Viajero: María Pérez</text>
+  <text x="472" y="386" class="lbl">Total: $240 USD · 8.640,00 Bs</text>
+  <line x1="472" y1="400" x2="798" y2="400" class="sep"/>
+  <circle cx="486" cy="424" r="11" class="mark"/>
+  <text x="486" y="428" class="marktxt" text-anchor="middle">4</text>
+  <text x="504" y="430" class="h2">DOCUMENTO NO FISCAL</text>
+
+  <rect x="456" y="478" width="358" height="38" class="btnbox"/>
+  <text x="635" y="503" class="btn" text-anchor="middle">Descargar voucher (PDF)</text>
+  <rect x="456" y="526" width="358" height="38" class="btnbox"/>
+  <text x="635" y="551" class="btn" text-anchor="middle">Descargar comprobante (PDF)</text>
+  <text x="456" y="590" class="note">Ambos PDF llevan la leyenda «Documento no fiscal».</text>
+  <text x="456" y="624" class="lbl">Ver en Mis reservas ›</text>
+
+  <rect x="456" y="770" width="358" height="42" class="bar"/>
+  <text x="635" y="796" class="btn" text-anchor="middle">‹ Volver al inicio</text>
+
+  <!-- Notas -->
+  <rect x="20" y="850" width="810" height="140" class="notes"/>
+  <text x="36" y="878" class="notetitle">Reglas visibles en esta pantalla</text>
+  <text x="36" y="902" class="note">[1] La tasa BCV se congela al iniciar el pago: el monto en VES no se recalcula.</text>
+  <text x="36" y="920" class="note">[2] Retención del cupo de 30 min con cuenta regresiva visible durante el pago.</text>
+  <text x="36" y="938" class="note">[3] El pago nace IN_REVIEW; el modo de la agencia (AUTO/MANUAL) define quién lo aprueba.</text>
+  <text x="36" y="956" class="note">[4] Voucher y comprobante llevan siempre la leyenda «Documento no fiscal».</text>
+  <text x="36" y="974" class="note">El paso 1 (viajero y resumen) sigue el mismo flujo en columna única; botones a todo el ancho.</text>
+</svg>

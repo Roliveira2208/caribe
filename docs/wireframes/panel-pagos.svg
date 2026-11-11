@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" role="img" aria-labelledby="wf-title wf-desc">
+  <title id="wf-title">Panel de pagos — admin</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad del panel de reservas y pagos del admin: badge del modo de aprobación (AUTO o MANUAL), filtros por estado, método y fecha, y tabla de pagos con estado IN_REVIEW, APPROVED o REJECTED y acciones de aprobar o rechazar.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 20px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 700; }
+    .lbl { font-size: 12px; fill: #555; }
+    .val { font-size: 12px; fill: #333; }
+    .btn { font-size: 12.5px; font-weight: 600; fill: #333; }
+    .abtn { font-size: 11px; font-weight: 600; fill: #333; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1.2; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1.2; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1.2; }
+    .chip { fill: #fff; stroke: #777; stroke-width: 1; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .mark { fill: #fff; stroke: #666; stroke-width: 1.2; }
+    .marktxt { font-size: 12px; font-weight: 700; }
+    .sep { stroke: #ddd; stroke-width: 1; }
+  </style>
+
+  <!-- Encabezado del wireframe -->
+  <text x="16" y="28" class="cap">Caribe Admin — Reservas y pagos · escritorio · wireframe de baja fidelidad · es</text>
+
+  <!-- Header del panel -->
+  <rect x="16" y="44" width="1168" height="44" class="box"/>
+  <text x="32" y="72" class="h1">Caribe Admin</text>
+  <text x="920" y="72" class="lbl">Admin · María P.</text>
+  <text x="1082" y="72" class="lbl">ES | EN</text>
+
+  <!-- Modo de aprobación y contador de revisión -->
+  <rect x="16" y="100" width="316" height="34" class="panel"/>
+  <circle cx="32" cy="117" r="11" class="mark"/>
+  <text x="32" y="121" class="marktxt" text-anchor="middle">3</text>
+  <text x="48" y="121" class="h2">Modo de aprobación: MANUAL</text>
+  <text x="352" y="121" class="note">payment_mode por agencia · AUTO aprueba el pago al instante</text>
+  <rect x="900" y="100" width="284" height="34" class="chip"/>
+  <text x="1042" y="121" class="btn" text-anchor="middle">3 pagos en revisión</text>
+
+  <!-- Filtros -->
+  <text x="16" y="160" class="lbl">Estado</text>
+  <rect x="16" y="168" width="160" height="32" class="field"/>
+  <text x="28" y="189" class="val">Todos ▾</text>
+  <text x="196" y="160" class="lbl">Método</text>
+  <rect x="196" y="168" width="160" height="32" class="field"/>
+  <text x="208" y="189" class="val">Todos ▾</text>
+  <text x="376" y="160" class="lbl">Fecha</text>
+  <rect x="376" y="168" width="160" height="32" class="field"/>
+  <text x="388" y="189" class="val">10/11/2026 ▾</text>
+  <text x="556" y="160" class="lbl">Buscar</text>
+  <rect x="556" y="168" width="240" height="32" class="field"/>
+  <rect x="568" y="180" width="140" height="8" class="line"/>
+
+  <!-- Tabla de pagos -->
+  <rect x="16" y="216" width="1168" height="252" class="box"/>
+  <rect x="16" y="216" width="1168" height="32" class="panel"/>
+  <text x="32" y="237" class="lbl">Pago</text>
+  <text x="150" y="237" class="lbl">Reserva</text>
+  <text x="290" y="237" class="lbl">Cliente</text>
+  <text x="470" y="237" class="lbl">Método</text>
+  <text x="630" y="237" class="lbl">Monto USD</text>
+  <text x="740" y="237" class="lbl">VES · tasa</text>
+  <text x="920" y="237" class="lbl">Estado</text>
+  <text x="1050" y="237" class="lbl">Acciones</text>
+
+  <!-- Fila 1: en revisión -->
+  <line x1="16" y1="248" x2="1184" y2="248" class="sep"/>
+  <text x="32" y="274" class="val">PAG-0142</text>
+  <text x="150" y="274" class="val">CR-2026-0001</text>
+  <text x="290" y="274" class="val">María Pérez</text>
+  <text x="470" y="274" class="val">Pago Móvil</text>
+  <text x="630" y="274" class="val">$240,00</text>
+  <text x="740" y="274" class="val">8.640,00 · 36,00</text>
+  <circle cx="884" cy="270" r="10" class="mark"/>
+  <text x="884" y="274" class="marktxt" text-anchor="middle">1</text>
+  <rect x="920" y="256" width="104" height="26" class="chip"/>
+  <text x="928" y="273" class="lbl">IN_REVIEW</text>
+  <circle cx="1036" cy="270" r="10" class="mark"/>
+  <text x="1036" y="274" class="marktxt" text-anchor="middle">2</text>
+  <rect x="1050" y="256" width="62" height="26" class="btnbox"/>
+  <text x="1081" y="273" class="abtn" text-anchor="middle">Aprobar</text>
+  <rect x="1118" y="256" width="66" height="26" class="btnbox"/>
+  <text x="1151" y="273" class="abtn" text-anchor="middle">Rechazar</text>
+
+  <!-- Fila 2: aprobado -->
+  <line x1="16" y1="292" x2="1184" y2="292" class="sep"/>
+  <text x="32" y="318" class="val">PAG-0141</text>
+  <text x="150" y="318" class="val">CR-2026-0002</text>
+  <text x="290" y="318" class="val">Juan Díaz</text>
+  <text x="470" y="318" class="val">Zelle</text>
+  <text x="630" y="318" class="val">$120,00</text>
+  <text x="740" y="318" class="val">4.320,00 · 36,00</text>
+  <rect x="920" y="300" width="104" height="26" class="chip"/>
+  <text x="928" y="317" class="lbl">APPROVED</text>
+  <text x="1080" y="318" class="lbl">—</text>
+
+  <!-- Fila 3: rechazado -->
+  <line x1="16" y1="336" x2="1184" y2="336" class="sep"/>
+  <text x="32" y="362" class="val">PAG-0139</text>
+  <text x="150" y="362" class="val">CR-2026-0004</text>
+  <text x="290" y="362" class="val">Ana Rojas</text>
+  <text x="470" y="362" class="val">Binance Pay</text>
+  <text x="630" y="362" class="val">$95,00</text>
+  <text x="740" y="362" class="val">3.420,00 · 36,00</text>
+  <rect x="920" y="344" width="104" height="26" class="chip"/>
+  <text x="928" y="361" class="lbl">REJECTED</text>
+  <text x="1080" y="362" class="lbl">—</text>
+
+  <!-- Filas esqueleto -->
+  <line x1="16" y1="380" x2="1184" y2="380" class="sep"/>
+  <rect x="32" y="396" width="80" height="10" class="line"/>
+  <rect x="150" y="396" width="100" height="10" class="line"/>
+  <rect x="290" y="396" width="90" height="10" class="line"/>
+  <rect x="470" y="396" width="80" height="10" class="line"/>
+  <rect x="630" y="396" width="60" height="10" class="line"/>
+  <rect x="740" y="396" width="110" height="10" class="line"/>
+  <rect x="920" y="396" width="104" height="10" class="line"/>
+  <rect x="1050" y="396" width="60" height="10" class="line"/>
+  <line x1="16" y1="424" x2="1184" y2="424" class="sep"/>
+  <rect x="32" y="440" width="80" height="10" class="line"/>
+  <rect x="150" y="440" width="100" height="10" class="line"/>
+  <rect x="290" y="440" width="90" height="10" class="line"/>
+  <rect x="470" y="440" width="80" height="10" class="line"/>
+  <rect x="630" y="440" width="60" height="10" class="line"/>
+  <rect x="740" y="440" width="110" height="10" class="line"/>
+  <rect x="920" y="440" width="104" height="10" class="line"/>
+  <rect x="1050" y="440" width="60" height="10" class="line"/>
+  <line x1="16" y1="468" x2="1184" y2="468" class="sep"/>
+
+  <text x="16" y="500" class="lbl">Página 1 de 6 · 1 2 3 … →</text>
+
+  <!-- Reglas visibles -->
+  <rect x="16" y="520" width="1168" height="110" class="notes"/>
+  <text x="32" y="544" class="notetitle">Reglas visibles en esta pantalla</text>
+  <text x="32" y="566" class="note">[1] Cada pago guarda su par original (exchange_rate_id y amount_ves): la columna VES · tasa muestra el monto congelado y la tasa con que se pagó, sin recálculo.</text>
+  <text x="32" y="586" class="note">[2] Estados del pago: IN_REVIEW (en revisión), APPROVED (aprobado), REJECTED (rechazado); aprobar o rechazar escribe en audit_logs.</text>
+  <text x="32" y="606" class="note">[3] Modo de aprobación por agencia (payment_mode): AUTO aprueba al instante; MANUAL exige revisión (badge de arriba).</text>
+</svg>

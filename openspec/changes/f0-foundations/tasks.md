@@ -29,5 +29,9 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
     apps; login por el proxy del admin; `GET /admin/audit-logs` con org activa responde 403
     `TWO_FACTOR_REQUIRED`; `two-factor/enable` → `verify-totp` → audit-logs 200; login posterior devuelve
     `twoFactorRedirect` con cookie pendiente de 10 min y `verify-totp` crea la sesión.
-- [ ] T-F0-11 Wireframes SVG de baja fidelidad de búsqueda, detalle, checkout y panel de pagos en `docs/wireframes/`.
+- [x] T-F0-11 Wireframes SVG de baja fidelidad de búsqueda, detalle, checkout y panel de pagos en `docs/wireframes/`.
+  - Prueba: los 6 SVG (busqueda, busqueda-movil, detalle, checkout, checkout-movil, panel-pagos) validan como XML
+    bien formado y contienen las reglas obligatorias (precio USD + equivalente VES con tasa BCV y fecha valor,
+    temporizador de retención de 30 min, estados IN_REVIEW/APPROVED/REJECTED y modos AUTO/MANUAL, leyenda
+    «Documento no fiscal», versiones móviles); `docs/wireframes/README.md` indexa pantallas y reglas.
 - [ ] T-F0-12 Verificación de la change: `/verify f0-foundations` en conversación limpia; archivar con `/opsx:archive`.
