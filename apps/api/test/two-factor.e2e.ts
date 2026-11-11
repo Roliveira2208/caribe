@@ -27,6 +27,7 @@ import {
   signIn,
   totpCode,
   totpSecretFromUri,
+  userWithTotp,
 } from "./auth-helpers.js";
 
 /**
@@ -48,6 +49,8 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
   let baseUrl: string;
   const suffix = randomUUID().slice(0, 8);
   let cachedOwnerCookie: string | undefined;
+  let cachedOwnerWithoutOrg: OwnerWithoutActiveOrg | undefined;
+  let cachedAgentWithoutOrg: { cookie: string; userId: string } | undefined;
 
   beforeAll(async () => {
     app = await createApp();
@@ -115,6 +118,21 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
       expect(declared, `${route.path} sin metodos declarados en la tabla`).toContain(route.method);
     }
 
+    // La capa declarada no puede contradecir la familia ni la auditoria: un
+    // error aqui imputaria a plataforma la fila de una agencia (o al reves).
+    const misclassified = adminRoutes.filter((route) => {
+      const declared = betterAuthAdminRouteOf(route.path);
+      if (!declared) return true;
+      if (route.path.startsWith("/admin")) {
+        return declared.authorization !== "platform" || (declared.audit !== undefined && !declared.audit.platform);
+      }
+      return declared.authorization !== "organization" || declared.audit?.platform === true;
+    });
+    expect(
+      misclassified.map((route) => route.path),
+      "rutas administrativas con capa de autorizacion mal declarada",
+    ).toEqual([]);
+
     // El hook before exige TOTP antes de validar el cuerpo o los permisos:
     // con un admin sin TOTP y un cuerpo vacio, todas responden 403 con el
     // codigo de aplicacion (no 400 ni 403 opaco).
@@ -135,6 +153,38 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     // Negativo: una ruta de Better Auth no administrativa sigue accesible.
     const list = await callBetterAuthRoute({ method: "GET", path: "/organization/list" }, cookie);
     expect(list.status).toBe(200);
+
+    // La clasificacion no puede depender solo de la organizacion activa (B3
+    // del segundo informe): con la cookie sin organizacion activa y la
+    // agencia objetivo en el cuerpo, las escrituras de organizacion siguen
+    // exigiendo TOTP; sin objetivo determinable (cuerpo vacio) fallan
+    // cerradas para un rol administrativo en cualquier agencia. La agencia
+    // objetivo es desechable: /organization/delete la borraria si la
+    // exigencia no se aplicara antes.
+    const noActiveOrg = await ownerWithoutActiveOrg();
+    const disposable = await createAgency(
+      noActiveOrg.userId,
+      `Agencia B3 borrado ${suffix}`,
+      `agencia-b3-borrado-${suffix}`,
+    );
+    const passes = [
+      { label: "organizationId en el cuerpo", body: { organizationId: disposable.id } },
+      { label: "cuerpo vacio", body: {} },
+    ];
+    for (const pass of passes) {
+      const passFailures: string[] = [];
+      for (const route of adminRoutes) {
+        const res = await callBetterAuthRoute(route, noActiveOrg.cookie, pass.body);
+        const body = (await res.json().catch(() => null)) as { code?: string } | null;
+        if (res.status !== 403 || body?.code !== "TWO_FACTOR_REQUIRED") {
+          passFailures.push(`${route.method} ${route.path} respondio ${res.status}`);
+        }
+      }
+      expect(
+        passFailures,
+        `rutas administrativas de Better Auth sin exigir TOTP (${pass.label}): ${passFailures.join("; ")}`,
+      ).toEqual([]);
+    }
   });
 
   it("admin sin TOTP recibe 403 TWO_FACTOR_REQUIRED en un endpoint administrativo", async () => {
@@ -239,6 +289,114 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     expect(res.status).toBe(401);
   });
 
+  describe("clasificación por la organización objetivo (fix B3 del segundo informe)", () => {
+    it("owner sin TOTP ni organización activa: organizationId en el cuerpo → 403 y sin efecto", async () => {
+      const { cookie, orgId, providerMemberId } = await ownerWithoutActiveOrg();
+      const email = `invitado-b3-${suffix}@example.com`;
+
+      const invite = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie, origin: authOrigin },
+        body: JSON.stringify({ email, role: "provider", organizationId: orgId }),
+      });
+      expect(invite.status).toBe(403);
+      await expect(invite.json()).resolves.toMatchObject({ code: "TWO_FACTOR_REQUIRED" });
+      await expect(
+        prisma.invitation.findFirst({ where: { email, organizationId: orgId } }),
+      ).resolves.toBeNull();
+
+      const role = await fetch(`${baseUrl}/api/auth/organization/update-member-role`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie, origin: authOrigin },
+        body: JSON.stringify({ memberId: providerMemberId, role: "agent", organizationId: orgId }),
+      });
+      expect(role.status).toBe(403);
+      await expect(role.json()).resolves.toMatchObject({ code: "TWO_FACTOR_REQUIRED" });
+      const member = await prisma.member.findUniqueOrThrow({ where: { id: providerMemberId } });
+      expect(member.role).toBe("provider");
+    });
+
+    it("owner sin TOTP ni organización activa: escritura sin objetivo determinable → falla cerrado", async () => {
+      const { cookie } = await ownerWithoutActiveOrg();
+      const res = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie, origin: authOrigin },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(403);
+      await expect(res.json()).resolves.toMatchObject({ code: "TWO_FACTOR_REQUIRED" });
+
+      // Un rol no administrativo recibe el rechazo normal de la lib (400 por
+      // falta de organización), no el código de aplicación: el fail-closed no
+      // convierte un 400 legítimo en una pantalla de activación de TOTP.
+      const agent = await agentWithoutActiveOrg();
+      const resAgent = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: agent.cookie, origin: authOrigin },
+        body: JSON.stringify({}),
+      });
+      expect(resAgent.status).toBe(400);
+      const bodyAgent = (await resAgent.json()) as { code?: string };
+      expect(bodyAgent.code).not.toBe("TWO_FACTOR_REQUIRED");
+    });
+
+    it("owner de una agencia con organizationId de otra donde no es admin → rechazo de la lib, sin efecto", async () => {
+      const { cookie, userId } = await ownerWithoutActiveOrg();
+      const orgB = await createAgency(
+        await createUser(`owner-b3b-${suffix}@example.com`),
+        `Agencia B3 B ${suffix}`,
+        `agencia-b3-b-${suffix}`,
+      );
+      await addMember(orgB.id, userId, "agent");
+      const email = `invitado-b3b-${suffix}@example.com`;
+
+      // La clasificación usa el rol EN LA AGENCIA OBJETIVO (agente), no el
+      // rol administrativo que el llamador tiene en su propia agencia: sin
+      // TOTP no hay exigencia y la lib rechaza por permiso.
+      const res = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie, origin: authOrigin },
+        body: JSON.stringify({ email, role: "provider", organizationId: orgB.id }),
+      });
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { code?: string };
+      expect(body.code).not.toBe("TWO_FACTOR_REQUIRED");
+      await expect(
+        prisma.invitation.findFirst({ where: { email, organizationId: orgB.id } }),
+      ).resolves.toBeNull();
+    });
+
+    it("owner con TOTP y sin organización activa escribe en su agencia: 2xx y fila de auditoría", async () => {
+      const owner = await userWithTotp(baseUrl, `owner-b3-totp-${suffix}@example.com`);
+      const org = await createAgency(
+        owner.userId,
+        `Agencia B3 TOTP ${suffix}`,
+        `agencia-b3-totp-${suffix}`,
+      );
+      const email = `invitado-b3-totp-${suffix}@example.com`;
+
+      const res = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: owner.cookie, origin: authOrigin },
+        body: JSON.stringify({ email, role: "provider", organizationId: org.id }),
+      });
+      expect(res.status).toBe(200);
+      const invitation = (await res.json()) as { id: string };
+
+      const row = await prisma.auditLog.findFirstOrThrow({
+        where: { action: "auth.organization.invite-member", entityId: invitation.id },
+      });
+      expect(row.tenantId).toBe(org.id);
+      expect(row.actorId).toBe(owner.userId);
+    });
+
+    it("una ruta de organización no administrativa sigue accesible sin organización activa", async () => {
+      const { cookie } = await ownerWithoutActiveOrg();
+      const list = await callBetterAuthRoute({ method: "GET", path: "/organization/list" }, cookie);
+      expect(list.status).toBe(200);
+    });
+  });
+
   it("la activacion queda accesible y tras verificar el TOTP el endpoint responde 2xx", async () => {
     const email = `owner-full-${suffix}@example.com`;
     const owner = await createUser(email);
@@ -287,6 +445,48 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     return cookie;
   }
 
+  /**
+   * Owner sin organizacion activa (el estado por defecto tras el login: la
+   * autoseleccion de agencia llega en F1). Su agencia tiene un miembro con rol
+   * provider para ejercitar update-member-role. Cacheado: el rate limit de
+   * /sign-in/email es por IP y esta suite ya gasta varios logins.
+   */
+  async function ownerWithoutActiveOrg(): Promise<OwnerWithoutActiveOrg> {
+    if (cachedOwnerWithoutOrg) return cachedOwnerWithoutOrg;
+    const email = `owner-b3-${suffix}@example.com`;
+    const userId = await createUser(email);
+    const org = await createAgency(userId, `Agencia B3 ${suffix}`, `agencia-b3-${suffix}`);
+    const providerId = await createUser(`provider-b3-${suffix}@example.com`);
+    await addMember(org.id, providerId, "provider");
+    const provider = await prisma.member.findFirstOrThrow({
+      where: { organizationId: org.id, userId: providerId },
+    });
+    const cookie = await signIn(baseUrl, email);
+    cachedOwnerWithoutOrg = {
+      cookie,
+      userId,
+      orgId: org.id,
+      providerMemberId: provider.id,
+    };
+    return cachedOwnerWithoutOrg;
+  }
+
+  /** Agente sin organizacion activa: rol no administrativo en su unica agencia. */
+  async function agentWithoutActiveOrg(): Promise<{ cookie: string; userId: string }> {
+    if (cachedAgentWithoutOrg) return cachedAgentWithoutOrg;
+    const email = `agent-b3-${suffix}@example.com`;
+    const userId = await createUser(email);
+    const org = await createAgency(
+      await createUser(`owner-b3-agent-${suffix}@example.com`),
+      `Agencia B3 Agent ${suffix}`,
+      `agencia-b3-agent-${suffix}`,
+    );
+    await addMember(org.id, userId, "agent");
+    const cookie = await signIn(baseUrl, email);
+    cachedAgentWithoutOrg = { cookie, userId };
+    return cachedAgentWithoutOrg;
+  }
+
   async function callAdminOverride(cookie: string): Promise<Response> {
     return fetch(`${baseUrl}/api/v1/admin/exchange-rates/override`, {
       method: "PUT",
@@ -312,6 +512,7 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
   async function callBetterAuthRoute(
     route: Pick<RegisteredRoute, "method" | "path">,
     cookie: string,
+    body: Record<string, unknown> = {},
   ): Promise<Response> {
     const url = `${baseUrl}/api/auth${route.path}`;
     const headers: Record<string, string> = { cookie, origin: authOrigin };
@@ -319,11 +520,19 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     if (route.method !== "GET" && route.method !== "HEAD") {
       headers["content-type"] = "application/json";
       // El hook before exige TOTP antes de validar el cuerpo: basta vacio.
-      init.body = JSON.stringify({});
+      init.body = JSON.stringify(body);
     }
     return fetch(url, init);
   }
 });
+
+/** Fixture cacheado de owner sin organizacion activa (ver ownerWithoutActiveOrg). */
+interface OwnerWithoutActiveOrg {
+  cookie: string;
+  userId: string;
+  orgId: string;
+  providerMemberId: string;
+}
 
 interface RegisteredRoute {
   method: string;

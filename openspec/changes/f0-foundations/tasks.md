@@ -46,6 +46,14 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
   plugin admin (super admin con TOTP → 200, fila de plataforma en `audit_logs`, víctima 401 con la cookie
   revocada). Detectó y corrigió el desalineo del preestado de `revoke-user-session` (commit `c0cb9a8`).
   - Prueba: audit › "Super Admin revoca una sesión".
+- [x] T-F0-15 Fix del bloqueante B3 del segundo informe: clasificar la exigencia de TOTP de las escrituras de
+  `/api/auth/organization/*` por la organización objetivo (cuerpo, query o activa) y no por la activa; si no puede
+  determinarse, falla cerrado (403 `TWO_FACTOR_REQUIRED` para un rol administrativo en cualquier agencia). La
+  auditoría se imputa a la agencia objetivo o a la de la entidad devuelta (`cancel-invitation`).
+  - Prueba: auth-access › "clasificación por la organización objetivo (fix B3 del segundo informe)": owner sin TOTP
+    ni organización activa con `organizationId` en el cuerpo, flujo con TOTP, escritura sin objetivo determinable
+    (owner y agente), owner escribiendo en otra agencia y ruta de organización no administrativa; el inventario de
+    Better Auth recorre también la pasada por `organizationId` y la de cuerpo vacío.
 - Nota (M1 del informe): configurar `trustedProxies` al decidir el hosting; hoy la IP tras un proxy resuelve a
   null y el rate limit de login degenera en bucket global.
 - Nota (M2 del informe): Helmet, CSP y CORS antes de cualquier demo pública (faseados en F5 por el SDD §13).

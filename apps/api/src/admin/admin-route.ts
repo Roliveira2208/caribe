@@ -188,6 +188,13 @@ export interface BetterAuthAdminRoute {
   path: string;
   /** Metodos HTTP con los que responde la ruta. */
   methods: readonly string[];
+  /**
+   * Capa que autoriza la escritura (B3 del segundo informe): las rutas del
+   * plugin admin son de plataforma; las de organizacion, de agencia. El hook
+   * before resuelve la organizacion objetivo solo en las de organizacion y el
+   * after imputa la fila de auditoria a esa agencia.
+   */
+  authorization: "platform" | "organization";
   /** Regla de auditoria; ausente en las rutas administrativas de solo lectura. */
   audit?: BetterAuthAuditRule;
 }
@@ -222,6 +229,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/set-role",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.set-role",
@@ -232,6 +240,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/create-user",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.create-user",
@@ -242,6 +251,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/update-user",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.update-user",
@@ -252,6 +262,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/ban-user",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.ban-user",
@@ -262,6 +273,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/unban-user",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.unban-user",
@@ -272,6 +284,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/impersonate-user",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.impersonate-user",
@@ -282,6 +295,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/stop-impersonating",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.stop-impersonating",
@@ -292,6 +306,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/revoke-user-session",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.revoke-user-session",
@@ -306,6 +321,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/revoke-user-sessions",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.revoke-user-sessions",
@@ -316,6 +332,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/remove-user",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.remove-user",
@@ -326,6 +343,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/admin/set-user-password",
     methods: ["POST"],
+    authorization: "platform",
     audit: {
       platform: true,
       action: "auth.admin.set-user-password",
@@ -334,17 +352,18 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
     },
   },
   // Plugin admin: solo lectura. Exigen TOTP, no auditan.
-  { path: "/admin/get-user", methods: ["GET"] },
-  { path: "/admin/list-users", methods: ["GET"] },
-  { path: "/admin/list-user-sessions", methods: ["POST"] },
-  { path: "/admin/has-permission", methods: ["POST"] },
+  { path: "/admin/get-user", methods: ["GET"], authorization: "platform" },
+  { path: "/admin/list-users", methods: ["GET"], authorization: "platform" },
+  { path: "/admin/list-user-sessions", methods: ["POST"], authorization: "platform" },
+  { path: "/admin/has-permission", methods: ["POST"], authorization: "platform" },
   // Plugin organization: escrituras administrativas de agencia. create no
   // audita ni se salta con sesion: con allowUserToCreateOrganization: false
   // una sesion de usuario nunca llega a escribir (403 de la propia lib).
-  { path: "/organization/create", methods: ["POST"] },
+  { path: "/organization/create", methods: ["POST"], authorization: "organization" },
   {
     path: "/organization/update",
     methods: ["POST"],
+    authorization: "organization",
     audit: {
       action: "auth.organization.update",
       entity: "organization",
@@ -354,6 +373,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/organization/delete",
     methods: ["POST"],
+    authorization: "organization",
     audit: {
       action: "auth.organization.delete",
       entity: "organization",
@@ -363,6 +383,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/organization/invite-member",
     methods: ["POST"],
+    authorization: "organization",
     audit: {
       action: "auth.organization.invite-member",
       entity: "invitation",
@@ -372,6 +393,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/organization/cancel-invitation",
     methods: ["POST"],
+    authorization: "organization",
     audit: {
       action: "auth.organization.cancel-invitation",
       entity: "invitation",
@@ -381,6 +403,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/organization/remove-member",
     methods: ["POST"],
+    authorization: "organization",
     audit: {
       action: "auth.organization.remove-member",
       entity: "member",
@@ -390,6 +413,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   {
     path: "/organization/update-member-role",
     methods: ["POST"],
+    authorization: "organization",
     audit: {
       action: "auth.organization.update-member-role",
       entity: "member",
@@ -429,4 +453,71 @@ const betterAuthRouteByPath = new Map<string, BetterAuthAdminRoute>(
 export function betterAuthAdminRouteOf(path: string | undefined): BetterAuthAdminRoute | undefined {
   if (!path) return undefined;
   return betterAuthRouteByPath.get(path);
+}
+
+// ---------------------------------------------------------------------------
+// Organizacion objetivo de una escritura (B3 del segundo informe)
+// ---------------------------------------------------------------------------
+
+/** string no vacia: Better Auth trata "" como ausente en body.organizationId. */
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+/** organizationId de un registro (invitacion, miembro). */
+function organizationIdOfRecord(record: Record<string, unknown> | undefined): string | undefined {
+  return nonEmptyString(record?.["organizationId"]);
+}
+
+/** organizationId del cuerpo o de la query, en el orden en que los lee la lib. */
+function organizationIdFromInputs(
+  body: Record<string, unknown> | undefined,
+  query: Record<string, unknown> | undefined,
+): string | undefined {
+  return nonEmptyString(body?.["organizationId"]) ?? nonEmptyString(query?.["organizationId"]);
+}
+
+/**
+ * Organizacion objetivo de una escritura de /organization/* para clasificar
+ * el segundo factor: la del cuerpo o la query y, si no viene, la activa.
+ * undefined si no puede determinarse: el hook falla cerrado.
+ *
+ * No se usa en las rutas del plugin admin: son de plataforma y no afectan a
+ * una agencia en concreto.
+ */
+export function targetOrganizationIdOf(
+  body: Record<string, unknown> | undefined,
+  query: Record<string, unknown> | undefined,
+  activeOrganizationId: string | null | undefined,
+): string | undefined {
+  return organizationIdFromInputs(body, query) ?? nonEmptyString(activeOrganizationId);
+}
+
+/**
+ * Agencia a la que imputar la fila de auditoria de una escritura de
+ * organizacion: la del cuerpo/query, la de la entidad devuelta o, en su
+ * defecto, la activa. cancel-invitation no recibe organizationId en el
+ * cuerpo: la invitacion devuelta (que no se borra, se marca canceled) la
+ * trae. /organization/update y delete devuelven la propia organizacion, cuyo
+ * id ES el tenant.
+ */
+export function tenantOrganizationIdOf(
+  entity: string,
+  returned: Record<string, unknown>,
+  body: Record<string, unknown> | undefined,
+  query: Record<string, unknown> | undefined,
+  activeOrganizationId: string | null | undefined,
+): string | undefined {
+  const fromInputs = organizationIdFromInputs(body, query);
+  if (fromInputs) return fromInputs;
+
+  if (entity === "organization") return idOf(returned);
+
+  const nested =
+    entity === "invitation"
+      ? organizationIdOfRecord(asRecord(returned["invitation"]))
+      : entity === "member"
+        ? organizationIdOfRecord(asRecord(returned["member"]))
+        : undefined;
+  return nested ?? organizationIdOfRecord(returned) ?? nonEmptyString(activeOrganizationId);
 }

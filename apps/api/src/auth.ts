@@ -8,7 +8,7 @@ import {
 } from "better-auth/api";
 import { admin, organization, twoFactor } from "better-auth/plugins";
 import { TWO_FACTOR_REQUIRED } from "@caribe/shared";
-import { betterAuthAdminRouteOf, type BetterAuthPreState } from "./admin/admin-route.js";
+import { betterAuthAdminRouteOf, targetOrganizationIdOf, tenantOrganizationIdOf, type BetterAuthPreState } from "./admin/admin-route.js";
 import { TWO_FACTOR_REQUIRED_MESSAGE, isAdminLevelSession, type AdminSessionInfo } from "./admin/admin-session.js";
 import type { AuditEntry } from "./audit/audit.service.js";
 import { AuditService } from "./audit/audit.service.js";
@@ -73,16 +73,6 @@ async function recordBetterAuthAudit(entry: AuditEntry): Promise<void> {
   });
 }
 
-/** Agencia afectada por una escritura de organization: body, si viene, si no la activa. */
-function organizationIdOf(
-  body: Record<string, unknown>,
-  activeOrganizationId: string | null | undefined,
-): string | undefined {
-  const fromBody = body["organizationId"];
-  if (typeof fromBody === "string") return fromBody;
-  return typeof activeOrganizationId === "string" ? activeOrganizationId : undefined;
-}
-
 export const auth = betterAuth({
   appName: "Caribe",
   baseURL: requiredEnv("BETTER_AUTH_URL"),
@@ -124,7 +114,23 @@ export const auth = betterAuth({
       // getSessionFromCtx tipa la sesion con los tipos base de la lib (sin
       // las props que anaden los plugins, como activeOrganizationId); la
       // sesion real si la trae, igual que la que ve el guard de Nest.
-      if (!session.user.twoFactorEnabled && (await isAdminLevelSession(session as AdminSessionInfo))) {
+      //
+      // En las escrituras de organizacion la clasificacion usa la agencia
+      // objetivo (B3 del segundo informe): la del cuerpo o la query, o la
+      // activa si no viene. Sin objetivo determinable queda undefined y la
+      // sesion falla cerrada si es administrativa en cualquier agencia.
+      const targetOrganizationId =
+        route.authorization === "organization"
+          ? targetOrganizationIdOf(
+              ctx.body as Record<string, unknown> | undefined,
+              ctx.query as Record<string, unknown> | undefined,
+              session.session.activeOrganizationId,
+            )
+          : undefined;
+      if (
+        !session.user.twoFactorEnabled &&
+        (await isAdminLevelSession(session as AdminSessionInfo, targetOrganizationId))
+      ) {
         throw new APIError("FORBIDDEN", {
           code: TWO_FACTOR_REQUIRED,
           message: TWO_FACTOR_REQUIRED_MESSAGE,
@@ -175,7 +181,15 @@ export const auth = betterAuth({
         );
         return;
       }
-      const tenantId = audit.platform ? null : organizationIdOf(body, session.session.activeOrganizationId);
+      const tenantId = audit.platform
+        ? null
+        : tenantOrganizationIdOf(
+            audit.entity,
+            returnedRecord,
+            body,
+            ctx.query as Record<string, unknown> | undefined,
+            session.session.activeOrganizationId,
+          );
       if (tenantId === undefined) {
         ctx.context.logger.error(`auditoría de ${ctx.path}: sin agencia a la que imputar la fila`);
         return;
