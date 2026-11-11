@@ -543,6 +543,73 @@ aplicado tras la primera verificación. Deltas de spec primero (`d8e33c7`), lueg
   con la cookie revocada. La víctima inicia sesión por `auth.api` (acción de sistema) para no
   sumar al rate limit HTTP de `/sign-in/email`: el archivo va justo en 10 por ventana de 60s.
 
+## Fix del bloqueante B3 y hallazgo M3 del segundo informe (2026-11-11)
+
+Fix del bloqueante B3 del segundo informe de verificación (`docs/plans/verify-f0-foundations-2.md`),
+aplicado tras esa verificación. Deltas de spec primero (`20925b5`), luego el código (`6ab9432` y
+`73bf5fb`), después la propuesta (`239201d`); tareas T-F0-15/T-F0-16/T-F0-17. Sin dependencias
+nuevas ni cambios de esquema.
+
+- **Por qué fallaba:** el hook `before` clasificaba la sesión solo por
+  `session.activeOrganizationId`, pero la lib autoriza las escrituras de `/organization/*` por la
+  organización que llega en el **cuerpo** (o la activa si no viene; en `invite-member`,
+  `update-member-role`, `remove-member` y `organization/update`:
+  `ctx.body.organizationId || activeOrganizationId`; en `organization/delete`, solo el cuerpo). Con
+  el estado por defecto tras el login (sin organización activa, la autoselección llega en F1) un
+  owner no clasificaba como administrativo y escribía sin TOTP pasando `organizationId` en el
+  cuerpo. Lo cazó el segundo informe con HTTP propio; los e2e no lo cubrían porque todos los
+  fixtures hacían `set-active`.
+- **La tabla declara su capa** (`admin-route.ts`): `authorization: "platform" | "organization"` en
+  las 22 entradas. Las 15 rutas del plugin admin son de plataforma; las 7 escrituras
+  administrativas de `/organization/*` son de agencia. El hook `before` resuelve la organización
+  objetivo solo en las de organización y el `after` imputa la fila de auditoría a esa agencia. El
+  inventario e2e comprueba además que la capa declarada no contradice la familia del path ni la
+  regla de auditoría (`audit.platform`), para que un error de clasificación no impute a plataforma
+  la fila de una agencia ni al revés.
+- **Resolución de la organización objetivo** (`targetOrganizationIdOf`): `body.organizationId ||
+  query.organizationId ||` la activa, con la misma semántica de *truthiness* que la lib (una
+  cadena vacía cuenta como ausente; un valor que no sea string no resuelve). La query se mira
+  porque es la misma puerta de entrada que acepta la lib; ninguna de las 7 rutas la usa hoy, pero
+  clasificar por el cuerpo y no por la query dejaría el mismo bypass si una versión futura la
+  añade.
+- **Falla cerrada sin objetivo determinable:** `isAdminLevelSession(session, targetOrganizationId?)`
+  conserva el comportamiento previo cuando la agencia objetivo llega (solo cuenta el rol en ESA
+  agencia: ser owner de otra no vuelve administrativa la escritura que afecta a esta). Sin objetivo
+  (ni en el cuerpo/query ni activa) cae al admin en cualquier agencia: un rol de plataforma, o un
+  owner/admin en alguna agencia, recibe 403 `TWO_FACTOR_REQUIRED`; un rol no administrativo en
+  todas ellas pasa a Better Auth y recibe su 400/403 normal. Así una escritura de organización que
+  no puede clasificarse no se libra del segundo factor, y el guard de Nest (que siempre tiene la
+  activa) no cambia de comportamiento.
+- **Atribución de la auditoría** (`tenantOrganizationIdOf`): el cuerpo o la query, la entidad
+  devuelta o, en su defecto, la activa. `cancel-invitation` es el caso especial: no recibe
+  `organizationId` en el cuerpo y autoriza por la organización de la invitación, que devuelve en el
+  resultado (marcada `canceled`, no borrada), así que la fila se imputa a la organización de la
+  invitación devuelta. En `organization/update` y `organization/delete` el id devuelto ES el
+  tenant.
+- **Limitación conocida (sin código):** en `cancel-invitation` la clasificación del TOTP no puede
+  usar la organización de la invitación en el hook `before` —la escritura solo trae
+  `invitationId` y habría que consultar la fila, que el hook no lee a propósito para no acoplar la
+  clasificación a la base—; usa el cuerpo/query o, si no, la activa, y sin ninguna falla cerrada.
+  El caso queda cubierto porque una sesión sin organización activa y sin `organizationId` falla
+  cerrada si es administrativa en cualquier agencia, y la auditoría sí se imputa correctamente a la
+  organización de la invitación devuelta. Si una versión futura añade `organizationId` a esa ruta,
+  la resolución ya lo toma sin cambios.
+- **M3 (`revoke-user-session`):** en better-auth 1.7.18 la ruta responde `200 {success:true}`
+  aunque el `sessionToken` no corresponda a ninguna fila, porque `deleteSession` es un no-op
+  silencioso. La app se comporta bien (sin fila que revocar el preestado queda vacío, el `after` no
+  audita y ninguna sesión se pierde), pero el contraste queda documentado en la regla de auditoría
+  y cubierto por un e2e que reconoce el 200, la sesión del actor intacta y la ausencia de fila. El
+  panel debe pasar el token crudo de `list-user-sessions`, nunca el valor firmado de la cookie.
+- **Pruebas:** describe nuevo en `two-factor.e2e.ts` (owner sin TOTP ni organización activa con
+  `organizationId` en el cuerpo → 403 y sin efecto; el mismo flujo con TOTP → 2xx y fila de
+  auditoría; escritura sin objetivo determinable para owner y para agente no administrativo; owner
+  de A escribiendo en B → denegado; ruta no administrativa accesible) y el inventario recorre las
+  dos pasadas (cuerpo con `organizationId` y cuerpo vacío) con una agencia desechable, porque
+  `/organization/delete` habría borrado la agencia del fixture. El test de M3 usa la cookie firmada
+  del propio super admin como token que no coincide y comparte el super admin con TOTP en un
+  `beforeAll` para no sumar logins HTTP (el rate limit de `/sign-in/email` es por IP y la suite va
+  justa).
+
 
 
 
