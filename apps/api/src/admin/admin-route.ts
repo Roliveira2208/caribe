@@ -123,10 +123,13 @@ export function mergeRoutePermissions(
 
 /** Une la ruta del controller y la del metodo ("admin/x" + "y" -> "admin/x/y"). */
 export function joinRoutePath(base?: string, method?: string): string {
-  const clean = (value: string) => value.replace(/^\/+|\/+$/g, "");
+  // Se limpia cada parte ANTES de descartar vacias: un metodo sin path
+  // declara "/" y, si se filtra antes de limpiar, deja una barra final
+  // ("products/") que no es la ruta registrada por Nest.
   return [base, method]
     .filter((part): part is string => typeof part === "string" && part.length > 0)
-    .map(clean)
+    .map((part) => part.replace(/^\/+|\/+$/g, ""))
+    .filter((part) => part.length > 0)
     .join("/");
 }
 
@@ -226,7 +229,9 @@ function userIdFromBody(_returned: Record<string, unknown>, body: Record<string,
  * Rutas administrativas del middleware de Better Auth. La lista es cerrada a
  * proposito: si una actualizacion de la lib anade o renombra una ruta, el
  * inventario e2e (two-factor.e2e.ts) falla hasta que alguien la clasifique
- * conscientemente aqui o en BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS.
+ * conscientemente aqui, en BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES o en
+ * BETTER_AUTH_NON_ADMIN_ROUTES. Las tres listas cubren todas las rutas de
+ * auth.api; el inventario compara el conjunto real, no solo la tabla.
  *
  * Las formas de retorno verificadas contra better-auth 1.7.18:
  * - set-role/create-user/ban-user/unban-user/impersonate-user -> { user }
@@ -453,28 +458,312 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
 ];
 
 /**
+ * Motivo por el que una ruta de Better Auth no exige segundo factor:
+ * - "read": solo lectura.
+ * - "self-service": el usuario actua sobre su propia cuenta, sesion o
+ *   membresia.
+ *
+ * Cualquier escritura administrativa de agencia o de plataforma tiene que
+ * estar en BETTER_AUTH_ADMIN_ROUTES.
+ */
+export type BetterAuthNonAdminJustification = "read" | "self-service";
+
+/** Ruta de Better Auth que no exige segundo factor, con su justificacion. */
+export interface BetterAuthNonAdminRoute {
+  /** Path relativo al basePath de Better Auth, con barra inicial. */
+  path: string;
+  justification: BetterAuthNonAdminJustification;
+  /** Motivo legible para la revision humana del inventario. */
+  reason: string;
+}
+
+/**
+ * Rutas de Better Auth fuera de /admin, /organization y /two-factor. Lista
+ * cerrada (snapshot de better-auth 1.7.18): si un upgrade anade, renombra o
+ * elimina una ruta, el inventario e2e falla hasta que alguien la clasifique
+ * aqui. Incluye los dos paths con parametros de la lib; la tabla
+ * administrativa no los admite porque su Map exacto no puede casar con
+ * ctx.path (el modulo falla al cargar si se anade uno).
+ */
+export const BETTER_AUTH_NON_ADMIN_ROUTES: readonly BetterAuthNonAdminRoute[] = [
+  {
+    path: "/account-info",
+    justification: "read",
+    reason: "Informacion de la cuenta propia (lectura).",
+  },
+  {
+    path: "/callback/:id",
+    justification: "self-service",
+    reason: "Callback de proveedor social sobre la cuenta propia; hoy no hay proveedores habilitados.",
+  },
+  {
+    path: "/change-email",
+    justification: "self-service",
+    reason: "Cambio del correo de la cuenta propia.",
+  },
+  {
+    path: "/change-password",
+    justification: "self-service",
+    reason: "Cambio de la contrasena de la cuenta propia.",
+  },
+  {
+    path: "/delete-user",
+    justification: "self-service",
+    reason: "Baja de la cuenta propia.",
+  },
+  {
+    path: "/delete-user/callback",
+    justification: "self-service",
+    reason: "Callback de la baja de la cuenta propia.",
+  },
+  {
+    path: "/error",
+    justification: "read",
+    reason: "Pagina de error de Better Auth.",
+  },
+  {
+    path: "/get-access-token",
+    justification: "self-service",
+    reason: "Token de acceso de la sesion propia.",
+  },
+  {
+    path: "/get-session",
+    justification: "read",
+    reason: "Sesion actual (lectura).",
+  },
+  {
+    path: "/link-social",
+    justification: "self-service",
+    reason: "Vinculacion de una cuenta social propia.",
+  },
+  {
+    path: "/list-accounts",
+    justification: "read",
+    reason: "Cuentas vinculadas de la cuenta propia (lectura).",
+  },
+  {
+    path: "/list-sessions",
+    justification: "read",
+    reason: "Sesiones de la cuenta propia (lectura).",
+  },
+  {
+    path: "/ok",
+    justification: "read",
+    reason: "Comprobacion de salud de Better Auth.",
+  },
+  {
+    path: "/refresh-token",
+    justification: "self-service",
+    reason: "Renovacion del token de la sesion propia.",
+  },
+  {
+    path: "/request-password-reset",
+    justification: "self-service",
+    reason: "Solicitud de restablecimiento de la contrasena propia.",
+  },
+  {
+    path: "/reset-password",
+    justification: "self-service",
+    reason: "Restablecimiento de la contrasena propia.",
+  },
+  {
+    path: "/reset-password/:token",
+    justification: "self-service",
+    reason: "Restablecimiento de la contrasena propia con token.",
+  },
+  {
+    path: "/revoke-other-sessions",
+    justification: "self-service",
+    reason: "Revocacion de las demas sesiones propias.",
+  },
+  {
+    path: "/revoke-session",
+    justification: "self-service",
+    reason: "Revocacion de una sesion propia.",
+  },
+  {
+    path: "/revoke-sessions",
+    justification: "self-service",
+    reason: "Revocacion de todas las sesiones propias.",
+  },
+  {
+    path: "/send-verification-email",
+    justification: "self-service",
+    reason: "Reenvio del correo de verificacion de la cuenta propia.",
+  },
+  {
+    path: "/sign-in/email",
+    justification: "self-service",
+    reason: "Inicio de sesion con correo y contrasena.",
+  },
+  {
+    path: "/sign-in/social",
+    justification: "self-service",
+    reason: "Inicio de sesion social; hoy no hay proveedores habilitados.",
+  },
+  {
+    path: "/sign-out",
+    justification: "self-service",
+    reason: "Cierre de la sesion propia.",
+  },
+  {
+    path: "/sign-up/email",
+    justification: "self-service",
+    reason: "Registro con correo y contrasena.",
+  },
+  {
+    path: "/unlink-account",
+    justification: "self-service",
+    reason: "Desvinculacion de una cuenta social propia.",
+  },
+  {
+    path: "/update-session",
+    justification: "self-service",
+    reason: "Actualizacion de datos de la sesion propia.",
+  },
+  {
+    path: "/update-user",
+    justification: "self-service",
+    reason: "Actualizacion del perfil propio.",
+  },
+  {
+    path: "/verify-email",
+    justification: "self-service",
+    reason: "Verificacion del correo de la cuenta propia.",
+  },
+  {
+    path: "/verify-password",
+    justification: "self-service",
+    reason: "Verificacion de la contrasena de la cuenta propia.",
+  },
+];
+
+/**
  * Rutas de /organization/* que NO son administrativas (lectura, aceptar o
  * rechazar invitaciones propias, fijar la agencia activa): no exigen TOTP.
  * Completan la particion de /organization/* junto a BETTER_AUTH_ADMIN_ROUTES.
+ * Cada entrada declara por que no exige segundo factor.
  */
-export const BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS: readonly string[] = [
-  "/organization/accept-invitation",
-  "/organization/check-slug",
-  "/organization/get-active-member",
-  "/organization/get-active-member-role",
-  "/organization/get-full-organization",
-  "/organization/get-invitation",
-  "/organization/get-organization",
-  "/organization/has-permission",
-  "/organization/leave",
-  "/organization/list",
-  "/organization/list-invitations",
-  "/organization/list-members",
-  "/organization/list-user-invitations",
-  "/organization/reject-invitation",
-  "/organization/set-active",
+export const BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES: readonly BetterAuthNonAdminRoute[] = [
+  {
+    path: "/organization/accept-invitation",
+    justification: "self-service",
+    reason: "Aceptar una invitacion propia.",
+  },
+  {
+    path: "/organization/check-slug",
+    justification: "read",
+    reason: "Comprobar la disponibilidad de un slug.",
+  },
+  {
+    path: "/organization/get-active-member",
+    justification: "read",
+    reason: "Membresia activa propia (lectura).",
+  },
+  {
+    path: "/organization/get-active-member-role",
+    justification: "read",
+    reason: "Rol en la membresia activa propia (lectura).",
+  },
+  {
+    path: "/organization/get-full-organization",
+    justification: "read",
+    reason: "Organizacion activa con sus miembros (lectura).",
+  },
+  {
+    path: "/organization/get-invitation",
+    justification: "read",
+    reason: "Invitacion propia (lectura).",
+  },
+  {
+    path: "/organization/get-organization",
+    justification: "read",
+    reason: "Organizacion (lectura).",
+  },
+  {
+    path: "/organization/has-permission",
+    justification: "read",
+    reason: "Comprobacion de permisos (lectura).",
+  },
+  {
+    path: "/organization/leave",
+    justification: "self-service",
+    reason: "Abandonar una organizacion propia.",
+  },
+  {
+    path: "/organization/list",
+    justification: "read",
+    reason: "Organizaciones del usuario (lectura).",
+  },
+  {
+    path: "/organization/list-invitations",
+    justification: "read",
+    reason: "Invitaciones de la organizacion (lectura).",
+  },
+  {
+    path: "/organization/list-members",
+    justification: "read",
+    reason: "Miembros de la organizacion (lectura).",
+  },
+  {
+    path: "/organization/list-user-invitations",
+    justification: "read",
+    reason: "Invitaciones del usuario (lectura).",
+  },
+  {
+    path: "/organization/reject-invitation",
+    justification: "self-service",
+    reason: "Rechazar una invitacion propia.",
+  },
+  {
+    path: "/organization/set-active",
+    justification: "self-service",
+    reason: "Fijar la organizacion activa de la sesion propia.",
+  },
 ];
 
+/** Paths de la allowlist de organizacion (vista derivada para el inventario). */
+export const BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS: readonly string[] =
+  BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES.map((route) => route.path);
+
+/**
+ * La clasificacion administrativa es un Map exacto: un path con parametros
+ * (:id) no puede casar con ctx.path y quedaria sin proteger. Falla al cargar
+ * el modulo (build/arranque) hasta que la clasificacion soporte patrones.
+ * Las rutas con parametros de la lib son no administrativas y viven en
+ * BETTER_AUTH_NON_ADMIN_ROUTES, que si las declara explicitamente.
+ */
+function assertNoParameterizedAdminPath(
+  routes: readonly { path: string }[],
+  label: string,
+): void {
+  const parameterized = routes.filter((route) => route.path.includes(":"));
+  if (parameterized.length > 0) {
+    throw new Error(
+      `${label} no admite paths con parametros (:): ${parameterized
+        .map((route) => route.path)
+        .join(", ")}`,
+    );
+  }
+}
+
+assertNoParameterizedAdminPath(BETTER_AUTH_ADMIN_ROUTES, "BETTER_AUTH_ADMIN_ROUTES");
+assertNoParameterizedAdminPath(
+  BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES,
+  "BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES",
+);
+
+/*
+ * Politica de rutas administrativas sin sesion (T-F1-0): no hay
+ * autenticacion por token (API key, bearer, SSO, OAuth). Las rutas
+ * administrativas se autentican solo por la cookie de sesion; sin sesion, la
+ * lib rechaza la peticion y el hook no exige TOTP porque no hay rol que
+ * clasificar. El inventario e2e comprueba que ninguna ruta administrativa
+ * responde 2xx sin cookie y que el conjunto de plugins es exactamente
+ * organization + admin + two-factor. Habilitar cualquier otro plugin exige
+ * una change que actualice esta politica, la clasificacion y el inventario
+ * (AGENTS.md, "Que NO hacer").
+ */
 const betterAuthRouteByPath = new Map<string, BetterAuthAdminRoute>(
   BETTER_AUTH_ADMIN_ROUTES.map((route) => [route.path, route]),
 );

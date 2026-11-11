@@ -1,7 +1,7 @@
 # Tareas: f1-hotels-e2e
 Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 
-- [ ] T-F1-0 Endurecer el inventario de rutas (primera tarea, antes de tocar catálogo; análisis en
+- [x] T-F1-0 Endurecer el inventario de rutas (primera tarea, antes de tocar catálogo; análisis en
   `docs/plans/inventory-hardening-f0.md`).
   - Registro cerrado de rutas no administrativas: toda ruta fuera de `/admin`, `/organization` y
     `/two-factor` declarada en una lista explícita; un prefijo nuevo rompe el test.
@@ -14,6 +14,9 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
     plugin de Better Auth.
   - Prueba: auth-access › "Ruta administrativa sin exigencia de segundo factor" (inventario Nest +
     Better Auth) y los casos nuevos del registro cerrado.
+  - Hecho: 30 rutas fuera de las familias + 15 de allowlist con justificación; métodos exactos;
+    paths con `:` solo en no administrativas; sin sesión ninguna ruta admin responde 2xx; plugins
+    cerrados a organization/admin/two-factor; registro Nest cerrado; `joinRoutePath` sin barra final.
 - [ ] T-F1-1 Migraciones de catálogo (`destinations`, `products` tipo hotel, `availability`, `cancellation_policies`) con RLS.
 - [ ] T-F1-2 Esquema Zod de `attributes` para hotel en `packages/shared`.  Prueba: catalog › "Atributos inválidos".
 - [ ] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad.  Prueba: catalog › búsqueda y estados.

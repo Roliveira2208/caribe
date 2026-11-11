@@ -10,6 +10,8 @@ import { prisma } from "../src/prisma.js";
 import {
   BETTER_AUTH_ADMIN_ROUTES,
   BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS,
+  BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES,
+  BETTER_AUTH_NON_ADMIN_ROUTES,
   betterAuthAdminRouteOf,
   AUTH_METADATA_KEYS,
   isAdminRoute,
@@ -116,6 +118,40 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
         `rutas Nest administrativas sin exigir TOTP (${pass.label}): ${failures.join("; ")}`,
       ).toEqual([]);
     }
+  });
+
+  it("inventario Nest: el registro de rutas no administrativas es cerrado", () => {
+    const routes = listRegisteredRoutes(app);
+    const nonAdmin = routes.filter((route) => !route.administrative);
+    const declared = new Set(NON_ADMIN_NEST_ROUTES.map((route) => `${route.method} ${route.path}`));
+
+    // Una ruta nueva fuera de /admin y sin permiso exclusivo no puede pasar
+    // en silencio: o es administrativa (y el primer test la llama), o se
+    // justifica aquí.
+    const unregistered = nonAdmin.filter((route) => !declared.has(`${route.method} ${route.path}`));
+    expect(
+      unregistered.map((route) => `${route.method} /${route.path}`),
+      "rutas Nest no administrativas sin justificar",
+    ).toEqual([]);
+
+    // Sin entradas rancias: si una ruta desaparece o pasa a administrativa,
+    // el registro tiene que actualizarse.
+    const stale = NON_ADMIN_NEST_ROUTES.filter(
+      (declaredRoute) =>
+        !routes.some(
+          (route) =>
+            route.method === declaredRoute.method &&
+            route.path === declaredRoute.path &&
+            !route.administrative,
+        ),
+    );
+    expect(
+      stale.map((route) => `${route.method} /${route.path}`),
+      "entradas rancias en el registro Nest",
+    ).toEqual([]);
+
+    const unjustified = NON_ADMIN_NEST_ROUTES.filter((route) => route.reason.trim().length === 0);
+    expect(unjustified.map((route) => `${route.method} /${route.path}`)).toEqual([]);
   });
 
   it("inventario Better Auth: toda ruta administrativa del middleware exige segundo factor", async () => {
@@ -255,6 +291,155 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
         `rutas administrativas de Better Auth sin exigir TOTP (${pass.label}): ${passFailures.join("; ")}`,
       ).toEqual([]);
     }
+  });
+
+  it("inventario Better Auth: el registro de rutas no administrativas es cerrado", () => {
+    const methodsByPath = inventoryMethodsByPath(listBetterAuthRoutes());
+    const adminPaths = new Set(BETTER_AUTH_ADMIN_ROUTES.map((route) => route.path));
+    const organizationAllowlistPaths = new Set(
+      BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES.map((route) => route.path),
+    );
+    const outsidePaths = new Set(BETTER_AUTH_NON_ADMIN_ROUTES.map((route) => route.path));
+
+    // Toda ruta servida cae en una de las cuatro categorías: administrativa,
+    // allowlist de organización, registro de fuera de las familias o
+    // two-factor (nunca administrativa). Un prefijo nuevo rompe el test.
+    const unclassified = [...methodsByPath.keys()].filter(
+      (path) =>
+        !adminPaths.has(path) &&
+        !organizationAllowlistPaths.has(path) &&
+        !outsidePaths.has(path) &&
+        !path.startsWith("/two-factor/"),
+    );
+    expect(
+      unclassified,
+      `rutas de Better Auth sin clasificar: ${unclassified.join("; ")}`,
+    ).toEqual([]);
+
+    // El registro de fuera de las familias no puede invadir las familias.
+    const outsideInFamily = BETTER_AUTH_NON_ADMIN_ROUTES.filter(
+      (route) =>
+        route.path.startsWith("/admin") ||
+        route.path.startsWith("/organization") ||
+        route.path.startsWith("/two-factor"),
+    );
+    expect(outsideInFamily.map((route) => route.path)).toEqual([]);
+
+    // Sin duplicados entre listas: una ruta administrativa no puede estar
+    // también en una lista que se salta el TOTP.
+    const allPaths = [...adminPaths, ...organizationAllowlistPaths, ...outsidePaths];
+    expect(new Set(allPaths).size, "una ruta aparece en más de una lista").toBe(allPaths.length);
+
+    // Sin declaraciones huérfanas en ninguna de las tres listas.
+    const declared = [
+      ...BETTER_AUTH_ADMIN_ROUTES,
+      ...BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES,
+      ...BETTER_AUTH_NON_ADMIN_ROUTES,
+    ];
+    const orphans = declared.filter((route) => !methodsByPath.has(route.path));
+    expect(
+      orphans.map((route) => route.path),
+      "declaraciones que el inventario no encontró en auth.api",
+    ).toEqual([]);
+  });
+
+  it("inventario Better Auth: las declaraciones administrativas fijan todos los métodos", () => {
+    const methodsByPath = inventoryMethodsByPath(listBetterAuthRoutes());
+    const mismatches = BETTER_AUTH_ADMIN_ROUTES.flatMap((declared) => {
+      const observed = methodsByPath.get(declared.path);
+      if (!observed) return [`${declared.path}: no existe en auth.api`];
+      const declaredSet = [...declared.methods].sort();
+      const observedSet = [...observed].sort();
+      if (JSON.stringify(declaredSet) !== JSON.stringify(observedSet)) {
+        return [`${declared.path}: declarados [${declaredSet}] != observados [${observedSet}]`];
+      }
+      return [];
+    });
+    expect(
+      mismatches,
+      `métodos administrativos desalineados: ${mismatches.join("; ")}`,
+    ).toEqual([]);
+  });
+
+  it("inventario Better Auth: la allowlist de organización tiene justificación", () => {
+    const unjustified = [
+      ...BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES,
+      ...BETTER_AUTH_NON_ADMIN_ROUTES,
+    ].filter((route) => route.reason.trim().length === 0);
+    expect(
+      unjustified.map((route) => route.path),
+      "rutas no administrativas sin justificación",
+    ).toEqual([]);
+
+    // La lista de paths es una vista derivada de las entradas, no una segunda
+    // fuente de verdad que pueda desincronizarse.
+    expect(BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS).toEqual(
+      BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES.map((route) => route.path),
+    );
+  });
+
+  it("inventario Better Auth: los paths con parámetros están clasificados explícitamente", () => {
+    const parameterized = [
+      ...new Set(
+        listBetterAuthRoutes()
+          .filter((route) => route.path.includes(":"))
+          .map((route) => route.path),
+      ),
+    ];
+    // No puede pasar en vacío: better-auth 1.7.18 sirve /callback/:id y
+    // /reset-password/:token. Si desaparecen, se revisa el snapshot.
+    expect(parameterized.length).toBeGreaterThan(0);
+
+    const outsidePaths = new Set(BETTER_AUTH_NON_ADMIN_ROUTES.map((route) => route.path));
+    const unclassified = parameterized.filter((path) => !outsidePaths.has(path));
+    expect(
+      unclassified,
+      "paths con parámetros sin declarar como no administrativos",
+    ).toEqual([]);
+
+    // La tabla administrativa y la allowlist no admiten patrones: el Map
+    // exacto no puede casar con ctx.path. El módulo falla al cargar si se
+    // añade uno.
+    expect(BETTER_AUTH_ADMIN_ROUTES.filter((route) => route.path.includes(":"))).toEqual([]);
+    expect(
+      BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES.filter((route) => route.path.includes(":")),
+    ).toEqual([]);
+  });
+
+  it("política sin sesión: ninguna ruta administrativa responde 2xx sin cookie", async () => {
+    // No hay autenticación por token: las rutas administrativas se
+    // autentican solo por cookie de sesión. Sin sesión, la lib rechaza la
+    // petición. Si una ruta administrativa respondiera 2xx, un endpoint que
+    // autentique por token se saltaría el TOTP.
+    const adminRoutes = listBetterAuthRoutes().filter((route) => route.administrative);
+    expect(adminRoutes.length).toBeGreaterThan(0);
+    const failures: string[] = [];
+    for (const route of adminRoutes) {
+      const res = await callBetterAuthRoute(route, "", {});
+      if (res.status >= 200 && res.status < 300) {
+        failures.push(`${route.method} ${route.path} respondió ${res.status}`);
+      }
+    }
+    expect(
+      failures,
+      `rutas administrativas accesibles sin sesión: ${failures.join("; ")}`,
+    ).toEqual([]);
+  });
+
+  it("plugins de Better Auth: solo los tres aprobados (sin autenticación por token)", () => {
+    // Un plugin nuevo (api-key, bearer, sso, oauth2...) añade rutas con
+    // capacidad administrativa fuera de la partición. Habilitarlo exige una
+    // change que actualice la clasificación, el inventario y la política sin
+    // sesión (AGENTS.md, "Qué NO hacer").
+    const ids = ((auth.options.plugins ?? []) as Array<{ id?: string }>)
+      .map((plugin) => plugin.id)
+      .filter((id): id is string => typeof id === "string")
+      .sort();
+    expect(ids, "un plugin nuevo exige revisar la clasificación de rutas").toEqual([
+      "admin",
+      "organization",
+      "two-factor",
+    ]);
   });
 
   it("admin sin TOTP recibe 403 TWO_FACTOR_REQUIRED en un endpoint administrativo", async () => {
@@ -677,6 +862,44 @@ interface RegisteredRoute {
   administrative: boolean;
 }
 
+/** Por qué una ruta de Nest no exige segundo factor. */
+type NonAdminNestJustification = "public" | "shared-permission" | "self-service";
+
+interface NonAdminNestRoute {
+  method: string;
+  path: string;
+  justification: NonAdminNestJustification;
+  reason: string;
+}
+
+/**
+ * Rutas de Nest que NO son administrativas (espejo del registro de Better
+ * Auth, T-F1-0). Lista cerrada: una ruta nueva fuera de /admin y sin permiso
+ * exclusivo, o un cambio de metadata que saque una ruta de la clasificación
+ * administrativa, rompe el inventario hasta que alguien la justifique aquí.
+ */
+const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
+  {
+    method: "GET",
+    path: "products",
+    justification: "public",
+    reason: "Catálogo público (spec auth-access, 'Catálogo público').",
+  },
+  {
+    method: "PUT",
+    path: "products/:id",
+    justification: "shared-permission",
+    reason:
+      "product:update lo comparten proveedor y admin; la propiedad del producto se comprueba en F1.",
+  },
+  {
+    method: "GET",
+    path: "bookings/:id",
+    justification: "self-service",
+    reason: "Reserva propia; la propiedad se comprueba en F1 (hoy es un stub).",
+  },
+];
+
 /**
  * Inventario de rutas registradas: controllers descubiertos por
  * DiscoveryService + metadata de Nest (PATH/METHOD). La clasificacion usa la
@@ -724,16 +947,28 @@ function listBetterAuthRoutes(): RegisteredRoute[] {
   for (const endpoint of Object.values(auth.api)) {
     const e = endpoint as { path?: string; options?: { method?: string | string[] } };
     if (!e?.path) continue; // solo API de servidor (addMember): sin ruta HTTP
-    const method = Array.isArray(e.options?.method)
-      ? (e.options.method[0] ?? "GET")
-      : (e.options?.method ?? "GET");
-    routes.push({
-      method,
-      path: e.path,
-      administrative: betterAuthAdminRouteOf(e.path) !== undefined,
-    });
+    // Todos los métodos, no solo method[0]: una ruta que gane un verbo no
+    // puede quedar fuera del inventario.
+    const declared = e.options?.method;
+    const methods = Array.isArray(declared) ? declared : declared ? [declared] : ["GET"];
+    for (const method of methods) {
+      routes.push({
+        method,
+        path: e.path,
+        administrative: betterAuthAdminRouteOf(e.path) !== undefined,
+      });
+    }
   }
   return routes;
+}
+
+/** Métodos observados por path (todos los verbos, sin colapsar a method[0]). */
+function inventoryMethodsByPath(routes: readonly RegisteredRoute[]): Map<string, string[]> {
+  const byPath = new Map<string, string[]>();
+  for (const route of routes) {
+    byPath.set(route.path, [...(byPath.get(route.path) ?? []), route.method]);
+  }
+  return byPath;
 }
 
 /** Metadata de una ruta con la semantica getAllAndOverride (handler, clase). */

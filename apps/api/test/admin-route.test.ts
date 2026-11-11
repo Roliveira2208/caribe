@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { PermissionCheck } from "@thallesp/nestjs-better-auth";
 import {
+  BETTER_AUTH_ADMIN_ROUTES,
+  BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS,
+  BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES,
+  BETTER_AUTH_NON_ADMIN_ROUTES,
   isAdminRoute,
+  joinRoutePath,
   mergeRoutePermissions,
   requiresAdminExclusivePermission,
   targetOrganizationIdOf,
@@ -161,5 +166,66 @@ describe("clasificación de rutas administrativas (T-F0-8)", () => {
         "request",
       ),
     ).toBe("devuelta");
+  });
+
+  it("el registro de rutas no administrativas de Better Auth es explícito (T-F1-0)", () => {
+    // Snapshot de better-auth 1.7.18. Un upgrade que añada, renombre o
+    // elimine rutas obliga a revisar estas listas: el inventario e2e compara
+    // contra auth.api real.
+    expect(BETTER_AUTH_NON_ADMIN_ROUTES).toHaveLength(30);
+    expect(BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES).toHaveLength(15);
+    expect(BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS).toEqual(
+      BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES.map((route) => route.path),
+    );
+
+    for (const route of [
+      ...BETTER_AUTH_NON_ADMIN_ROUTES,
+      ...BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES,
+    ]) {
+      expect(route.reason.trim(), `${route.path} sin justificación`).not.toBe("");
+    }
+  });
+
+  it("las rutas no administrativas no invaden las familias administrativas", () => {
+    const familyPrefixes = ["/admin", "/organization", "/two-factor"];
+    expect(
+      BETTER_AUTH_NON_ADMIN_ROUTES.filter((route) =>
+        familyPrefixes.some((prefix) => route.path.startsWith(prefix)),
+      ),
+    ).toEqual([]);
+    expect(
+      BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES.filter(
+        (route) => !route.path.startsWith("/organization/"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("ninguna ruta está a la vez en la tabla administrativa y en una lista no administrativa", () => {
+    const adminPaths = new Set(BETTER_AUTH_ADMIN_ROUTES.map((route) => route.path));
+    const overlaps = [
+      ...BETTER_AUTH_NON_ADMIN_ROUTES,
+      ...BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES,
+    ].filter((route) => adminPaths.has(route.path));
+    expect(overlaps.map((route) => route.path)).toEqual([]);
+  });
+
+  it("la tabla administrativa y la allowlist no admiten paths con parámetros", () => {
+    // La clasificación es un Map exacto y no puede casar con ctx.path; el
+    // módulo falla al cargar si alguien añade un patrón. Las rutas con
+    // parámetros de la lib son no administrativas y están declaradas en
+    // BETTER_AUTH_NON_ADMIN_ROUTES.
+    expect(BETTER_AUTH_ADMIN_ROUTES.filter((route) => route.path.includes(":"))).toEqual([]);
+    expect(
+      BETTER_AUTH_NON_ADMIN_ORGANIZATION_ROUTES.filter((route) => route.path.includes(":")),
+    ).toEqual([]);
+  });
+
+  it("joinRoutePath no deja barras finales cuando el método no declara path", () => {
+    // @Get() sin argumento declara "/" en la metadata de Nest; la ruta
+    // registrada es la del controller, sin barra final.
+    expect(joinRoutePath("products", "/")).toBe("products");
+    expect(joinRoutePath("admin/audit-logs", "/")).toBe("admin/audit-logs");
+    expect(joinRoutePath("/products/", "/:id/")).toBe("products/:id");
+    expect(joinRoutePath("/", "/")).toBe("");
   });
 });
