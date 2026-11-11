@@ -154,8 +154,8 @@ function idOf(record: Record<string, unknown> | undefined): string | undefined {
 
 /** Estado previo que el hook before guarda para que el after pueda auditar. */
 export interface BetterAuthPreState {
-  sessionId?: string;
-  userId?: string;
+  sessionId: string;
+  userId: string;
 }
 
 /**

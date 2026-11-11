@@ -140,7 +140,9 @@ export const auth = betterAuth({
             where: { token },
             select: { id: true, userId: true },
           });
-          if (revoked) betterAuthPreStates.set(ctx.context, revoked);
+          if (revoked) {
+            betterAuthPreStates.set(ctx.context, { sessionId: revoked.id, userId: revoked.userId });
+          }
         }
       }
     }),
