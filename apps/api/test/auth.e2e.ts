@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type ApiApplication, createApp } from "../src/bootstrap.js";
+import { auth } from "../src/auth.js";
 import { prisma } from "../src/prisma.js";
 import {
+  TEST_PASSWORD,
   addMember,
   authOrigin,
   createAgency,
@@ -194,6 +196,53 @@ describe("auth-access", () => {
         headers: { cookie, origin: authOrigin },
       });
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe("Revocación de sesión (delta de audit, fix de verificación)", () => {
+    it("super admin revoca la sesión de un usuario: 200, fila de plataforma y 401 a la víctima", async () => {
+      // La víctima inicia sesión por la API de servidor (acción de sistema):
+      // el comportamiento bajo prueba es la revocación, no el login, y así
+      // no se suma al rate limit HTTP de /sign-in/email.
+      const victimEmail = `victima-rev-${suffix}@example.com`;
+      const victimId = await createUser(victimEmail);
+      await auth.api.signInEmail({ body: { email: victimEmail, password: TEST_PASSWORD } });
+      const victimSession = await prisma.session.findFirstOrThrow({
+        where: { userId: victimId },
+      });
+
+      const superAdmin = await userWithTotp(baseUrl, `super-rev-${suffix}@example.com`);
+      await prisma.user.update({
+        where: { id: superAdmin.userId },
+        data: { role: "super_admin" },
+      });
+
+      const res = await fetch(`${baseUrl}/api/auth/admin/revoke-user-session`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: superAdmin.cookie, origin: authOrigin },
+        body: JSON.stringify({ sessionToken: victimSession.token }),
+      });
+      expect(res.status).toBe(200);
+
+      // Fila de plataforma (tenant NULL) con la sesión revocada como entidad.
+      const row = await prisma.auditLog.findFirstOrThrow({
+        where: { action: "auth.admin.revoke-user-session", entityId: victimSession.id },
+      });
+      expect(row.tenantId).toBe(null);
+      expect(row.actorId).toBe(superAdmin.userId);
+      expect(row.entity).toBe("session");
+      // La fila de session se borra al ejecutar la acción: el después solo
+      // conserva al dueño, que guardó el hook before (delta de audit).
+      expect(row.before).toBe(null);
+      expect(row.after).toEqual({ userId: victimId });
+      expect(row.ip).toBeTruthy();
+
+      // La sesión revocada ya no sirve: la víctima recibe 401 en una ruta
+      // protegida (el catálogo es público, así que iría a /bookings).
+      const victim = await fetch(`${baseUrl}/api/v1/bookings/de-esta-victima`, {
+        headers: { cookie: `better-auth.session_token=${victimSession.token}`, origin: authOrigin },
+      });
+      expect(victim.status).toBe(401);
     });
   });
 
