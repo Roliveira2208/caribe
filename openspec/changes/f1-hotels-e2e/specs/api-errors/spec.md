@@ -67,6 +67,8 @@ ni reutilizarse para otra causa. Los códigos nuevos SHALL añadirse a esta spec
 | `DOCUMENT_PENDING` | 409 | Documento aún en generación |
 | `DOCUMENT_UNAVAILABLE` | 503 | Documento fallido |
 | `PAYLOAD_TOO_LARGE` | 413 | Cuerpo de la solicitud demasiado grande |
+| `METHOD_NOT_ALLOWED` | 405 | Método HTTP no permitido para la ruta |
+| `CONFLICT` | 409 | Conflicto sin un código de dominio más específico |
 | `INTERNAL_ERROR` | 500 | Fallo inesperado |
 
 #### Scenario: Cupo agotado
