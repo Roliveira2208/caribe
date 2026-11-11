@@ -58,6 +58,9 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
   200 `{success:true}` sin efecto cuando el token no coincide con ninguna sesión (`deleteSession` es un no-op
   silencioso) y cubrirlo con un test que reconozca el 200, la sesión intacta y la ausencia de fila de auditoría.
   - Prueba: auth-access › "un token que no coincide con ninguna sesión responde 200 sin efecto ni fila (M3)".
+- [x] T-F0-17 Fix del hallazgo M4 del segundo informe: la propuesta declara el delta de `payments` que la change
+  arrastra, además de `auth-access` y `audit`.
+  - Prueba: revisión del dueño (`proposal.md`, sin código).
 - Nota (M1 del informe): configurar `trustedProxies` al decidir el hosting; hoy la IP tras un proxy resuelve a
   null y el rate limit de login degenera en bucket global.
 - Nota (M2 del informe): Helmet, CSP y CORS antes de cualquier demo pública (faseados en F5 por el SDD §13).

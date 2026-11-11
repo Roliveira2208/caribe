@@ -16,6 +16,9 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
   API (403 `TWO_FACTOR_REQUIRED`). Delta en `specs/auth-access/spec.md`.
 - `audit`: se implementa y se añade el requisito de acciones de plataforma (`tenant_id` NULL, legible
   solo por el rol de plataforma). Delta en `specs/audit/spec.md`.
+- `payments`: se modifica el requisito del modo de aprobación: la revisión de un pago (aprobarlo o
+  rechazarlo) es exclusiva del Admin de agencia de la agencia del pago y nunca la hace quien lo reportó;
+  el Super Admin y los demás roles no revisan. Delta en `specs/payments/spec.md`.
 
 ## Decisiones
 - T-F0-8 entrega el mecanismo completo en la API (guard, 403 `TWO_FACTOR_REQUIRED`, inventario de rutas
