@@ -61,3 +61,6 @@ Detalle en `docs/workflow.md`. Resumen:
 - No uses `pnpm approve-builds` sin revisar `pnpm-workspace.yaml` después: pnpm 12 lo reescribe al
   formato `allowBuilds` y puede perder aprobaciones previas (ya perdimos la de `esbuild`); revísalo
   también tras `pnpm add` o `pnpm install`.
+- No habilites ningún plugin de Better Auth ni autenticación por token (API key, bearer, SSO, OAuth)
+  sin una change propia que actualice la clasificación de rutas, el inventario y la política para
+  rutas sin sesión.
