@@ -61,6 +61,13 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
 - [x] T-F0-17 Fix del hallazgo M4 del segundo informe: la propuesta declara el delta de `payments` que la change
   arrastra, además de `auth-access` y `audit`.
   - Prueba: revisión del dueño (`proposal.md`, sin código).
+- [x] T-F0-18 Fix del bypass residual de `cancel-invitation` detectado en la prueba dinámica posterior (B3): la ruta
+  no acepta `organizationId` y autoriza por la agencia de la invitación, así que un `organizationId` de otra agencia
+  en el cuerpo (que el hook ve antes de validar) saltaba la clasificación y permitía cancelar sin TOTP. Las rutas de
+  organización declaran ahora si su agencia objetivo sale de la petición (`request`) o no puede conocerse antes de
+  ejecutar (`unknown` → falla cerrada ignorando también la activa).
+  - Prueba: auth-access › "cancel-invitation de su agencia con organizationId ajeno en el cuerpo → 403 y sin efecto";
+    el inventario de Better Auth exige la declaración de la agencia objetivo en todas las rutas de organización.
 - Nota (M1 del informe): configurar `trustedProxies` al decidir el hosting; hoy la IP tras un proxy resuelve a
   null y el rate limit de login degenera en bucket global.
 - Nota (M2 del informe): Helmet, CSP y CORS antes de cualquier demo pública (faseados en F5 por el SDD §13).

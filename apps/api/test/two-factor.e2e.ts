@@ -82,6 +82,41 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     expect(failures, `rutas administrativas sin exigir TOTP: ${failures.join("; ")}`).toEqual([]);
   });
 
+  it("inventario Nest: sin organización activa el organizationId del cuerpo no libra del segundo factor", async () => {
+    // El guard de Nest no lee organizationId del cuerpo: la agencia de una
+    // ruta de Nest sale de la sesión (organización activa). Sin activa y con
+    // un owner/admin en cualquier agencia, el guard falla cerrado igual que
+    // el hook de Better Auth (B3): el cuerpo no puede ni librar del TOTP ni
+    // redirigir la escritura a otra agencia.
+    const adminRoutes = listRegisteredRoutes(app).filter((route) => route.administrative);
+    expect(adminRoutes.length).toBeGreaterThan(0);
+    const { cookie, orgId } = await ownerWithoutActiveOrg();
+    const otherAgency = await createAgency(
+      await createUser(`owner-nest-otra-${suffix}@example.com`),
+      `Agencia Nest otra ${suffix}`,
+      `agencia-nest-otra-${suffix}`,
+    );
+
+    const passes = [
+      { label: "organizationId de su agencia", organizationId: orgId },
+      { label: "organizationId de otra agencia", organizationId: otherAgency.id },
+    ];
+    for (const pass of passes) {
+      const failures: string[] = [];
+      for (const route of adminRoutes) {
+        const res = await callRoute(route, cookie, { organizationId: pass.organizationId });
+        const body = (await res.json().catch(() => null)) as { code?: string } | null;
+        if (res.status !== 403 || body?.code !== "TWO_FACTOR_REQUIRED") {
+          failures.push(`${route.method} /${route.path} respondio ${res.status}`);
+        }
+      }
+      expect(
+        failures,
+        `rutas Nest administrativas sin exigir TOTP (${pass.label}): ${failures.join("; ")}`,
+      ).toEqual([]);
+    }
+  });
+
   it("inventario Better Auth: toda ruta administrativa del middleware exige segundo factor", async () => {
     const routes = listBetterAuthRoutes();
     const adminRoutes = routes.filter((route) => route.administrative);
@@ -131,6 +166,19 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     expect(
       misclassified.map((route) => route.path),
       "rutas administrativas con capa de autorizacion mal declarada",
+    ).toEqual([]);
+
+    // Toda ruta de organizacion declara si su agencia objetivo sale de la
+    // peticion o no puede conocerse antes de ejecutar (fail-closed). Sin
+    // declaracion, una ruta nueva que ignore organizationId podria volver a
+    // abrir el bypass de cancel-invitation.
+    const missingTarget = adminRoutes.filter((route) => {
+      const declared = betterAuthAdminRouteOf(route.path);
+      return declared?.authorization === "organization" && declared.targetOrganization === undefined;
+    });
+    expect(
+      missingTarget.map((route) => route.path),
+      "rutas de organizacion sin declarar la agencia objetivo",
     ).toEqual([]);
 
     // El hook before exige TOTP antes de validar el cuerpo o los permisos:
@@ -366,6 +414,69 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
       ).resolves.toBeNull();
     });
 
+    it("owner de una agencia con organizationId de una agencia ajena sin membresía → rechazo de la lib, sin efecto", async () => {
+      const { cookie } = await ownerWithoutActiveOrg();
+      const otherAgency = await createAgency(
+        await createUser(`owner-b3c-${suffix}@example.com`),
+        `Agencia B3 C ${suffix}`,
+        `agencia-b3-c-${suffix}`,
+      );
+      const email = `invitado-b3c-${suffix}@example.com`;
+
+      // Sin membresía en la agencia ajena el rol EN ELLA no existe, así que
+      // no hay exigencia de TOTP y la lib rechaza por membresía (400). Lo que
+      // no puede pasar es que el cuerpo redirija la escritura a otra agencia:
+      // no queda invitación.
+      const res = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie, origin: authOrigin },
+        body: JSON.stringify({ email, role: "provider", organizationId: otherAgency.id }),
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { code?: string };
+      expect(body.code).toBe("MEMBER_NOT_FOUND");
+      expect(body.code).not.toBe("TWO_FACTOR_REQUIRED");
+      await expect(
+        prisma.invitation.findFirst({ where: { email, organizationId: otherAgency.id } }),
+      ).resolves.toBeNull();
+    });
+
+    it("cancel-invitation de su agencia con organizationId ajeno en el cuerpo → 403 y sin efecto", async () => {
+      const { cookie, userId, orgId } = await ownerWithoutActiveOrg();
+      const otherAgency = await createAgency(
+        await createUser(`owner-b3d-${suffix}@example.com`),
+        `Agencia B3 D ${suffix}`,
+        `agencia-b3-d-${suffix}`,
+      );
+      const invitationId = randomUUID();
+      const email = `invitado-b3d-${suffix}@example.com`;
+      await prisma.invitation.create({
+        data: {
+          id: invitationId,
+          organizationId: orgId,
+          email,
+          role: "provider",
+          status: "pending",
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          inviterId: userId,
+        },
+      });
+
+      // cancel-invitation NO acepta organizationId en su esquema y autoriza
+      // por la agencia de la invitación. Un organizationId ajeno en el cuerpo
+      // no puede usarse para saltarse el TOTP: la clasificación falla
+      // cerrada, no se cancela nada.
+      const res = await fetch(`${baseUrl}/api/auth/organization/cancel-invitation`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie, origin: authOrigin },
+        body: JSON.stringify({ invitationId, organizationId: otherAgency.id }),
+      });
+      expect(res.status).toBe(403);
+      await expect(res.json()).resolves.toMatchObject({ code: "TWO_FACTOR_REQUIRED" });
+      const invitation = await prisma.invitation.findUniqueOrThrow({ where: { id: invitationId } });
+      expect(invitation.status).toBe("pending");
+    });
+
     it("owner con TOTP y sin organización activa escribe en su agencia: 2xx y fila de auditoría", async () => {
       const owner = await userWithTotp(baseUrl, `owner-b3-totp-${suffix}@example.com`);
       const org = await createAgency(
@@ -495,7 +606,11 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     });
   }
 
-  async function callRoute(route: RegisteredRoute, cookie: string): Promise<Response> {
+  async function callRoute(
+    route: RegisteredRoute,
+    cookie: string,
+    body: Record<string, unknown> = {},
+  ): Promise<Response> {
     // Los parametros :id se sustituyen por un valor cualquiera: el guard
     // rechaza antes de que el handler llegue a validar nada.
     const url = `${baseUrl}${apiConfig.basePath}/${route.path.replace(/:(\w+)/g, "x")}`;
@@ -503,7 +618,7 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     const init: RequestInit = { method: route.method, headers };
     if (route.method === "POST" || route.method === "PUT" || route.method === "PATCH") {
       headers["content-type"] = "application/json";
-      init.body = JSON.stringify({});
+      init.body = JSON.stringify(body);
     }
     return fetch(url, init);
   }

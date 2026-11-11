@@ -4,6 +4,7 @@ import {
   isAdminRoute,
   mergeRoutePermissions,
   requiresAdminExclusivePermission,
+  targetOrganizationIdOf,
 } from "../src/admin/admin-route.js";
 
 /**
@@ -86,5 +87,22 @@ describe("clasificación de rutas administrativas (T-F0-8)", () => {
       ),
     ).toEqual({ product: ["update"], "exchange-rate": ["update"] });
     expect(mergeRoutePermissions(undefined, undefined)).toBeUndefined();
+  });
+
+  it("la agencia objetivo ignora el cuerpo en rutas que no aceptan organizationId", () => {
+    // "request": cuerpo o query y, si no vienen, la activa.
+    expect(targetOrganizationIdOf("request", { organizationId: "cuerpo" }, undefined, "activa")).toBe(
+      "cuerpo",
+    );
+    expect(targetOrganizationIdOf("request", {}, { organizationId: "query" }, "activa")).toBe("query");
+    expect(targetOrganizationIdOf("request", {}, undefined, "activa")).toBe("activa");
+    expect(targetOrganizationIdOf("request", {}, undefined, null)).toBeUndefined();
+    // "unknown" (o sin declarar): ni cuerpo ni activa; fail-closed con null.
+    expect(targetOrganizationIdOf("unknown", { organizationId: "ajena" }, undefined, "activa")).toBe(
+      null,
+    );
+    expect(targetOrganizationIdOf(undefined, { organizationId: "ajena" }, undefined, "activa")).toBe(
+      null,
+    );
   });
 });

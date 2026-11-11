@@ -195,6 +195,18 @@ export interface BetterAuthAdminRoute {
    * after imputa la fila de auditoria a esa agencia.
    */
   authorization: "platform" | "organization";
+  /**
+   * De donde sale la agencia objetivo para clasificar el segundo factor en
+   * las rutas de organizacion (B3 y el bypass residual de cancel-invitation):
+   * - "request": `organizationId` del cuerpo o la query y, si no viene, la
+   *   activa.
+   * - "unknown": la ruta no acepta `organizationId` y la agencia de la
+   *   entidad no se conoce antes de ejecutar (cancel-invitation autoriza por
+   *   la agencia de la invitacion; create no tiene agencia previa). Se ignora
+   *   el cuerpo: un `organizationId` ajeno no puede librar del TOTP.
+   * Obligatorio en las rutas de organizacion (lo comprueba el inventario e2e).
+   */
+  targetOrganization?: "request" | "unknown";
   /** Regla de auditoria; ausente en las rutas administrativas de solo lectura. */
   audit?: BetterAuthAuditRule;
 }
@@ -364,11 +376,18 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
   // Plugin organization: escrituras administrativas de agencia. create no
   // audita ni se salta con sesion: con allowUserToCreateOrganization: false
   // una sesion de usuario nunca llega a escribir (403 de la propia lib).
-  { path: "/organization/create", methods: ["POST"], authorization: "organization" },
+  {
+    path: "/organization/create",
+    methods: ["POST"],
+    authorization: "organization",
+    // No acepta organizationId y no hay agencia previa que clasificar.
+    targetOrganization: "unknown",
+  },
   {
     path: "/organization/update",
     methods: ["POST"],
     authorization: "organization",
+    targetOrganization: "request",
     audit: {
       action: "auth.organization.update",
       entity: "organization",
@@ -379,6 +398,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
     path: "/organization/delete",
     methods: ["POST"],
     authorization: "organization",
+    targetOrganization: "request",
     audit: {
       action: "auth.organization.delete",
       entity: "organization",
@@ -389,6 +409,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
     path: "/organization/invite-member",
     methods: ["POST"],
     authorization: "organization",
+    targetOrganization: "request",
     audit: {
       action: "auth.organization.invite-member",
       entity: "invitation",
@@ -399,6 +420,8 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
     path: "/organization/cancel-invitation",
     methods: ["POST"],
     authorization: "organization",
+    // No acepta organizationId; autoriza por la agencia de la invitacion.
+    targetOrganization: "unknown",
     audit: {
       action: "auth.organization.cancel-invitation",
       entity: "invitation",
@@ -409,6 +432,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
     path: "/organization/remove-member",
     methods: ["POST"],
     authorization: "organization",
+    targetOrganization: "request",
     audit: {
       action: "auth.organization.remove-member",
       entity: "member",
@@ -419,6 +443,7 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
     path: "/organization/update-member-role",
     methods: ["POST"],
     authorization: "organization",
+    targetOrganization: "request",
     audit: {
       action: "auth.organization.update-member-role",
       entity: "member",
@@ -485,16 +510,26 @@ function organizationIdFromInputs(
 /**
  * Organizacion objetivo de una escritura de /organization/* para clasificar
  * el segundo factor: la del cuerpo o la query y, si no viene, la activa.
- * undefined si no puede determinarse: el hook falla cerrado.
+ *
+ * Devuelve `null` cuando la ruta no acepta `organizationId` y la agencia de
+ * la entidad no se conoce antes de ejecutar ("unknown"): la clasificacion no
+ * puede creerle el cuerpo a la peticion ni asumir la activa (cancel-invitation
+ * autoriza por la agencia de la invitacion, que puede no ser la activa) y el
+ * hook falla cerrado. `undefined` es "no hay objetivo" para las rutas que si
+ * lo aceptan (sin cuerpo, query ni activa).
  *
  * No se usa en las rutas del plugin admin: son de plataforma y no afectan a
  * una agencia en concreto.
  */
 export function targetOrganizationIdOf(
+  targetOrganization: "request" | "unknown" | undefined,
   body: Record<string, unknown> | undefined,
   query: Record<string, unknown> | undefined,
   activeOrganizationId: string | null | undefined,
-): string | undefined {
+): string | null | undefined {
+  // Cualquier valor distinto de "request" (incluida una ruta sin declarar)
+  // no puede clasificarse con datos de la peticion: falla cerrado.
+  if (targetOrganization !== "request") return null;
   return organizationIdFromInputs(body, query) ?? nonEmptyString(activeOrganizationId);
 }
 

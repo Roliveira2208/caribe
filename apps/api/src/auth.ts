@@ -117,11 +117,14 @@ export const auth = betterAuth({
       //
       // En las escrituras de organizacion la clasificacion usa la agencia
       // objetivo (B3 del segundo informe): la del cuerpo o la query, o la
-      // activa si no viene. Sin objetivo determinable queda undefined y la
-      // sesion falla cerrada si es administrativa en cualquier agencia.
+      // activa si no viene. Sin objetivo determinable la sesion falla cerrada
+      // si es administrativa en cualquier agencia; en las rutas que no aceptan
+      // organizationId (cancel-invitation, create) el resolver devuelve null
+      // y tampoco vale la activa: el cuerpo no puede librar del TOTP.
       const targetOrganizationId =
         route.authorization === "organization"
           ? targetOrganizationIdOf(
+              route.targetOrganization,
               ctx.body as Record<string, unknown> | undefined,
               ctx.query as Record<string, unknown> | undefined,
               session.session.activeOrganizationId,
