@@ -275,9 +275,9 @@ Commits del fix anterior confirmados en la historia: `d8e33c7` (deltas), `776739
 
 ## 10. Corrección (2026-11-11)
 
-Fix de B3, M3 y M4 aplicado después de este informe, con tests primero y un commit por problema.
-Sin cambio de esquema ni dependencias nuevas; `f0-foundations` sigue sin archivar (`T-F0-12`
-pendiente: la re-verificación en conversación limpia).
+Fix de B3, M3, M4 y del bypass residual de `cancel-invitation` aplicado después de este informe, con
+tests primero y un commit por problema. Sin cambio de esquema ni dependencias nuevas; `f0-foundations`
+sigue sin archivar (`T-F0-12` pendiente: la re-verificación en conversación limpia).
 
 | Commit | Tipo | Qué cierra |
 |---|---|---|
@@ -285,6 +285,7 @@ pendiente: la re-verificación en conversación limpia).
 | `6ab9432` | `fix(auth)` | **B3** (T-F0-15): capa de autorización por ruta, resolución de la organización objetivo y falla cerrada; auditoría imputada a la agencia objetivo o a la entidad devuelta. 5 e2e nuevos + inventario ampliado. |
 | `73bf5fb` | `test(auth)` | **M3** (T-F0-16): documenta el 200 sin efecto de `revoke-user-session` en la regla de auditoría y lo cubre con un e2e. |
 | `239201d` | `docs(spec)` | **M4** (T-F0-17): `proposal.md` declara el delta de `payments`. |
+| `a7d05d3` | `fix(auth)` | **B3 residual** (T-F0-18): `cancel-invitation` podía saltarse el TOTP con un `organizationId` ajeno en el cuerpo; resuelto con la declaración de agencia objetivo y la falla cerrada `null`. |
 
 - **B3 resuelto en el criterio que pedía el informe:** la organización objetivo es
   `body.organizationId || query.organizationId ||` la activa, y el rol se evalúa en ESA agencia
@@ -312,9 +313,30 @@ pendiente: la re-verificación en conversación limpia).
 |---|---|
 | `pnpm lint --force` | ✅ 4 tareas (shared, api, web, admin) |
 | `pnpm typecheck --force` | ✅ 5 tareas (incluye el build de shared) |
-| `pnpm test --force` | ✅ **171 tests** — api 101 · shared 44 · web 13 · admin 13 |
+| `pnpm test --force` | ✅ **175 tests** — api 105 · shared 44 · web 13 · admin 13 |
 | `node scripts/check-specs.mjs` | ✅ 8 specs válidas |
 
-En la API: 11 archivos / 101 tests; `two-factor.e2e.ts` 15, `auth.e2e.ts` 13, `audit.e2e.ts` 16.
+En la API: 11 archivos / 105 tests; `two-factor.e2e.ts` 18, `auth.e2e.ts` 13, `audit.e2e.ts` 16,
+`admin-route.test.ts` 6.
 Sigue pendiente el paso 3 del veredicto: re-verificar en conversación limpia (T-F0-12) y entonces
 archivar.
+
+## 11. Prueba dinámica por HTTP posterior (2026-11-11)
+
+Prueba pedida por el dueño tras el fix: sesión **sin organización activa**, sin TOTP, con
+`organizationId` en el cuerpo, propio y de otra agencia. Fixtures: owner de A (sin `set-active`),
+agencia B creada por otro usuario. Todo por HTTP contra la app real (`createApp` + `listen(0)`).
+
+| Comando / test | Qué prueba | Resultado |
+|---|---|---|
+| `pnpm --filter @caribe/api test two-factor.e2e.ts -t "inventario Nest: sin organización activa"` | Las 3 rutas administrativas de Nest (`PUT /api/v1/admin/exchange-rates/override`, `POST /api/v1/admin/organizations`, `GET /api/v1/admin/audit-logs`) con `organizationId` propio y de B | ✅ 6/6 → 403 `TWO_FACTOR_REQUIRED`; el cuerpo no libra del TOTP ni cambia de tenant |
+| … `-t "cancel-invitation de su agencia"` | Bypass residual: invitación real de A + `organizationId` de B | ✅ tras el fix → 403 `TWO_FACTOR_REQUIRED`, invitación en `pending`; **antes del fix → 200 y `canceled`** |
+| `pnpm --filter @caribe/api test two-factor.e2e.ts` | Inventario completo de Better Auth sin organización activa (pasada con `organizationId` propio y con cuerpo vacío) + escenarios B3 | ✅ 18/18 |
+| Sonda HTTP temporal (no versionada) sobre las 22 rutas de `BETTER_AUTH_ADMIN_ROUTES` × agencia propia/ajena | Matriz completa por HTTP | 22/22 con agencia propia → 403 `TWO_FACTOR_REQUIRED`; con agencia ajena ninguna escribe (400/403 de la lib) y `cancel-invitation`/`create` fallan cerradas con 403 |
+
+La matriz con agencia **ajena** da, por diseño, el rechazo de la lib (400) en las rutas que sí
+aceptan `organizationId`: el llamador no es admin en B, así que no hay TOTP que exigir y la lib
+deniega por membresía (`MEMBER_NOT_FOUND`, `USER_IS_NOT_A_MEMBER_OF_THE_ORGANIZATION`); en las
+rutas que no lo aceptan (`cancel-invitation`, `create`) la clasificación falla cerrada con 403. La
+sonda encontró el bypass de `cancel-invitation` (200 y `canceled` sin TOTP), que se corrigió en
+`a7d05d3` y quedó cubierto por el e2e del cuadro.
