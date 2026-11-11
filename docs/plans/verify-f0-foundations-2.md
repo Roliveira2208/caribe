@@ -286,6 +286,8 @@ sigue sin archivar (`T-F0-12` pendiente: la re-verificación en conversación li
 | `73bf5fb` | `test(auth)` | **M3** (T-F0-16): documenta el 200 sin efecto de `revoke-user-session` en la regla de auditoría y lo cubre con un e2e. |
 | `239201d` | `docs(spec)` | **M4** (T-F0-17): `proposal.md` declara el delta de `payments`. |
 | `a7d05d3` | `fix(auth)` | **B3 residual** (T-F0-18): `cancel-invitation` podía saltarse el TOTP con un `organizationId` ajeno en el cuerpo; resuelto con la declaración de agencia objetivo y la falla cerrada `null`. |
+| `9d59b7f` | `docs(spec)` | **B3 auditoría** (T-F0-19): el delta de `audit` ignora el cuerpo en las rutas con agencia objetivo desconocida y añade el escenario del `organizationId` ajeno. |
+| `f44ff23` | `fix(auth)` | **B3 auditoría residual** (T-F0-19): `cancel-invitation` imputaba la fila a la agencia del cuerpo; ahora manda la entidad devuelta. Unitario + e2e (falla sin el fix). |
 
 - **B3 resuelto en el criterio que pedía el informe:** la organización objetivo es
   `body.organizationId || query.organizationId ||` la activa, y el rol se evalúa en ESA agencia
@@ -340,3 +342,40 @@ deniega por membresía (`MEMBER_NOT_FOUND`, `USER_IS_NOT_A_MEMBER_OF_THE_ORGANIZ
 rutas que no lo aceptan (`cancel-invitation`, `create`) la clasificación falla cerrada con 403. La
 sonda encontró el bypass de `cancel-invitation` (200 y `canceled` sin TOTP), que se corrigió en
 `a7d05d3` y quedó cubierto por el e2e del cuadro.
+
+## 12. Residuo de atribución de auditoría en `cancel-invitation` (T-F0-19, 2026-11-11)
+
+Comprobación pedida por el dueño sobre los mismos dos puntos por HTTP sin organización activa. El
+TOTP sigue cerrado (403 y `pending`), pero la sonda encontró un residuo en la otra mitad del fix B3:
+la **atribución de la fila de auditoría**.
+
+- **Qué pasaba:** con TOTP activo y sin organización activa, cancelar una invitación de A enviando
+  un `organizationId` de B en el cuerpo respondía 200 y cancelaba la invitación, pero la fila de
+  `audit_logs` quedaba con `tenant_id` = B y A no recibía fila. La declaración
+  `targetOrganization: "unknown"` (T-F0-18) solo se aplicaba al hook `before`; el `after` seguía
+  mirando `body/query.organizationId` antes que la entidad devuelta, y el cuerpo que ve es el crudo
+  (la lib ignora ese campo en esta ruta).
+- **Fix:** `tenantOrganizationIdOf` recibe la declaración de la ruta y solo confía en el
+  cuerpo/query cuando es `"request"`; en `"unknown"` imputa por la entidad devuelta (la invitación
+  marcada `canceled`) y, en su defecto, por la activa. Mismo dato del cuerpo que ya no salta el TOTP
+  tampoco puede desviar la auditoría de tenant.
+- **Cobertura:** unitario de la función (`admin-route.test.ts`) y e2e de auditoría con TOTP
+  (`audit.e2e.ts`) que comprueba la agencia de la fila y la ausencia de fila en la agencia del
+  cuerpo. Verificado que el e2e **falla sin el fix** (fila en la agencia del cuerpo) y pasa con él.
+- **Inventario no vacuo:** el inventario de Better Auth exige ahora al menos una ruta de
+  organización visible en `auth.api` y que ninguna declaración de organización quede huérfana, para
+  que la aserción de `targetOrganization` no pueda pasar por lista vacía. Las 7 rutas de
+  organización declaran su agencia objetivo (`create` y `cancel-invitation` = `unknown`; el resto =
+  `request`).
+
+### Pipeline tras T-F0-19
+
+| Paso | Resultado |
+|---|---|
+| `pnpm lint` | ✅ 4 tareas (shared, api, web, admin) |
+| `pnpm typecheck` | ✅ 5 tareas (incluye el build de shared) |
+| `pnpm test` | ✅ **177 tests** — api 107 · shared 44 · web 13 · admin 13 |
+
+En la API: 11 archivos / 107 tests; `two-factor.e2e.ts` 18, `audit.e2e.ts` 17,
+`admin-route.test.ts` 7. Sigue pendiente la re-verificación en conversación limpia (T-F0-12) y el
+archivo de la change.
