@@ -33,6 +33,8 @@ describe("aislamiento entre tenants (RLS)", () => {
   let client: Client;
   let orgA: string;
   let orgB: string;
+  let ownerA: string;
+  let ownerB: string;
   let rowA1: string;
   let rowA2: string;
   let rowB: string;
@@ -41,8 +43,8 @@ describe("aislamiento entre tenants (RLS)", () => {
   beforeAll(async () => {
     // Dos agencias como accion de sistema (misma via que el seed y el e2e de
     // auth); las filas se montan por Prisma como dueno, que no pasa por RLS.
-    const ownerA = await signUp(`owner-rls-a-${suffix}@example.com`);
-    const ownerB = await signUp(`owner-rls-b-${suffix}@example.com`);
+    ownerA = await signUp(`owner-rls-a-${suffix}@example.com`);
+    ownerB = await signUp(`owner-rls-b-${suffix}@example.com`);
     orgA = (
       await auth.api.createOrganization({
         body: { name: `Agencia RLS A ${suffix}`, slug: `agencia-rls-a-${suffix}`, userId: ownerA },
@@ -91,9 +93,17 @@ describe("aislamiento entre tenants (RLS)", () => {
     return rows.map((row) => row.id);
   }
 
-  /** Ejecuta fn como caribe_app en su propia transaccion con el GUC pedido. */
+  /** Ejecuta fn como caribe_app en su propia transaccion con los GUC pedidos. */
   async function asCaribeApp<T>(
-    guc: { tenantId?: string; platform?: boolean } | undefined,
+    guc:
+      | {
+          tenantId?: string;
+          userId?: string;
+          platform?: boolean;
+          public?: boolean;
+          ratesGlobal?: boolean;
+        }
+      | undefined,
     fn: (c: Client) => Promise<T>,
   ): Promise<T> {
     await client.query("BEGIN");
@@ -101,8 +111,17 @@ describe("aislamiento entre tenants (RLS)", () => {
       if (guc?.tenantId) {
         await client.query("SELECT set_config('app.tenant_id', $1, true)", [guc.tenantId]);
       }
+      if (guc?.userId) {
+        await client.query("SELECT set_config('app.user_id', $1, true)", [guc.userId]);
+      }
       if (guc?.platform) {
         await client.query("SELECT set_config('app.platform', 'on', true)");
+      }
+      if (guc?.public) {
+        await client.query("SELECT set_config('app.public', 'on', true)");
+      }
+      if (guc?.ratesGlobal) {
+        await client.query("SELECT set_config('app.rates_global', 'on', true)");
       }
       return await fn(client);
     } finally {
@@ -233,6 +252,186 @@ describe("aislamiento entre tenants (RLS)", () => {
       await expect(
         tenantService.withContext({ kind: "none" }, async () => "no debe correr"),
       ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe("contextos de datos explícitos (T-F1-0d)", () => {
+    it("el contexto de agencia A no ve las filas de plataforma", async () => {
+      const rows = await asCaribeApp({ tenantId: orgA }, runRows);
+      expect(rows).not.toContain(rowPlatform);
+    });
+
+    it("sin contexto tampoco se escribe: WITH CHECK rechaza el INSERT", async () => {
+      await expect(
+        asCaribeApp(undefined, (c) =>
+          c.query(
+            "INSERT INTO audit_logs (id, tenant_id, action, entity, entity_id) VALUES ($1, $2, 'test.forge', 'test', $3)",
+            [randomUUID(), orgA, `forge-sin-contexto-${suffix}`],
+          ),
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("el contexto owner no ve auditoría: no hay política por dueño", async () => {
+      // `audit_logs` solo tiene políticas de agencia y de plataforma. Un
+      // cliente operando sobre sus propias filas no debe ver auditoría.
+      const rows = await asCaribeApp({ userId: ownerA }, runRows);
+      expect(rows).toEqual([]);
+    });
+
+    it("el contexto public no ve auditoría", async () => {
+      const rows = await asCaribeApp({ public: true }, runRows);
+      expect(rows).toEqual([]);
+    });
+
+    it("el contexto rates_global no ve ni escribe auditoría", async () => {
+      const rows = await asCaribeApp({ ratesGlobal: true }, runRows);
+      expect(rows).toEqual([]);
+      await expect(
+        asCaribeApp({ ratesGlobal: true }, (c) =>
+          c.query(
+            "INSERT INTO audit_logs (id, tenant_id, action, entity, entity_id) VALUES ($1, $2, 'test.forge', 'test', $3)",
+            [randomUUID(), orgA, `forge-rates-${suffix}`],
+          ),
+        ),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("inventario de tablas con RLS forzada", () => {
+    // Tablas que no son de negocio y viven sin RLS: las administra Better Auth
+    // con sus propias reglas, y el historial de migraciones de Prisma. Toda
+    // tabla nueva que no esté aquí debe traer RLS habilitada y forzada: el
+    // inventario falla nombrándola (spec tenant-isolation, "Tabla nueva sin
+    // RLS").
+    const SIN_RLS = new Set([
+      "_prisma_migrations",
+      "user",
+      "session",
+      "account",
+      "verification",
+      "organization",
+      "member",
+      "invitation",
+      "twoFactor",
+    ]);
+
+    async function tables(): Promise<
+      Array<{ name: string; rls: boolean; forced: boolean; policies: number }>
+    > {
+      const { rows } = await client.query<{
+        name: string;
+        rls: boolean;
+        forced: boolean;
+        policies: number;
+      }>(
+        `SELECT c.relname AS name,
+                c.relrowsecurity AS rls,
+                c.relforcerowsecurity AS forced,
+                (SELECT count(*)::int FROM pg_policy p WHERE p.polrelid = c.oid) AS policies
+           FROM pg_class c
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relkind = 'r'
+          ORDER BY c.relname`,
+      );
+      return rows;
+    }
+
+    it("toda tabla de negocio tiene RLS habilitada y forzada, con al menos una política", async () => {
+      const business = (await tables()).filter((row) => !SIN_RLS.has(row.name));
+      expect(business.map((row) => row.name)).toEqual(
+        expect.arrayContaining(["audit_logs", "auth_events"]),
+      );
+      const failures = business
+        .filter((row) => !row.rls || !row.forced || row.policies < 1)
+        .map(
+          (row) => `${row.name} (rls=${row.rls}, forced=${row.forced}, políticas=${row.policies})`,
+        );
+      expect(
+        failures,
+        `tablas de negocio sin RLS habilitada y forzada: ${failures.join("; ")}`,
+      ).toEqual([]);
+    });
+
+    it("la lista de excepciones solo contiene tablas reales", async () => {
+      // Una excepción con nombre equivocado escondería una tabla de negocio
+      // bajo un nombre que ya no existe; el inventario debe avisar.
+      const existing = new Set((await tables()).map((row) => row.name));
+      const stale = [...SIN_RLS].filter((name) => !existing.has(name));
+      expect(stale, `excepciones de RLS sin tabla: ${stale.join(", ")}`).toEqual([]);
+    });
+  });
+
+  describe("TenantService: contextos de cliente, catálogo y tasa", () => {
+    const tenantService = new TenantService();
+
+    it("withOwner fija app.user_id", async () => {
+      const setting = await tenantService.withOwner(ownerA, async (tx) => {
+        const rows = await tx.$queryRaw<{ user_id: string | null; tenant_id: string | null }[]>`
+          SELECT current_setting('app.user_id', true) AS user_id,
+                 current_setting('app.tenant_id', true) AS tenant_id`;
+        return rows[0];
+      });
+      expect(setting?.user_id).toBe(ownerA);
+      // El contexto owner no concede agencia: la política de agencia compara
+      // contra "" (sin GUC) y nunca coincide con un tenant_id, así que RLS no
+      // devuelve filas de la agencia.
+      expect(setting?.tenant_id ?? "").toBe("");
+    });
+
+    it("withOwnerTenant fija app.tenant_id y app.user_id", async () => {
+      const setting = await tenantService.withOwnerTenant(ownerA, orgA, async (tx) => {
+        const rows = await tx.$queryRaw<{ user_id: string | null; tenant_id: string | null }[]>`
+          SELECT current_setting('app.user_id', true) AS user_id,
+                 current_setting('app.tenant_id', true) AS tenant_id`;
+        return rows[0];
+      });
+      expect(setting).toEqual({ user_id: ownerA, tenant_id: orgA });
+    });
+
+    it("withPublic fija app.public", async () => {
+      const setting = await tenantService.withPublic(async (tx) => {
+        const rows = await tx.$queryRaw<{ v: string | null }[]>`
+          SELECT current_setting('app.public', true) AS v`;
+        return rows[0]?.v ?? null;
+      });
+      expect(setting).toBe("on");
+    });
+
+    it("withRatesGlobal fija app.rates_global", async () => {
+      const setting = await tenantService.withRatesGlobal(async (tx) => {
+        const rows = await tx.$queryRaw<{ v: string | null }[]>`
+          SELECT current_setting('app.rates_global', true) AS v`;
+        return rows[0]?.v ?? null;
+      });
+      expect(setting).toBe("on");
+    });
+
+    it("withOwner y withOwnerTenant rechazan identificadores vacíos", async () => {
+      await expect(tenantService.withOwner("", async () => "no debe correr")).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      await expect(
+        tenantService.withOwnerTenant("", orgA, async () => "no debe correr"),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(
+        tenantService.withOwnerTenant(ownerA, "", async () => "no debe correr"),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it("withContext despacha cada contexto explícito", async () => {
+      const kinds = await Promise.all([
+        tenantService.withContext({ kind: "owner", userId: ownerA }, (tx) =>
+          tx.$queryRaw<{ v: string | null }[]>`SELECT current_setting('app.user_id', true) AS v`,
+        ),
+        tenantService.withContext({ kind: "public" }, (tx) =>
+          tx.$queryRaw<{ v: string | null }[]>`SELECT current_setting('app.public', true) AS v`,
+        ),
+        tenantService.withContext({ kind: "rates_global" }, (tx) =>
+          tx.$queryRaw<{ v: string | null }[]>`SELECT current_setting('app.rates_global', true) AS v`,
+        ),
+      ]);
+      expect(kinds.map((rows) => rows[0]?.v)).toEqual([ownerA, "on", "on"]);
     });
   });
 
