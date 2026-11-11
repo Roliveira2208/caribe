@@ -4,8 +4,17 @@ packages:
 
 # pnpm 12: los paquetes con scripts de instalación necesitan aprobación
 # explícita. esbuild (vitest/vite) valida su binario; prisma y @prisma/engines
-# descargan los motores que usa el CLI de migraciones.
+# descargan los motores que usa el CLI de migraciones; @swc/core y
+# @parcel/watcher validan los bindings nativos que usa Next 16 (SWC y watcher).
 allowBuilds:
+  "@parcel/watcher": true
   "@prisma/engines": true
+  "@swc/core": true
   esbuild: true
   prisma: true
+
+minimumReleaseAgeExclude:
+  - icu-minify@4.14.10
+  - next-intl-swc-plugin-extractor@4.14.10
+  - next-intl@4.14.10
+  - use-intl@4.14.10

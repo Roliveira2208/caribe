@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de marca (Tailwind v4 @theme): paleta caribe (aguas turquesas) para
+ * la web publica. Los componentes ui/* consumen estas variables.
+ */
+@theme {
+  --color-brand-50: #ecfeff;
+  --color-brand-100: #cffafe;
+  --color-brand-200: #a5f3fc;
+  --color-brand-300: #67e8f9;
+  --color-brand-400: #22d3ee;
+  --color-brand-500: #06b6d4;
+  --color-brand-600: #0891b2;
+  --color-brand-700: #0e7490;
+  --color-brand-800: #155e75;
+  --color-brand-900: #164e63;
+  --color-coral-500: #f97316;
+  --color-coral-600: #ea580c;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}

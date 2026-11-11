@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "appName": "Caribe",
+    "tagline": "Viajes por Venezuela",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "security": "Seguridad",
+    "language": "Idioma",
+    "spanish": "Español",
+    "english": "English"
+  },
+  "metadata": {
+    "title": "Caribe · Viajes por Venezuela",
+    "titleTemplate": "%s · Caribe",
+    "description": "Agencia de viajes en línea para explorar Venezuela: tours, alojamientos y experiencias de agencias locales."
+  },
+  "home": {
+    "title": "Explora Venezuela con Caribe",
+    "subtitle": "Tours, alojamientos y experiencias seleccionadas por agencias venezolanas.",
+    "notReady": "El buscador y las reservas llegan en la siguiente fase.",
+    "featureCatalogTitle": "Catálogo local",
+    "featureCatalogDescription": "Tours y experiencias publicados y operados por agencias venezolanas.",
+    "featureRatesTitle": "Precios en USD y VES",
+    "featureRatesDescription": "Cada precio con su equivalente en bolívares a la tasa del día.",
+    "featureOfflineTitle": "Tus reservas siempre a mano",
+    "featureOfflineDescription": "Instalable y con lectura de reservas sin conexión (próximamente)."
+  },
+  "login": {
+    "title": "Iniciar sesión",
+    "description": "Accede con tu correo y contraseña.",
+    "email": "Correo",
+    "password": "Contraseña",
+    "submit": "Entrar",
+    "submitting": "Entrando…",
+    "invalidCredentials": "Correo o contraseña incorrectos.",
+    "genericError": "No se pudo iniciar sesión. Inténtalo de nuevo.",
+    "metaTitle": "Iniciar sesión",
+    "metaDescription": "Accede a tu cuenta de Caribe con correo y contraseña."
+  },
+  "twoFactor": {
+    "title": "Seguridad de dos pasos",
+    "description": "Protege tu cuenta con tu app autenticadora.",
+    "metaTitle": "Seguridad de dos pasos",
+    "metaDescription": "Activa o verifica el segundo factor de tu cuenta de Caribe.",
+    "loading": "Cargando…",
+    "verifyTitle": "Verifica tu código",
+    "verifyDescription": "Abre tu app autenticadora y escribe el código de un solo uso para terminar de entrar.",
+    "code": "Código de verificación",
+    "codePlaceholder": "123456",
+    "verify": "Verificar",
+    "verifying": "Verificando…",
+    "invalidCode": "El código no es válido o ya expiró.",
+    "expired": "Tu acceso quedó pendiente. Vuelve a iniciar sesión.",
+    "expiredAction": "Ir a iniciar sesión",
+    "activateTitle": "Activa tu app autenticadora",
+    "activateDescription": "Confirma tu contraseña para generar tu código QR.",
+    "password": "Contraseña",
+    "continue": "Continuar",
+    "enabling": "Generando…",
+    "invalidPassword": "La contraseña no es correcta.",
+    "genericError": "Algo salió mal. Inténtalo de nuevo.",
+    "scanDescription": "Escanea el QR con tu app autenticadora (Google Authenticator, Authy…) y confirma el código para terminar la activación.",
+    "manualKeyTitle": "O introdúcelo a mano",
+    "accountLabel": "Cuenta",
+    "issuerLabel": "Servicio",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "backupCodesTitle": "Guarda tus códigos de recuperación",
+    "backupCodesDescription": "Te los mostramos una sola vez: guárdalos en un lugar seguro antes de continuar.",
+    "backupCodesWarning": "Si pierdes tu teléfono, un código de recuperación te deja entrar. Cada uno sirve una sola vez y no se vuelven a mostrar: cópialos ahora.",
+    "backupCodesEmpty": "No hay códigos disponibles ahora. Puedes generar otros nuevos con tu contraseña.",
+    "copyAll": "Copiar todos",
+    "regenerateDescription": "¿Perdiste los códigos? Genera otros con tu contraseña.",
+    "regenerate": "Generar",
+    "regenerating": "Generando…",
+    "finish": "Ya guardé mis códigos, continuar"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La ruta que buscas no existe o cambió.",
+    "back": "Volver al inicio"
+  }
+}

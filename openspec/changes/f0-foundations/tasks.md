@@ -22,7 +22,12 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
   - La pantalla de activación pasa a T-F0-10 junto al shell (decisión del dueño, 2026-11-10).
 - [x] T-F0-9 `audit_logs` inmutable (permisos de BD) e interceptor `AuditModule` con un endpoint de ejemplo.
   - Prueba: audit › "Intento de borrado", "Admin aprueba un pago" (con acción de ejemplo).
-- [ ] T-F0-10 `next-intl` en web y admin con es/en y rutas `/es` `/en`; shell de cada app con login.
+- [x] T-F0-10 `next-intl` en web y admin con es/en y rutas `/es` `/en`; shell de cada app con login.
   - Incluye la pantalla de activación de TOTP de T-F0-8 (redirige ante 403 `TWO_FACTOR_REQUIRED`).
+  - Prueba: web y admin `routing`, `alternate-links`, `messages` (paridad es/en y claves usadas); shared `auth-api`
+    y `auth-client` (44 tests). Verificación e2e local (2026-11-10): `/` redirige a `/es` y hreflang en ambas
+    apps; login por el proxy del admin; `GET /admin/audit-logs` con org activa responde 403
+    `TWO_FACTOR_REQUIRED`; `two-factor/enable` → `verify-totp` → audit-logs 200; login posterior devuelve
+    `twoFactorRedirect` con cookie pendiente de 10 min y `verify-totp` crea la sesión.
 - [ ] T-F0-11 Wireframes SVG de baja fidelidad de búsqueda, detalle, checkout y panel de pagos en `docs/wireframes/`.
 - [ ] T-F0-12 Verificación de la change: `/verify f0-foundations` en conversación limpia; archivar con `/opsx:archive`.

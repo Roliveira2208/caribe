@@ -7,7 +7,7 @@ import {
   WEB_PORT,
   isLocale,
   localeSchema,
-} from "../src/index.js";
+} from "../src/index";
 
 describe("locale", () => {
   it("acepta es y en como idiomas válidos", () => {

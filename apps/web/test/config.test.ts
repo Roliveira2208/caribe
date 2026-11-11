@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { webConfig } from "../src/config.js";
+import { webConfig } from "../src/config";
 
 describe("webConfig", () => {
   it("expone la web en el puerto 3000", () => {

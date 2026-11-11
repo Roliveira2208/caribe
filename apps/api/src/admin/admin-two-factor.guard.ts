@@ -2,6 +2,7 @@ import { ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common
 import { Reflector } from "@nestjs/core";
 import { fromNodeHeaders } from "better-auth/node";
 import { AuthGuard } from "@thallesp/nestjs-better-auth";
+import { TWO_FACTOR_REQUIRED } from "@caribe/shared";
 import { auth } from "../auth.js";
 import { prisma } from "../prisma.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
@@ -13,9 +14,6 @@ import {
   registeredRoutePath,
   type RouteSecurity,
 } from "./admin-route.js";
-
-/** Codigo de aplicacion del 403 que activa la pantalla de TOTP (spec auth-access). */
-export const TWO_FACTOR_REQUIRED = "TWO_FACTOR_REQUIRED";
 
 /**
  * Lo minimo que el guard necesita de la sesion (estructural, como

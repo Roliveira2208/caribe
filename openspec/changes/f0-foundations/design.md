@@ -398,5 +398,84 @@ comportamiento especificado: refuerza pruebas y deja anotadas dos decisiones par
   confirma con sus efectos locales y su auditoría en una transacción; la interacción con el
   proveedor se audita en su propia fila/transacción cuando la llamada vuelve.
 
+## Decisiones técnicas de T-F0-10 (next-intl, shells de web/admin y pantalla TOTP)
+
+- **Dependencias nuevas, todas del stack del SDD:** `next` 16.4.6 + `react`/`react-dom` 19.3.1 en
+  ambas apps y `next-intl` 4.14.10 (es/en con prefijo de locale). En web, además: `react-qr-code`
+  2.2.0 (QR de la activación TOTP: renderiza SVG, sin canvas ni APIs de navegador), Tailwind 4
+  (`tailwindcss` + `@tailwindcss/postcss` 4.3.5) y los cuatro paquetes que exige el patrón
+  shadcn/ui para button/input/label/card montados a mano (`@radix-ui/react-slot`,
+  `class-variance-authority`, `clsx`, `tailwind-merge`); los componentes se copiaron a mano en
+  vez de usar el CLI para no arrastrar dependencias sin usar. En admin: `antd` 6.7.0 y
+  `@ant-design/nextjs-registry` 1.3.0 (extrae los estilos cssinjs de antd durante el SSR; es
+  named export en esta versión). Pines exactos, misma política que TypeScript/Prisma/better-auth.
+- **Sin cliente JS de better-auth en los frontends:** las llamadas van con `fetch` crudo al
+  mismo origen (los rewrites de `next.config` las llevan a la API), para no sumar dependencias y
+  para que los tests de shared controlen la red con un `fetch` inyectable. El contrato vive en
+  `packages/shared`: `auth-api.ts` (constantes `AUTH_BASE_PATH`/`TWO_FACTOR_REQUIRED`, tipos de
+  respuesta, `twoFactorScreenMode`, `parseOtpauthUri`, `safeLocalizedRedirectPath`) y
+  `auth-client.ts` (wrappers `signInEmail`/`signOut`/`getSession`/`enableTwoFactor`/`verifyTotp`/
+  `generateBackupCodes`). `TWO_FACTOR_REQUIRED` se define una sola vez, en shared, y el guard del
+  API lo importa desde ahí (antes lo duplicaba).
+- **Contrato observado de Better Auth 1.7.18 (verificado e2e por el proxy de admin):** login sin
+  TOTP crea sesión normal; con TOTP activo responde 200 con `twoFactorRedirect: true` y
+  `twoFactorMethods: ["totp"]`, borra las cookies de sesión (`Max-Age=0`) y deja solo
+  `better-auth.two_factor` (HttpOnly, `Max-Age=600`). `two-factor/enable` exige sesión y
+  contraseña y devuelve `{method, totpURI, backupCodes:10}` — los códigos de recuperación
+  viajan en claro solo en esa respuesta. `two-factor/verify-totp` sirve tanto para completar la
+  activación como para el login pendiente (en ambos rota la sesión y fija cookie nueva).
+- **Pantalla TOTP con dos modos (`twoFactorScreenMode`):** sin sesión → verificación (login
+  pendiente por la cookie `two_factor`); sesión sin TOTP → activación (contraseña → QR + clave
+  manual → código → códigos de recuperación con copiar/regenerar); sesión con TOTP → redirect al
+  destino. El secreto y los códigos se muestran en pantalla y jamás se escriben en logs ni URLs:
+  no hay `console.*` en `src` de ninguna app y se revisaron los logs de los tres servers tras la
+  verificación e2e.
+- **`redirectTo` validado en servidor:** las páginas de login y two-factor pasan el query param
+  por `safeLocalizedRedirectPath` antes de entregárselo al componente (path interno localizado o
+  fallback a portada/panel), para que un `redirectTo` externo no sobreviva al render server-side.
+  La navegación programática usa `useRouter` de next/navigation y los enlaces internos el `Link`
+  de next-intl (preserva el locale).
+- **Next 16 + next-intl:** middleware en `src/proxy.ts` (`middleware.ts` está deprecado en 16);
+  `createMiddleware` default de next-intl ya excluye `/api` del matcher; `getRequestConfig` con
+  fallback a es; `hasLocale` + `NextIntlClientProvider` en los layouts; `generateStaticParams`
+  por locale (SSG de `/es` y `/en`). Cada página declara `generateMetadata` con canonical +
+  hreflang es/en + x-default (`alternateLinks` sobre `WEB_URL`/`ADMIN_URL`). Un locale
+  desconocido se redirige bajo el locale por defecto (`/fr` → `/es/fr`) y cae al catch-all
+  `[...rest]` → 404 localizado (comportamiento de next-intl con `localePrefix: "always"`).
+- **Imports relativos siempre sin extensión:** Turbopack no resuelve especificadores `.js` a
+  archivos `.ts/.tsx` (tsc sí). Por eso `src` de web/admin y de shared usan imports
+  extensionless; las apps consumen shared por `paths` → `src` con `moduleResolution: "Bundler"`.
+  shared compila bajo `NodeNext` sin `"type": "module"` (CJS), donde los extensionless son
+  válidos; la API (`Node10`) resuelve la dependencia construida vía workspace.
+- **antd solo en admin, Tailwind solo en web** (regla del AGENTS.md raíz): admin no tiene Tailwind
+  (estilos inline mínimos fuera de antd) y antd vive solo en archivos "use client"; `AntRegistry`
+  + `ConfigProvider` con `antd/locale/es_ES`/`en_US` fijan el idioma de antd al locale activo.
+  antd 6 deprecó `Alert message` en favor de `title` (corregido en los tres componentes que lo
+  usan; sin advertencias en dev).
+- **Textos por i18n sin cadenas fijas:** namespaces nav/metadata/login/twoFactor/notFound
+  (mismas claves en web y admin) + `home` (web) / `panel` (admin). Tests de mensajes en cada app:
+  extraen namespaces y claves de `useTranslations`/`getTranslations` + llamadas `t("...")`
+  literales por regex y exigen que toda clave usada exista y que es/en tengan paridad exacta.
+- **`next-env.d.ts` commiteado y fuera de prettier:** CI no corre `pnpm build` de las apps y el
+  typecheck funciona sin `.next` porque el archivo está commiteado (verificado en ambas apps
+  moviendo `.next` fuera). `.prettierignore` lo excluye (lo genera Next). Igual tratamiento para
+  los `AGENTS.md` de `apps/web` y `apps/admin`: los escribe `next dev` (puntero de 9 líneas a los
+  docs de Next 16) y commitearlos mantiene el árbol limpio.
+- **turbo.json:** `build.outputs` pasa a `["dist/**", ".next/**", "!.next/cache/**"]` para que el
+  caché de Turborepo registre los artefactos de Next (evita los warnings de "no output files
+  found" que salían con solo `dist/**`).
+
+### Pregunta abierta para F1: organización activa por sesión
+
+Las sesiones de Better Auth nacen **sin organización activa** (el plugin Organization no la
+auto-fija); hoy solo se fija con `POST /api/auth/organization/set-active`, como hacen los tests
+en `auth-helpers.ts`. El panel de auditoría exige agencia activa (o rol de plataforma), así que
+en la verificación e2e un admin recién logueado recibe 403 «La auditoría requiere una agencia
+activa o el rol de plataforma» hasta llamar a set-active con su agencia. F1 debe decidir:
+selector de organización al login (multi-agencia) vs auto-set de la única membresía cuando el
+usuario pertenece a una sola. No se decide aquí porque el SDD no especifica el flujo y es
+comportamiento de producto del panel, no del shell.
+
+
 
 

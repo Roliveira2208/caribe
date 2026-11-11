@@ -1,0 +1,16 @@
+/*
+ * Reset minimo del admin: antd trae sus estilos via cssinjs (AntRegistry);
+ * aqui solo se ajusta el cuerpo de la pagina.
+ */
+body {
+  margin: 0;
+  background: #f5f5f5;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}

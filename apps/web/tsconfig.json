@@ -1,9 +1,11 @@
 {
   "extends": "@caribe/tsconfig/nextjs.json",
   "compilerOptions": {
+    "plugins": [{ "name": "next" }],
     "paths": {
-      "@caribe/shared": ["../../packages/shared/src"]
+      "@caribe/shared": ["../../packages/shared/src"],
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "test"]
+  "include": ["next-env.d.ts", "src", "test", ".next/types/**/*.ts"]
 }

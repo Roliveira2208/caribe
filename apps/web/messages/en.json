@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "appName": "Caribe",
+    "tagline": "Travel across Venezuela",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "security": "Security",
+    "language": "Language",
+    "spanish": "Español",
+    "english": "English"
+  },
+  "metadata": {
+    "title": "Caribe · Travel across Venezuela",
+    "titleTemplate": "%s · Caribe",
+    "description": "Online travel agency to explore Venezuela: tours, stays and experiences from local agencies."
+  },
+  "home": {
+    "title": "Explore Venezuela with Caribe",
+    "subtitle": "Tours, stays and experiences hand-picked by Venezuelan agencies.",
+    "notReady": "Search and bookings arrive in the next phase.",
+    "featureCatalogTitle": "Local catalog",
+    "featureCatalogDescription": "Tours and experiences published and operated by Venezuelan agencies.",
+    "featureRatesTitle": "Prices in USD and VES",
+    "featureRatesDescription": "Every price with its bolívar equivalent at today's rate.",
+    "featureOfflineTitle": "Your bookings at hand",
+    "featureOfflineDescription": "Installable with offline booking access (coming soon)."
+  },
+  "login": {
+    "title": "Sign in",
+    "description": "Use your email and password.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "invalidCredentials": "Wrong email or password.",
+    "genericError": "Could not sign in. Please try again.",
+    "metaTitle": "Sign in",
+    "metaDescription": "Access your Caribe account with email and password."
+  },
+  "twoFactor": {
+    "title": "Two-step security",
+    "description": "Protect your account with your authenticator app.",
+    "metaTitle": "Two-step security",
+    "metaDescription": "Activate or verify the second factor of your Caribe account.",
+    "loading": "Loading…",
+    "verifyTitle": "Enter your code",
+    "verifyDescription": "Open your authenticator app and type the one-time code to finish signing in.",
+    "code": "Verification code",
+    "codePlaceholder": "123456",
+    "verify": "Verify",
+    "verifying": "Verifying…",
+    "invalidCode": "The code is invalid or has expired.",
+    "expired": "Your sign-in is pending. Please sign in again.",
+    "expiredAction": "Go to sign in",
+    "activateTitle": "Set up your authenticator app",
+    "activateDescription": "Confirm your password to generate your QR code.",
+    "password": "Password",
+    "continue": "Continue",
+    "enabling": "Generating…",
+    "invalidPassword": "The password is not correct.",
+    "genericError": "Something went wrong. Please try again.",
+    "scanDescription": "Scan the QR with your authenticator app (Google Authenticator, Authy…) and confirm the code to finish the setup.",
+    "manualKeyTitle": "Or enter it manually",
+    "accountLabel": "Account",
+    "issuerLabel": "Service",
+    "copy": "Copy",
+    "copied": "Copied",
+    "backupCodesTitle": "Save your recovery codes",
+    "backupCodesDescription": "We show them only once: keep them somewhere safe before continuing.",
+    "backupCodesWarning": "If you lose your phone, a recovery code lets you sign in. Each works once and they are never shown again: copy them now.",
+    "backupCodesEmpty": "No codes available right now. You can generate new ones with your password.",
+    "copyAll": "Copy all",
+    "regenerateDescription": "Lost your codes? Generate new ones with your password.",
+    "regenerate": "Generate",
+    "regenerating": "Generating…",
+    "finish": "I saved my codes, continue"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The route you are looking for does not exist or has changed.",
+    "back": "Back to home"
+  }
+}

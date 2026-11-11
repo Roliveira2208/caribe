@@ -9,5 +9,7 @@ openspec
 .claude
 .opencode
 *.md
+# Tipos generados por next build (next-env.d.ts): Next los regenera, no se editan.
+next-env.d.ts
 # Cliente de Prisma generado (pnpm --filter @caribe/api generate); no se edita a mano.
 apps/api/src/generated/

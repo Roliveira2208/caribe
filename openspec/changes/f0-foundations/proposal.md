@@ -35,6 +35,9 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
 - ¿Qué inventario básico debe crear el seed de demostración? F0 no tiene tablas de catálogo (fuera del
   alcance de esta change): el seed crea solo identidad y el inventario se añade cuando llegue
   specs/catalog en F1 (decisión del dueño, 2026-11-10).
+- Las sesiones de Better Auth nacen sin organización activa y el panel de auditoría la exige: ¿F1
+  monta un selector de organización al login (multi-agencia) o auto-fija la única membresía del
+  usuario? Descubierto en la verificación e2e de T-F0-10; ver `design.md`.
 
 ## Fuera de alcance
 Catálogo, reservas, pagos y tasas (F1 y F2).
