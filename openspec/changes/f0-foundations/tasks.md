@@ -68,6 +68,12 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
   ejecutar (`unknown` → falla cerrada ignorando también la activa).
   - Prueba: auth-access › "cancel-invitation de su agencia con organizationId ajeno en el cuerpo → 403 y sin efecto";
     el inventario de Better Auth exige la declaración de la agencia objetivo en todas las rutas de organización.
+- [x] T-F0-19 Fix del residuo de atribución de auditoría de `cancel-invitation` (B3, prueba dinámica posterior): con
+  TOTP activo, un `organizationId` ajeno en el cuerpo desviaba la fila de `audit_logs` a esa agencia y dejaba la
+  cancelación sin fila en la agencia de la invitación. `tenantOrganizationIdOf` solo confía en el cuerpo/query cuando
+  la ruta declara `targetOrganization: "request"`; en `"unknown"` imputa por la entidad devuelta.
+  - Prueba: audit › "cancel-invitation con organizationId ajeno en el cuerpo imputa la fila a la agencia de la
+    invitación"; admin-route › "la auditoría no imputa por el cuerpo en rutas con agencia objetivo desconocida".
 - Nota (M1 del informe): configurar `trustedProxies` al decidir el hosting; hoy la IP tras un proxy resuelve a
   null y el rate limit de login degenera en bucket global.
 - Nota (M2 del informe): Helmet, CSP y CORS antes de cualquier demo pública (faseados en F5 por el SDD §13).

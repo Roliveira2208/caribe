@@ -38,9 +38,13 @@ Las escrituras administrativas atendidas por el middleware de Better Auth —las
 `audit_logs` con actor, acción, entidad, identificador de la entidad afectada, estado resultante, IP y
 fecha. Las acciones del plugin admin SHALL registrarse con `tenant_id` NULL (plataforma) y las de
 organización con el `tenant_id` de la agencia afectada. La agencia afectada SHALL resolverse de la
-organización objetivo de la escritura —la del cuerpo, la de la entidad afectada o, en su defecto, la
-activa— y no solo de la organización activa de la sesión. Las acciones de sistema ejecutadas por la API
-de servidor (`auth.api`) sin sesión HTTP quedan fuera de este registro.
+organización objetivo de la escritura y no solo de la organización activa de la sesión: la del cuerpo o
+la query cuando la ruta declara que su agencia objetivo sale de la petición, la de la entidad afectada
+o, en su defecto, la activa. En las rutas que no aceptan `organizationId` en su esquema (cancelar una
+invitación), el cuerpo SHALL ignorarse para atribuir la fila: un `organizationId` de otra agencia en el
+cuerpo SHALL NOT desviar la fila, que SHALL quedar con la agencia de la entidad afectada devuelta. Las
+acciones de sistema ejecutadas por la API de servidor (`auth.api`) sin sesión HTTP quedan fuera de este
+registro.
 
 #### Scenario: Owner invita a un miembro
 - GIVEN un owner de agencia autenticado con TOTP activo
@@ -56,6 +60,13 @@ de servidor (`auth.api`) sin sesión HTTP quedan fuera de este registro.
 - GIVEN un owner de agencia autenticado con TOTP activo y sin organización activa
 - WHEN cancela una invitación de su agencia por `/api/auth/organization/cancel-invitation`
 - THEN existe una fila de auditoría con la agencia de la invitación como `tenant_id` y el owner como actor
+
+#### Scenario: Owner cancela una invitación con organizationId ajeno en el cuerpo
+- GIVEN un owner de agencia autenticado con TOTP activo y sin organización activa
+- WHEN cancela una invitación de su agencia por `/api/auth/organization/cancel-invitation` con un `organizationId` de otra agencia en el cuerpo
+- THEN la invitación se cancela
+- AND existe una fila de auditoría con la agencia de la invitación como `tenant_id` y el owner como actor
+- AND no queda fila de auditoría imputada a la agencia del cuerpo
 
 #### Scenario: Super Admin revoca una sesión
 - GIVEN un Super Admin autenticado con TOTP activo

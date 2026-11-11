@@ -601,6 +601,16 @@ nuevas ni cambios de esquema.
   false` no cambia. La auditoría sigue imputándose a la organización de la invitación devuelta. El
   inventario e2e exige la declaración en todas las rutas de organización, para que una ruta nueva
   no reabra el hueco.
+- **Residuo de atribución de la auditoría en `cancel-invitation` (T-F0-19, corregido):** la
+  declaración `targetOrganization: "unknown"` se aplicaba solo al hook `before`. El hook `after`
+  seguía imputando la fila con `body/query.organizationId` antes que con la entidad devuelta, y el
+  cuerpo que ve es el crudo (la lib ignora ese campo en esta ruta). Con TOTP activo, cancelar una
+  invitación de A enviando un `organizationId` de B dejaba la invitación cancelada pero la fila de
+  auditoría en B —y sin fila en A—: el mismo dato que ya no salta el TOTP desviaba la auditoría de
+  tenant. `tenantOrganizationIdOf` recibe ahora la declaración de la ruta y solo confía en el
+  cuerpo/query cuando es `"request"`; en `"unknown"` usa la entidad devuelta (la invitación, que no
+  se borra) y, en su defecto, la activa. Cubierto por un unitario de la función y un e2e con TOTP
+  que comprueba la agencia de la fila y la ausencia de fila en la agencia del cuerpo.
 - **M3 (`revoke-user-session`):** en better-auth 1.7.18 la ruta responde `200 {success:true}`
   aunque el `sessionToken` no corresponda a ninguna fila, porque `deleteSession` es un no-op
   silencioso. La app se comporta bien (sin fila que revocar el preestado queda vacío, el `after` no
