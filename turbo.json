@@ -10,7 +10,17 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      // Turbo 2 corre las tareas en modo estricto: solo las variables
+      // declaradas aqui llegan al proceso. Los e2e de la API necesitan la BD
+      // del job de CI; sin esto, setup-env.ts cae al default local (:5433).
+      "env": [
+        "DATABASE_URL",
+        "BETTER_AUTH_URL",
+        "BETTER_AUTH_SECRET",
+        "TRUSTED_ORIGINS",
+        "REDIS_URL"
+      ]
     },
     "dev": {
       "dependsOn": ["^build"],
