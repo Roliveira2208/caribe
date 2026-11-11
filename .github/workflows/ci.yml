@@ -74,7 +74,9 @@ jobs:
       # Prisma 7 exige que la shadow venga del config (SHADOW_DATABASE_URL).
       - name: Comprobar divergencia entre schema.prisma y las migraciones
         run: |
-          psql "$DATABASE_URL" -c "CREATE DATABASE caribe_ci_shadow"
+          # psql no acepta la query string de Prisma (?schema=public): se quita
+          # solo para psql; DATABASE_URL sigue intacta para Prisma.
+          psql "${DATABASE_URL%%\?*}" -c "CREATE DATABASE caribe_ci_shadow"
           pnpm --filter @caribe/api exec prisma migrate diff \
             --from-migrations prisma/migrations \
             --to-schema prisma/schema.prisma \
