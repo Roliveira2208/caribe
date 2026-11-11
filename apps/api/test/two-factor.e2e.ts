@@ -5,8 +5,11 @@ import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { DiscoveryService } from "@nestjs/core";
 import { createApp, type ApiApplication } from "../src/bootstrap.js";
 import { apiConfig } from "../src/config.js";
+import { auth } from "../src/auth.js";
 import { prisma } from "../src/prisma.js";
 import {
+  BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS,
+  betterAuthAdminRouteOf,
   AUTH_METADATA_KEYS,
   isAdminRoute,
   joinRoutePath,
@@ -29,12 +32,16 @@ import {
 /**
  * E2E del segundo factor (T-F0-8, delta de auth-access).
  *
- * El inventario de rutas administrativas recorre los controllers registrados
- * (DiscoveryService + metadata de Nest), clasifica cada ruta con la misma
- * funcion pura del guard y llama por HTTP a las administrativas con un admin
- * sin TOTP: si alguna dejara de exigir segundo factor, la prueba falla
- * (escenario "Ruta administrativa sin exigencia de segundo factor"). La
- * pantalla de activacion llega con el shell en T-F0-10 (decision del dueno).
+ * El inventario de rutas administrativas recorre las dos familias que sirven
+ * la API: los controllers de Nest (DiscoveryService + metadata de Nest) y el
+ * middleware de Better Auth (la instancia real, auth.api). Cada familia se
+ * clasifica con la misma funcion pura del guard o de los hooks y se llama por
+ * HTTP a las administrativas con un admin sin TOTP: si alguna dejara de
+ * exigir segundo factor, la prueba falla (escenario "Ruta administrativa sin
+ * exigencia de segundo factor"). La particion de /organization/* es completa
+ * (tabla administrativa o allowlist), asi que una ruta nueva de la lib no
+ * pasa sin clasificarse. La pantalla de activacion llega con el shell en
+ * T-F0-10 (decision del dueno).
  */
 describe("auth-access: segundo factor (T-F0-8)", () => {
   let app: ApiApplication;
@@ -53,7 +60,7 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     await prisma.$disconnect();
   });
 
-  it("inventario: toda ruta administrativa exige segundo factor", async () => {
+  it("inventario Nest: toda ruta administrativa exige segundo factor", async () => {
     const routes = listRegisteredRoutes(app);
     const adminRoutes = routes.filter((route) => route.administrative);
     // El inventario no puede pasar en vacio: debe haber de las dos clases.
@@ -70,6 +77,64 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
       }
     }
     expect(failures, `rutas administrativas sin exigir TOTP: ${failures.join("; ")}`).toEqual([]);
+  });
+
+  it("inventario Better Auth: toda ruta administrativa del middleware exige segundo factor", async () => {
+    const routes = listBetterAuthRoutes();
+    const adminRoutes = routes.filter((route) => route.administrative);
+    expect(adminRoutes.length).toBeGreaterThan(0);
+    expect(routes.some((route) => !route.administrative)).toBe(true);
+
+    // Particion completa de las familias con reglas administrativas: todo
+    // /admin/* es administrativo; /organization/* o es administrativo o esta
+    // en la allowlist; two-factor/* nunca lo es (la activacion queda
+    // accesible). Una ruta nueva de la lib rompe hasta que alguien la
+    // clasifique en BETTER_AUTH_ADMIN_ROUTES o en la allowlist.
+    const unclassifiedAdmin = routes.filter(
+      (route) => route.path.startsWith("/admin") && !route.administrative,
+    );
+    expect(unclassifiedAdmin, `rutas /admin sin clasificar: ${unclassifiedAdmin.map((r) => r.path).join("; ")}`).toEqual([]);
+    const unclassifiedOrganization = routes.filter(
+      (route) =>
+        route.path.startsWith("/organization") &&
+        !route.administrative &&
+        !BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS.includes(route.path),
+    );
+    expect(
+      unclassifiedOrganization,
+      `rutas /organization sin clasificar: ${unclassifiedOrganization.map((r) => r.path).join("; ")}`,
+    ).toEqual([]);
+    const adminTwoFactor = routes.filter(
+      (route) => route.path.startsWith("/two-factor") && route.administrative,
+    );
+    expect(adminTwoFactor, `rutas two-factor administrativas: ${adminTwoFactor.map((r) => r.path).join("; ")}`).toEqual([]);
+
+    // La tabla declara los metodos que responde cada ruta administrativa.
+    for (const route of adminRoutes) {
+      const declared = betterAuthAdminRouteOf(route.path)?.methods;
+      expect(declared, `${route.path} sin metodos declarados en la tabla`).toContain(route.method);
+    }
+
+    // El hook before exige TOTP antes de validar el cuerpo o los permisos:
+    // con un admin sin TOTP y un cuerpo vacio, todas responden 403 con el
+    // codigo de aplicacion (no 400 ni 403 opaco).
+    const cookie = await ownerCookieWithoutTotp();
+    const failures: string[] = [];
+    for (const route of adminRoutes) {
+      const res = await callBetterAuthRoute(route, cookie);
+      const body = (await res.json().catch(() => null)) as { code?: string } | null;
+      if (res.status !== 403 || body?.code !== "TWO_FACTOR_REQUIRED") {
+        failures.push(`${route.method} ${route.path} respondio ${res.status}`);
+      }
+    }
+    expect(
+      failures,
+      `rutas administrativas de Better Auth sin exigir TOTP: ${failures.join("; ")}`,
+    ).toEqual([]);
+
+    // Negativo: una ruta de Better Auth no administrativa sigue accesible.
+    const list = await callBetterAuthRoute({ method: "GET", path: "/organization/list" }, cookie);
+    expect(list.status).toBe(200);
   });
 
   it("admin sin TOTP recibe 403 TWO_FACTOR_REQUIRED en un endpoint administrativo", async () => {
@@ -108,6 +173,34 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     expect(body.code).not.toBe("TWO_FACTOR_REQUIRED");
   });
 
+  it("rol no administrativo en una ruta administrativa de Better Auth recibe el 403 normal", async () => {
+    const ownerEmail = `owner-ba-${suffix}@example.com`;
+    const agentEmail = `agent-ba-${suffix}@example.com`;
+    const org = await createAgency(
+      await createUser(ownerEmail),
+      `Agencia BA ${suffix}`,
+      `agencia-ba-${suffix}`,
+    );
+    await addMember(org.id, await createUser(agentEmail), "agent");
+    const cookie = await signIn(baseUrl, agentEmail);
+    await setActiveOrg(baseUrl, cookie, org.id);
+
+    // El hook solo exige TOTP a roles administrativos: el agente recibe el
+    // 403 de permisos de la propia lib, sin el codigo de aplicacion.
+    const res = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie, origin: authOrigin },
+      body: JSON.stringify({
+        email: `invitado-ba-${suffix}@example.com`,
+        role: "provider",
+        organizationId: org.id,
+      }),
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json().catch(() => ({}))) as { code?: string };
+    expect(body.code).not.toBe("TWO_FACTOR_REQUIRED");
+  });
+
   it("super_admin sin TOTP recibe TWO_FACTOR_REQUIRED aunque falte el permiso de agencia", async () => {
     const email = `super-2fa-${suffix}@example.com`;
     const userId = await createUser(email);
@@ -120,6 +213,23 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     // super_admin sin exchange-rate:update recibe TWO_FACTOR_REQUIRED y no
     // un 403 opaco: la UI podria llevarlo a activar TOTP, T-F0-10).
     const res = await callAdminOverride(cookie);
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toMatchObject({ code: "TWO_FACTOR_REQUIRED" });
+  });
+
+  it("super_admin sin TOTP recibe TWO_FACTOR_REQUIRED en las rutas admin de Better Auth", async () => {
+    const email = `super-ba-${suffix}@example.com`;
+    const userId = await createUser(email);
+    await prisma.user.update({ where: { id: userId }, data: { role: "super_admin" } });
+    const cookie = await signIn(baseUrl, email);
+
+    // Sin organizacion activa y sin TOTP: el rol de plataforma basta para
+    // exigir el segundo factor antes de los permisos del plugin admin.
+    const res = await fetch(`${baseUrl}/api/auth/admin/create-user`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie, origin: authOrigin },
+      body: JSON.stringify({}),
+    });
     expect(res.status).toBe(403);
     await expect(res.json()).resolves.toMatchObject({ code: "TWO_FACTOR_REQUIRED" });
   });
@@ -197,6 +307,22 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     }
     return fetch(url, init);
   }
+
+  /** Llamada por HTTP a una ruta del middleware de Better Auth (/api/auth/*). */
+  async function callBetterAuthRoute(
+    route: Pick<RegisteredRoute, "method" | "path">,
+    cookie: string,
+  ): Promise<Response> {
+    const url = `${baseUrl}/api/auth${route.path}`;
+    const headers: Record<string, string> = { cookie, origin: authOrigin };
+    const init: RequestInit = { method: route.method, headers };
+    if (route.method !== "GET" && route.method !== "HEAD") {
+      headers["content-type"] = "application/json";
+      // El hook before exige TOTP antes de validar el cuerpo: basta vacio.
+      init.body = JSON.stringify({});
+    }
+    return fetch(url, init);
+  }
 });
 
 interface RegisteredRoute {
@@ -238,6 +364,28 @@ function listRegisteredRoutes(app: ApiApplication): RegisteredRoute[] {
         administrative: isAdminRoute(security),
       });
     }
+  }
+  return routes;
+}
+
+/**
+ * Inventario de las rutas HTTP de la instancia real de Better Auth: las que
+ * expone auth.api con path. La clasificacion usa la misma tabla de los hooks
+ * (betterAuthAdminRouteOf), asi que el e2e comprueba el efecto real por HTTP.
+ */
+function listBetterAuthRoutes(): RegisteredRoute[] {
+  const routes: RegisteredRoute[] = [];
+  for (const endpoint of Object.values(auth.api)) {
+    const e = endpoint as { path?: string; options?: { method?: string | string[] } };
+    if (!e?.path) continue; // solo API de servidor (addMember): sin ruta HTTP
+    const method = Array.isArray(e.options?.method)
+      ? (e.options.method[0] ?? "GET")
+      : (e.options?.method ?? "GET");
+    routes.push({
+      method,
+      path: e.path,
+      administrative: betterAuthAdminRouteOf(e.path) !== undefined,
+    });
   }
   return routes;
 }

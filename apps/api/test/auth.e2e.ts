@@ -9,6 +9,7 @@ import {
   createUser,
   setActiveOrg,
   signIn,
+  userWithTotp,
 } from "./auth-helpers.js";
 
 /**
@@ -138,16 +139,20 @@ describe("auth-access", () => {
     });
 
     it("owner invita a un proveedor: 200", async () => {
+      // invite-member es una escritura administrativa del middleware de
+      // Better Auth: desde el fix de la verificacion f0-foundations exige
+      // TOTP al owner (delta de auth-access), por eso va con userWithTotp.
       const ownerEmail = `owner-in-${suffix}@example.com`;
-      const org = await createAgency(
-        await createUser(ownerEmail),
-        `Agencia IN ${suffix}`,
-        `agencia-in-${suffix}`,
-      );
-      const cookie = await signIn(baseUrl, ownerEmail);
-      await setActiveOrg(baseUrl, cookie, org.id);
+      const owner = await userWithTotp(baseUrl, ownerEmail);
+      const org = await createAgency(owner.userId, `Agencia IN ${suffix}`, `agencia-in-${suffix}`);
+      await setActiveOrg(baseUrl, owner.cookie, org.id);
 
-      const res = await inviteMember(cookie, org.id, `invitado-${suffix}@example.com`, "provider");
+      const res = await inviteMember(
+        owner.cookie,
+        org.id,
+        `invitado-${suffix}@example.com`,
+        "provider",
+      );
       expect(res.status).toBe(200);
     });
 

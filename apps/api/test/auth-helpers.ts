@@ -3,7 +3,7 @@ import { auth } from "../src/auth.js";
 import { prisma } from "../src/prisma.js";
 
 /**
- * Helpers compartidos de los e2e de auth (auth.e2e.ts y two-factor.e2e.ts).
+ * Helpers compartidos de los e2e (auth, two-factor, audit y tenant).
  *
  * Los usuarios y agencias se dan de alta por la API de servidor de Better
  * Auth (accion de sistema; el registro por HTTP tiene rate limit y crear
@@ -94,6 +94,33 @@ export async function setActiveOrg(
   if (!org || org.id !== organizationId) {
     throw new Error("set-active no fijó la organización activa");
   }
+}
+
+/**
+ * Usuario con TOTP activo por HTTP (enable + verify-totp): la cookie devuelta
+ * es la de la sesion ya con el segundo factor verificado. La usan las
+ * escrituras administrativas de Better Auth y las rutas /admin de Nest.
+ */
+export async function userWithTotp(
+  baseUrl: string,
+  email: string,
+): Promise<{ userId: string; cookie: string }> {
+  const userId = await createUser(email);
+  const cookie = await signIn(baseUrl, email);
+  const enable = await fetch(`${baseUrl}/api/auth/two-factor/enable`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie, origin: authOrigin },
+    body: JSON.stringify({ password: TEST_PASSWORD }),
+  });
+  if (!enable.ok) throw new Error(`enable falló: ${await enable.text()}`);
+  const { totpURI } = (await enable.json()) as { totpURI: string };
+  const verify = await fetch(`${baseUrl}/api/auth/two-factor/verify-totp`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie, origin: authOrigin },
+    body: JSON.stringify({ code: totpCode(totpSecretFromUri(totpURI)) }),
+  });
+  if (!verify.ok) throw new Error(`verify-totp falló: ${await verify.text()}`);
+  return { userId, cookie: sessionCookieOf(verify) };
 }
 
 /** Secreto base32 del otpauth:// que devuelve /two-factor/enable. */

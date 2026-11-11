@@ -23,9 +23,12 @@ import { PLATFORM_ROLE } from "../tenant/tenant-context.js";
  * uno de esos roles con @Roles/@OrgRoles: es una condicion mas estricta que
  * la spec, nunca menos.
  *
- * La clasificacion es una funcion pura sobre la metadata de la ruta para que
- * el guard (en ejecucion) y el inventario de rutas de los tests calculen lo
- * mismo sin duplicar la definicion.
+ * La segunda familia son las rutas servidas por el middleware de Better Auth
+ * (fix de la verificacion f0-foundations): las escrituras del plugin admin
+ * (/api/auth/admin/*) y las escrituras administrativas del plugin
+ * organization. Ambas familias las clasifica este mismo modulo para que el
+ * guard de Nest, los hooks de Better Auth y el inventario de rutas de los
+ * tests calculen lo mismo sin duplicar la definicion.
  */
 
 /** Roles de agencia que exigen segundo factor (matriz T-F0-6). */
@@ -132,4 +135,298 @@ export function registeredRoutePath(controller: object, handler: object): string
   const base = Reflect.getMetadata(PATH_METADATA, controller) as string | undefined;
   const methodPath = Reflect.getMetadata(PATH_METADATA, handler) as string | undefined;
   return joinRoutePath(base, methodPath);
+}
+
+// ---------------------------------------------------------------------------
+// Rutas del middleware de Better Auth (fix de la verificacion f0-foundations)
+// ---------------------------------------------------------------------------
+
+/** Record de un valor desconocido (los endpoints devuelven JSON plano). */
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
+}
+
+/** id (string) de un registro; undefined si no viene o no es string. */
+function idOf(record: Record<string, unknown> | undefined): string | undefined {
+  const id = record?.["id"];
+  return typeof id === "string" ? id : undefined;
+}
+
+/** Estado previo que el hook before guarda para que el after pueda auditar. */
+export interface BetterAuthPreState {
+  sessionId?: string;
+  userId?: string;
+}
+
+/**
+ * Regla de auditoria de una escritura administrativa de Better Auth (delta de
+ * audit). entityId y after se extraen del resultado del endpoint y de su body;
+ * el estado previo (antes) queda NULL porque el middleware solo observa el
+ * resultado, y lo declara el delta de audit.
+ */
+export interface BetterAuthAuditRule {
+  /** Nombre con prefijo auth. para distinguirlas de las de la API de Nest. */
+  action: string;
+  /** Entidad afectada: user, session, invitation, member, organization. */
+  entity: string;
+  /** Escrituras del plugin admin: plataforma (tenant_id NULL). */
+  platform?: boolean;
+  /** Marca que el antes se pierde al ejecutar: el hook before lo guarda. */
+  preState?: "session-by-token";
+  entityIdOf: (
+    returned: Record<string, unknown>,
+    body: Record<string, unknown>,
+    pre?: BetterAuthPreState,
+  ) => string | undefined;
+  /** after de la fila; por defecto, el resultado del endpoint. */
+  afterOf?: (returned: Record<string, unknown>, body: Record<string, unknown>, pre?: BetterAuthPreState) => unknown;
+}
+
+/** Ruta administrativa servida por el middleware de Better Auth. */
+export interface BetterAuthAdminRoute {
+  /** Path relativo al basePath de Better Auth, con barra inicial. */
+  path: string;
+  /** Metodos HTTP con los que responde la ruta. */
+  methods: readonly string[];
+  /** Regla de auditoria; ausente en las rutas administrativas de solo lectura. */
+  audit?: BetterAuthAuditRule;
+}
+
+/** id del usuario afectado, del objeto user del resultado (set-role, ban...). */
+function userIdFromReturnedUser(returned: Record<string, unknown>): string | undefined {
+  return idOf(asRecord(returned["user"]));
+}
+
+/** id del usuario afectado, del body (revoke-user-sessions, remove-user...). */
+function userIdFromBody(_returned: Record<string, unknown>, body: Record<string, unknown>): string | undefined {
+  const userId = body["userId"];
+  return typeof userId === "string" ? userId : undefined;
+}
+
+/**
+ * Rutas administrativas del middleware de Better Auth. La lista es cerrada a
+ * proposito: si una actualizacion de la lib anade o renombra una ruta, el
+ * inventario e2e (two-factor.e2e.ts) falla hasta que alguien la clasifique
+ * conscientemente aqui o en BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS.
+ *
+ * Las formas de retorno verificadas contra better-auth 1.7.18:
+ * - set-role/create-user/ban-user/unban-user/impersonate-user -> { user }
+ * - update-user (adminUpdateUser) y update-member-role/update/invite-member/
+ *   cancel-invitation/delete (organization) -> objeto plano con id
+ * - remove-member -> { member }; stop-impersonating -> { session, user }
+ * - revoke-user-session(s)/remove-user -> { success };
+ *   set-user-password -> { status }
+ */
+export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
+  // Plugin admin: escrituras de plataforma, tenant_id NULL.
+  {
+    path: "/admin/set-role",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.set-role",
+      entity: "user",
+      entityIdOf: userIdFromReturnedUser,
+    },
+  },
+  {
+    path: "/admin/create-user",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.create-user",
+      entity: "user",
+      entityIdOf: userIdFromReturnedUser,
+    },
+  },
+  {
+    path: "/admin/update-user",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.update-user",
+      entity: "user",
+      entityIdOf: (returned) => idOf(asRecord(returned)),
+    },
+  },
+  {
+    path: "/admin/ban-user",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.ban-user",
+      entity: "user",
+      entityIdOf: userIdFromReturnedUser,
+    },
+  },
+  {
+    path: "/admin/unban-user",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.unban-user",
+      entity: "user",
+      entityIdOf: userIdFromReturnedUser,
+    },
+  },
+  {
+    path: "/admin/impersonate-user",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.impersonate-user",
+      entity: "user",
+      entityIdOf: userIdFromReturnedUser,
+    },
+  },
+  {
+    path: "/admin/stop-impersonating",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.stop-impersonating",
+      entity: "session",
+      entityIdOf: (returned) => idOf(asRecord(returned["session"])),
+    },
+  },
+  {
+    path: "/admin/revoke-user-session",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.revoke-user-session",
+      entity: "session",
+      // La fila de session se borra al ejecutar la accion: el id y el dueno
+      // se guardan en el hook before (preState) porque despues ya no existen.
+      preState: "session-by-token",
+      entityIdOf: (_returned, _body, pre) => pre?.sessionId,
+      afterOf: (_returned, _body, pre) => (pre?.userId ? { userId: pre.userId } : undefined),
+    },
+  },
+  {
+    path: "/admin/revoke-user-sessions",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.revoke-user-sessions",
+      entity: "user",
+      entityIdOf: userIdFromBody,
+    },
+  },
+  {
+    path: "/admin/remove-user",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.remove-user",
+      entity: "user",
+      entityIdOf: userIdFromBody,
+    },
+  },
+  {
+    path: "/admin/set-user-password",
+    methods: ["POST"],
+    audit: {
+      platform: true,
+      action: "auth.admin.set-user-password",
+      entity: "user",
+      entityIdOf: userIdFromBody,
+    },
+  },
+  // Plugin admin: solo lectura. Exigen TOTP, no auditan.
+  { path: "/admin/get-user", methods: ["GET"] },
+  { path: "/admin/list-users", methods: ["GET"] },
+  { path: "/admin/list-user-sessions", methods: ["POST"] },
+  { path: "/admin/has-permission", methods: ["POST"] },
+  // Plugin organization: escrituras administrativas de agencia. create no
+  // audita ni se salta con sesion: con allowUserToCreateOrganization: false
+  // una sesion de usuario nunca llega a escribir (403 de la propia lib).
+  { path: "/organization/create", methods: ["POST"] },
+  {
+    path: "/organization/update",
+    methods: ["POST"],
+    audit: {
+      action: "auth.organization.update",
+      entity: "organization",
+      entityIdOf: (returned) => idOf(asRecord(returned)),
+    },
+  },
+  {
+    path: "/organization/delete",
+    methods: ["POST"],
+    audit: {
+      action: "auth.organization.delete",
+      entity: "organization",
+      entityIdOf: (returned) => idOf(asRecord(returned)),
+    },
+  },
+  {
+    path: "/organization/invite-member",
+    methods: ["POST"],
+    audit: {
+      action: "auth.organization.invite-member",
+      entity: "invitation",
+      entityIdOf: (returned) => idOf(asRecord(returned)),
+    },
+  },
+  {
+    path: "/organization/cancel-invitation",
+    methods: ["POST"],
+    audit: {
+      action: "auth.organization.cancel-invitation",
+      entity: "invitation",
+      entityIdOf: (returned) => idOf(asRecord(returned)),
+    },
+  },
+  {
+    path: "/organization/remove-member",
+    methods: ["POST"],
+    audit: {
+      action: "auth.organization.remove-member",
+      entity: "member",
+      entityIdOf: (returned) => idOf(asRecord(returned["member"])),
+    },
+  },
+  {
+    path: "/organization/update-member-role",
+    methods: ["POST"],
+    audit: {
+      action: "auth.organization.update-member-role",
+      entity: "member",
+      entityIdOf: (returned) => idOf(asRecord(returned)),
+    },
+  },
+];
+
+/**
+ * Rutas de /organization/* que NO son administrativas (lectura, aceptar o
+ * rechazar invitaciones propias, fijar la agencia activa): no exigen TOTP.
+ * Completan la particion de /organization/* junto a BETTER_AUTH_ADMIN_ROUTES.
+ */
+export const BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS: readonly string[] = [
+  "/organization/accept-invitation",
+  "/organization/check-slug",
+  "/organization/get-active-member",
+  "/organization/get-active-member-role",
+  "/organization/get-full-organization",
+  "/organization/get-invitation",
+  "/organization/get-organization",
+  "/organization/has-permission",
+  "/organization/leave",
+  "/organization/list",
+  "/organization/list-invitations",
+  "/organization/list-members",
+  "/organization/list-user-invitations",
+  "/organization/reject-invitation",
+  "/organization/set-active",
+];
+
+const betterAuthRouteByPath = new Map<string, BetterAuthAdminRoute>(
+  BETTER_AUTH_ADMIN_ROUTES.map((route) => [route.path, route]),
+);
+
+/** Ruta administrativa de Better Auth por path; undefined si no lo es. */
+export function betterAuthAdminRouteOf(path: string | undefined): BetterAuthAdminRoute | undefined {
+  if (!path) return undefined;
+  return betterAuthRouteByPath.get(path);
 }

@@ -4,26 +4,14 @@ import { fromNodeHeaders } from "better-auth/node";
 import { AuthGuard } from "@thallesp/nestjs-better-auth";
 import { TWO_FACTOR_REQUIRED } from "@caribe/shared";
 import { auth } from "../auth.js";
-import { prisma } from "../prisma.js";
-import { isPlatformRole } from "../tenant/tenant-context.js";
 import {
-  AGENCY_ADMIN_ROLES,
   AUTH_METADATA_KEYS,
   isAdminRoute,
   mergeRoutePermissions,
   registeredRoutePath,
   type RouteSecurity,
 } from "./admin-route.js";
-
-/**
- * Lo minimo que el guard necesita de la sesion (estructural, como
- * SessionTenantInfo del tenant module): la sesion real de Better Auth es
- * asignable a esta forma.
- */
-interface SessionInfo {
-  session: { activeOrganizationId?: string | null };
-  user: { id: string; role?: string | string[] | null; twoFactorEnabled?: boolean | null };
-}
+import { TWO_FACTOR_REQUIRED_MESSAGE, isAdminLevelSession } from "./admin-session.js";
 
 interface HttpRequest {
   headers: Record<string, string | string[] | undefined>;
@@ -45,7 +33,8 @@ interface HttpRequest {
  * no administrativos siguen el flujo normal (el AuthGuard responde 401/403
  * por permisos), las rutas no administrativas quedan fuera del check y la
  * activacion vive en /api/auth/* (middleware de Better Auth, sin guards de
- * Nest), por lo que siempre es accesible.
+ * Nest, con sus propios hooks desde el fix de la verificacion
+ * f0-foundations), por lo que siempre es accesible.
  */
 @Injectable()
 export class AdminTwoFactorGuard extends AuthGuard {
@@ -75,16 +64,12 @@ export class AdminTwoFactorGuard extends AuthGuard {
     const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
     if (!session || session.user.twoFactorEnabled) return;
 
-    const memberRole = await this.activeMemberRole(session);
-    const isAdminLevel =
-      isPlatformRole(session.user.role) ||
-      (memberRole !== undefined && AGENCY_ADMIN_ROLES.includes(memberRole));
-    if (!isAdminLevel) return;
+    if (!(await isAdminLevelSession(session))) return;
 
     throw new ForbiddenException({
       statusCode: 403,
       code: TWO_FACTOR_REQUIRED,
-      message: "Activa el segundo factor (TOTP) antes de usar los endpoints administrativos",
+      message: TWO_FACTOR_REQUIRED_MESSAGE,
     });
   }
 
@@ -113,21 +98,5 @@ export class AdminTwoFactorGuard extends AuthGuard {
         [handler, controller],
       ),
     };
-  }
-
-  /**
-   * Rol de la membresia activa. Better Auth 1.7.18 no expone API de servidor
-   * para el rol del miembro activo (la lib cae en undefined), asi que se lee
-   * el registro member: la organizacion activa la verifico Better Auth al
-   * fijarla y la membresia activa solo puede ser una por agencia.
-   */
-  private async activeMemberRole(session: SessionInfo): Promise<string | undefined> {
-    const organizationId = session.session.activeOrganizationId;
-    if (!organizationId) return undefined;
-    const member = await prisma.member.findFirst({
-      where: { userId: session.user.id, organizationId },
-      select: { role: true },
-    });
-    return member?.role;
   }
 }

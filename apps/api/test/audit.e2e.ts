@@ -14,16 +14,13 @@ import { AuditService } from "../src/audit/audit.service.js";
 import { createApp, type ApiApplication } from "../src/bootstrap.js";
 import { prisma } from "../src/prisma.js";
 import {
-  TEST_PASSWORD,
   addMember,
   authOrigin,
   createAgency,
   createUser,
-  sessionCookieOf,
   setActiveOrg,
   signIn,
-  totpCode,
-  totpSecretFromUri,
+  userWithTotp,
 } from "./auth-helpers.js";
 
 /**
@@ -37,9 +34,13 @@ import {
  * actor/IP/fecha tomados de la sesion y no del body, la misma transaccion de
  * operacion y auditoria, la inmutabilidad de BD (permisos + trigger,
  * ejecutada como caribe_app siempre que el rol la puede ejercitar; el caso
- * "incluso el dueno" queda como dueno) y la igualdad de las filas de
+ * "incluso el dueno" queda como dueno), la igualdad de las filas de
  * POST /admin/organizations con las de createOrganization de Better Auth
- * (refuerzo pedido por el dueno tras aprobar T-F0-9).
+ * (refuerzo pedido por el dueno tras aprobar T-F0-9) y, desde el fix de la
+ * verificacion f0-foundations, la auditoria de las escrituras
+ * administrativas del middleware de Better Auth (delta "Auditoria de las
+ * escrituras administrativas de Better Auth": invite-member del owner deja
+ * fila con su agencia como tenant).
  */
 describe("audit: rastro inmutable (T-F0-9)", () => {
   let app: ApiApplication;
@@ -66,7 +67,7 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
     const ownerA = await createUser(`owner-audit-a-${suffix}@example.com`);
     orgA = (await createAgency(ownerA, `Agencia AUDIT A ${suffix}`, `agencia-audit-a-${suffix}`))
       .id;
-    const adminA = await userWithTotp(`admin-audit-a-${suffix}@example.com`);
+    const adminA = await userWithTotp(baseUrl, `admin-audit-a-${suffix}@example.com`);
     adminAId = adminA.userId;
     await addMember(orgA, adminAId, "admin");
     adminACookie = adminA.cookie;
@@ -83,7 +84,7 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
       .id;
 
     // Super Admin de plataforma con TOTP (las rutas /admin lo exigen).
-    const superAdmin = await userWithTotp(`super-audit-${suffix}@example.com`);
+    const superAdmin = await userWithTotp(baseUrl, `super-audit-${suffix}@example.com`);
     superAdminId = superAdmin.userId;
     await prisma.user.update({ where: { id: superAdminId }, data: { role: "super_admin" } });
     superCookie = superAdmin.cookie;
@@ -115,26 +116,6 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
     await app.close();
     await prisma.$disconnect();
   });
-
-  /** Usuario con TOTP activo (las rutas administrativas lo exigen). */
-  async function userWithTotp(email: string): Promise<{ userId: string; cookie: string }> {
-    const userId = await createUser(email);
-    const cookie = await signIn(baseUrl, email);
-    const enable = await fetch(`${baseUrl}/api/auth/two-factor/enable`, {
-      method: "POST",
-      headers: { "content-type": "application/json", cookie, origin: authOrigin },
-      body: JSON.stringify({ password: TEST_PASSWORD }),
-    });
-    if (!enable.ok) throw new Error(`enable falló: ${await enable.text()}`);
-    const { totpURI } = (await enable.json()) as { totpURI: string };
-    const verify = await fetch(`${baseUrl}/api/auth/two-factor/verify-totp`, {
-      method: "POST",
-      headers: { "content-type": "application/json", cookie, origin: authOrigin },
-      body: JSON.stringify({ code: totpCode(totpSecretFromUri(totpURI)) }),
-    });
-    if (!verify.ok) throw new Error(`verify-totp falló: ${await verify.text()}`);
-    return { userId, cookie: sessionCookieOf(verify) };
-  }
 
   describe("accion sensible de agencia (endpoint de ejemplo)", () => {
     it("deja fila con actor, accion, antes, despues, IP y fecha de la sesion", async () => {
@@ -308,6 +289,39 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
       expect(entityIds).toContain(createdOrgId);
       expect(items.some((item) => item.tenantId === orgA)).toBe(true);
       expect(items.some((item) => item.tenantId === null)).toBe(true);
+    });
+  });
+
+  describe("escrituras administrativas de Better Auth (delta del fix de verificación)", () => {
+    it("owner invita a un miembro y la escritura deja fila con su agencia como tenant", async () => {
+      const owner = await userWithTotp(baseUrl, `owner-inv-audit-${suffix}@example.com`);
+      const org = await createAgency(owner.userId, `Agencia INV ${suffix}`, `agencia-inv-${suffix}`);
+      await setActiveOrg(baseUrl, owner.cookie, org.id);
+
+      const res = await fetch(`${baseUrl}/api/auth/organization/invite-member`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: owner.cookie, origin: authOrigin },
+        body: JSON.stringify({
+          email: `invitado-inv-${suffix}@example.com`,
+          role: "provider",
+          organizationId: org.id,
+        }),
+      });
+      expect(res.status).toBe(200);
+      const invitation = (await res.json()) as { id: string };
+
+      const row = await prisma.auditLog.findFirstOrThrow({
+        where: { action: "auth.organization.invite-member", entityId: invitation.id },
+      });
+      expect(row.tenantId).toBe(org.id);
+      expect(row.actorId).toBe(owner.userId);
+      expect(row.entity).toBe("invitation");
+      // El middleware solo observa el resultado: antes NULL (delta de audit,
+      // la fila va en transaccion propia tras confirmarse la escritura).
+      expect(row.before).toBe(null);
+      expect(row.after).toMatchObject({ id: invitation.id });
+      expect(row.ip).toBeTruthy();
+      expect(row.at.getTime()).toBeGreaterThanOrEqual(startedAt);
     });
   });
 
