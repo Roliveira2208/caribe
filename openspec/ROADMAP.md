@@ -5,7 +5,7 @@ de cada fase, no todos ahora: así no se vuelven contexto obsoleto.
 
 | Fase SDD (§13) | Change | Specs que toca | Estado |
 | --- | --- | --- | --- |
-| F0 Fundaciones | `f0-foundations` | auth-access, audit | Listo para empezar |
+| F0 Fundaciones | `f0-foundations` | auth-access, audit, payments | Implementada; pendiente de re-verificar y archivar (bloqueantes V1/V2 corregidos) |
 | F1 Hoteles de punta a punta | `f1-hotels-e2e` | catalog, booking, exchange-rates, payments, documents | Tareas redactadas |
 | F2 Panel y tasas | `f2-admin-rates` | payments, exchange-rates, audit | Por redactar |
 | F3 Tours y paquetes | `f3-tours-packages` | catalog, booking | Por redactar |

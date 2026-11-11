@@ -21,7 +21,7 @@ interface AuthenticatedRequest {
  *
  * F0 no tiene tabla de tasas: el ejemplo registra "sin override" ->
  * "con override" de la agencia. El override real llega con specs/payments
- * (F2) y sustituye este stub por estado verdadero.
+ * (F2) y sustituye este stub por estado verdadero. TODO(F2)
  */
 @Controller("admin/exchange-rates")
 export class AdminController {

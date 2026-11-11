@@ -491,6 +491,58 @@ Cambio pedido por el dueño tras aprobar T-F0-10, fuera de `tasks.md`:
   build, el push que revisa el dueño en la pestaña Actions por fin ejecuta la verificación
   completa.
 
+## Fix de la verificación f0-foundations: TOTP y auditoría en rutas de Better Auth (2026-11-10)
+
+Fix de los bloqueantes V1/V2 del informe de verificación (`docs/plans/verify-f0-foundations.md`),
+aplicado tras la primera verificación. Deltas de spec primero (`d8e33c7`), luego el código
+(`7767397` + `c0cb9a8`); tareas T-F0-13/T-F0-14. Sin dependencias nuevas.
+
+- **Por qué hooks y no guards de Nest:** `@thallesp/nestjs-better-auth` monta el handler de
+  Better Auth como middleware crudo del adaptador HTTP, que corre antes del pipeline de Nest;
+  ni `AdminTwoFactorGuard` ni el `AuditInterceptor` alcanzan `/api/auth/*`. Los
+  `hooks.before`/`after` de la propia instancia de Better Auth son el único punto que ve esas
+  rutas.
+- **before: mismo contrato que el guard de Nest** (delta de auth-access): en las rutas de la
+  tabla, un rol administrativo sin TOTP recibe 403 `TWO_FACTOR_REQUIRED` ANTES de validar el
+  cuerpo y los permisos, para que la UI lo lleve a la activación y no a un 403 opaco (mismo
+  orden deliberado que el guard). Sin sesión HTTP pasa de largo (acción de sistema: seed,
+  `auth.api`); los roles no administrativos reciben su 403 normal de permisos de la lib.
+  `isAdminLevelSession` (nuevo `src/admin/admin-session.ts`) la comparten guard y hooks, para
+  que ambas familias clasifiquen igual a un mismo usuario.
+- **Clasificación cerrada en `BETTER_AUTH_ADMIN_ROUTES`** (`src/admin/admin-route.ts`): las 15
+  rutas `/admin/*` del plugin admin y las 7 escrituras administrativas de `/organization/*`
+  (create queda clasificada pero sin auditoría: con `allowUserToCreateOrganization: false` una
+  sesión de usuario nunca llega a escribir), cada una con su regla de auditoría (acción con
+  prefijo `auth.`, entidad, plataforma/agencia, extracción de `entityId` y `after`); la
+  allowlist `BETTER_AUTH_NON_ADMIN_ORGANIZATION_PATHS` (15) completa la partición de
+  `/organization/*`. La lista es cerrada a propósito: si better-auth añade o renombra rutas,
+  el inventario e2e falla hasta que alguien las reclasifique conscientemente (misma filosofía
+  que `AUTH_METADATA_KEYS`).
+- **after: auditoría en transacción propia.** El middleware no puede unirse a la transacción
+  interna de la lib, así que la fila se escribe tras confirmarse la escritura, en su propia
+  transacción con el GUC RLS de la acción (plataforma → `tenant_id` NULL; agencia →
+  `app.tenant_id` de la organización afectada). Solo audita escrituras 2xx (los `APIError`
+  llegan al hook como instancia de `Error`; `ctx.context.returned` es JSON plano porque el
+  dispatch de la lib fuerza `asResponse: false` y asigna el resultado antes de correr los after
+  hooks) y solo con sesión (las acciones de sistema por `auth.api` las audita su llamador, si
+  le toca). Si la fila falla, la acción ya está confirmada: queda en el log y la respuesta
+  pasa. `before` queda NULL porque el middleware solo observa el resultado (lo declara el delta
+  de audit).
+- **revoke-user-session conserva el antes en el before:** la fila de `session` se borra al
+  ejecutar la acción, así que el hook `before` stashea `{ sessionId, userId }` en un `WeakMap`
+  por `ctx.context` (el dispatch conserva la referencia entre before y after, verificado en
+  su código) y la regla lo usa como `entityId` y para el `after` (solo el dueño). Las props de
+  `BetterAuthPreState` son obligatorias a propósito: la primera versión guardaba la fila de
+  Prisma con `id` mientras la regla leía `sessionId`, y las props opcionales escondieron el
+  desalineo de typecheck; lo cazó el e2e de T-F0-14 y el fix lo hace imposible en tipo
+  (`c0cb9a8`).
+- **Pruebas:** inventario e2e de las dos familias (las rutas registradas por la lib se particionan
+  completa entre administrativas y allowlist) con admin sin TOTP; negativos por rol; fila de
+  `auth.organization.invite-member` (audit); "owner invita a un proveedor" pasa a owner con
+  TOTP (auth-access); y el e2e de V2: revocación → 200 + fila de plataforma + 401 a la víctima
+  con la cookie revocada. La víctima inicia sesión por `auth.api` (acción de sistema) para no
+  sumar al rate limit HTTP de `/sign-in/email`: el archivo va justo en 10 por ventana de 60s.
+
 
 
 

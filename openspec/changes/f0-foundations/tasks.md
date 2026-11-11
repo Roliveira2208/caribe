@@ -35,3 +35,17 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
     temporizador de retención de 30 min, estados IN_REVIEW/APPROVED/REJECTED y modos AUTO/MANUAL, leyenda
     «Documento no fiscal», versiones móviles); `docs/wireframes/README.md` indexa pantallas y reglas.
 - [ ] T-F0-12 Verificación de la change: `/verify f0-foundations` en conversación limpia; archivar con `/opsx:archive`.
+- [x] T-F0-13 Fix del bloqueante V1 del informe de verificación: TOTP y auditoría en las rutas administrativas del
+  middleware de Better Auth (`/api/auth/admin/*` y escrituras admin-grade de `/api/auth/organization/*`) vía
+  `hooks.before/after`, con deltas de `auth-access` y `audit` aprobadas primero.
+  - Prueba: auth-access › "Admin sin TOTP en una ruta administrativa de Better Auth", "Usuario sin rol
+    administrativo en una ruta administrativa de Better Auth" y "Ruta administrativa sin exigencia de segundo
+    factor" (inventario Nest + Better Auth); audit › "Owner invita a un miembro" y "Escritura de Better Auth
+    deja fila tras confirmarse"; el caso "owner invita a un proveedor" pasa a owner con TOTP.
+- [x] T-F0-14 Fix del bloqueante V2 del informe de verificación: e2e de revocación de sesión por el endpoint del
+  plugin admin (super admin con TOTP → 200, fila de plataforma en `audit_logs`, víctima 401 con la cookie
+  revocada). Detectó y corrigió el desalineo del preestado de `revoke-user-session` (commit `c0cb9a8`).
+  - Prueba: audit › "Super Admin revoca una sesión".
+- Nota (M1 del informe): configurar `trustedProxies` al decidir el hosting; hoy la IP tras un proxy resuelve a
+  null y el rate limit de login degenera en bucket global.
+- Nota (M2 del informe): Helmet, CSP y CORS antes de cualquier demo pública (faseados en F5 por el SDD §13).
