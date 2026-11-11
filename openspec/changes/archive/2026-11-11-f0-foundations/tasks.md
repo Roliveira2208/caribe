@@ -34,7 +34,7 @@ Una tarea a la vez, un commit por tarea. Marca `[x]` al terminar.
     bien formado y contienen las reglas obligatorias (precio USD + equivalente VES con tasa BCV y fecha valor,
     temporizador de retención de 30 min, estados IN_REVIEW/APPROVED/REJECTED y modos AUTO/MANUAL, leyenda
     «Documento no fiscal», versiones móviles); `docs/wireframes/README.md` indexa pantallas y reglas.
-- [ ] T-F0-12 Verificación de la change: `/verify f0-foundations` en conversación limpia; archivar con `/opsx:archive`.
+- [x] T-F0-12 Verificación de la change: `/verify f0-foundations` en conversación limpia; archivar con `/opsx:archive`.
 - [x] T-F0-13 Fix del bloqueante V1 del informe de verificación: TOTP y auditoría en las rutas administrativas del
   middleware de Better Auth (`/api/auth/admin/*` y escrituras admin-grade de `/api/auth/organization/*`) vía
   `hooks.before/after`, con deltas de `auth-access` y `audit` aprobadas primero.
