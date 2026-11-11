@@ -534,13 +534,26 @@ describe("audit: intentos y resultados de acciones administrativas (T-F1-0b)", (
       expect(pageTwo.items.every((item) => !firstIds.has(item.id))).toBe(true);
     });
 
-    it("query inválida -> 400", async () => {
-      const cases = ["outcome=bogus", "from=no-es-fecha", "cursor=%%%", "limit=0", "limit=101"];
+    it("query inválida -> 422 VALIDATION_ERROR (Problem Details)", async () => {
+      const cases = [
+        "outcome=bogus",
+        "from=no-es-fecha",
+        "cursor=%%%",
+        "limit=0",
+        "limit=101",
+        "desconocido=1",
+        "route=a&route=b",
+      ];
       for (const query of cases) {
         const res = await fetch(`${baseUrl}/api/v1/admin/auth-events?${query}`, {
           headers: { cookie: ownerACookie, origin: authOrigin },
         });
-        expect(res.status, query).toBe(400);
+        expect(res.status, query).toBe(422);
+        expect(res.headers.get("content-type"), query).toContain("application/problem+json");
+        await expect(res.json(), query).resolves.toMatchObject({
+          status: 422,
+          code: "VALIDATION_ERROR",
+        });
       }
     });
   });

@@ -24,9 +24,14 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [x] T-F1-0b Implementar `auth_events`: migración, RLS, hooks `before`/`after`, resultado del rechazo
   TOTP en el `catch`, consulta de solo lectura y prueba de inmutabilidad.
   Prueba: audit › "Registro de intentos y resultados de acciones administrativas" y "Visibilidad de los intentos".
-- [ ] T-F1-0c Contrato de errores: Problem Details, tabla de códigos, pipe de validación Zod y
+- [x] T-F1-0c Contrato de errores: Problem Details, tabla de códigos, pipe de validación Zod y
   serialización de dinero/fechas.
-  Prueba: escenarios de `api-errors` (spec nueva).
+  Prueba: escenarios de `api-errors` (spec nueva). Hecho: filtro global `application/problem+json`
+  con `code` estable, tabla `API_ERROR_STATUS` en `@caribe/shared` (incluye `METHOD_NOT_ALLOWED`
+  405 y `CONFLICT` 409 genérico), `ZodValidationPipe` estricto (claves desconocidas y campos
+  calculados → 422), puente Express para los errores de body-parser (JSON inválido → 422, cuerpo
+  grande → 413) que no pasan por el pipeline de Nest, y serializadores de dinero/tasa/fechas.
+  `/api/auth/*` conserva el formato de Better Auth.
 - [ ] T-F1-0d Contextos RLS `owner`, `public`, `tenant`+`owner` y `rates_global` en `TenantService`,
   políticas por dueño directo, por `EXISTS` del `booking` padre, lectura pública de `products`,
   `availability` y `destinations`, `WITH CHECK` e inventario de tablas con RLS forzada.

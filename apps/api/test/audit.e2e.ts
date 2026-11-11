@@ -201,15 +201,11 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
       const res = await fetch(`${baseUrl}/api/v1/admin/organizations`, {
         method: "POST",
         headers: { "content-type": "application/json", cookie: superCookie, origin: authOrigin },
-        // El body intenta suplantar actor, IP y fecha: el interceptor los
-        // toma de la sesion verificada y del servidor, nunca del body.
+        // Solo name y slug: desde T-F1-0c el esquema es estricto y un campo
+        // calculado o desconocido (actor_id, ip, at) responde 422.
         body: JSON.stringify({
           name: `Agencia Super ${suffix}`,
           slug,
-          actor_id: "intruso",
-          actorId: "intruso",
-          ip: "1.2.3.4",
-          at: "2000-01-01T00:00:00.000Z",
         }),
       });
       expect(res.status).toBe(201);
@@ -252,14 +248,20 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
       );
     });
 
-    it("body invalido -> 400 sin agencia ni fila de auditoria", async () => {
+    it("body invalido -> 422 sin agencia ni fila de auditoria", async () => {
       const rowsBefore = await prisma.auditLog.count({ where: { action: "organization.create" } });
       const missing = await fetch(`${baseUrl}/api/v1/admin/organizations`, {
         method: "POST",
         headers: { "content-type": "application/json", cookie: superCookie, origin: authOrigin },
         body: JSON.stringify({ slug: `agencia-y-${suffix}` }),
       });
-      expect(missing.status).toBe(400);
+      expect(missing.status).toBe(422);
+      expect(missing.headers.get("content-type")).toContain("application/problem+json");
+      await expect(missing.json()).resolves.toMatchObject({
+        status: 422,
+        code: "VALIDATION_ERROR",
+        errors: [expect.objectContaining({ path: "name" })],
+      });
       await expect(
         prisma.organization.findUnique({ where: { slug: `agencia-y-${suffix}` } }),
       ).resolves.toBeNull();

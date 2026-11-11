@@ -1,12 +1,8 @@
-import {
-  BadRequestException,
-  Controller,
-  ForbiddenException,
-  Get,
-  Query,
-  Req,
-} from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Query, Req } from "@nestjs/common";
+import { z } from "@caribe/shared";
 import type { AuthEvent, Prisma } from "../generated/prisma/client.js";
+import { ApiProblemException } from "../errors/api-problem.exception.js";
+import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
 import { prisma } from "../prisma.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 import { TenantService } from "../tenant/tenant.service.js";
@@ -51,7 +47,32 @@ interface AuthEventFilters {
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
-const OUTCOMES = new Set(["success", "error"]);
+
+/**
+ * Query de la consulta, validada con Zod estricto (T-F1-0c): una clave
+ * desconocida o un parametro repetido (array) responden 422. `from` y `to`
+ * son ISO 8601 y el rango se valida aqui, antes del handler.
+ */
+const querySchema = z
+  .strictObject({
+    route: z.string().min(1).optional(),
+    outcome: z.enum(["success", "error"]).optional(),
+    from: z.iso.datetime({ offset: true }).optional(),
+    to: z.iso.datetime({ offset: true }).optional(),
+    limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
+    cursor: z.string().min(1).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.from && value.to && new Date(value.from) > new Date(value.to)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["from"],
+        message: "from no puede ser posterior a to",
+      });
+    }
+  });
+
+type AuthEventQuery = z.infer<typeof querySchema>;
 
 /**
  * Consulta de auth_events (T-F1-0b, delta de audit "Visibilidad de los
@@ -71,13 +92,16 @@ export class AuthEventsController {
   constructor(private readonly tenantService: TenantService) {}
 
   @Get()
-  async list(@Req() request: AuthenticatedRequest, @Query() rawQuery: Record<string, unknown>) {
+  async list(
+    @Req() request: AuthenticatedRequest,
+    @Query(new ZodValidationPipe(querySchema)) query: AuthEventQuery,
+  ) {
     const session = request.session;
     if (!session) {
       // El guard global ya exigio sesion; red de seguridad.
       throw new ForbiddenException("Los eventos requieren una sesión");
     }
-    const filters = parseFilters(rawQuery);
+    const filters = toFilters(query);
 
     if (isPlatformRole(session.user.role)) {
       // Super Admin: eventos de plataforma y de todas las agencias.
@@ -195,84 +219,39 @@ function encodeCursor(at: string, id: string): string {
   return Buffer.from(JSON.stringify({ at, id }), "utf8").toString("base64url");
 }
 
-/** Valida la query de la consulta; cualquier valor fuera de rango es 400. */
-function parseFilters(rawQuery: Record<string, unknown>): AuthEventFilters {
-  const filters: AuthEventFilters = { limit: DEFAULT_LIMIT };
-
-  const route = single(rawQuery["route"], "route");
-  if (route !== undefined) {
-    if (route.length === 0) throw invalidQuery("route no puede estar vacío");
-    filters.route = route;
-  }
-
-  const outcome = single(rawQuery["outcome"], "outcome");
-  if (outcome !== undefined) {
-    if (!OUTCOMES.has(outcome)) {
-      throw invalidQuery("outcome debe ser success o error");
-    }
-    filters.outcome = outcome as "success" | "error";
-  }
-
-  const from = single(rawQuery["from"], "from");
-  if (from !== undefined) filters.from = parseDate(from, "from");
-
-  const to = single(rawQuery["to"], "to");
-  if (to !== undefined) filters.to = parseDate(to, "to");
-
-  if (filters.from && filters.to && filters.from > filters.to) {
-    throw invalidQuery("from no puede ser posterior a to");
-  }
-
-  const limit = single(rawQuery["limit"], "limit");
-  if (limit !== undefined) {
-    const value = Number(limit);
-    if (!Number.isInteger(value) || value < 1 || value > MAX_LIMIT) {
-      throw invalidQuery(`limit debe ser un entero entre 1 y ${MAX_LIMIT}`);
-    }
-    filters.limit = value;
-  }
-
-  const cursor = single(rawQuery["cursor"], "cursor");
-  if (cursor !== undefined) filters.cursor = decodeCursor(cursor);
-
+/** Convierte la query ya validada al filtro interno (fechas y cursor). */
+function toFilters(query: AuthEventQuery): AuthEventFilters {
+  const filters: AuthEventFilters = { limit: query.limit ?? DEFAULT_LIMIT };
+  if (query.route !== undefined) filters.route = query.route;
+  if (query.outcome !== undefined) filters.outcome = query.outcome;
+  if (query.from !== undefined) filters.from = new Date(query.from);
+  if (query.to !== undefined) filters.to = new Date(query.to);
+  if (query.cursor !== undefined) filters.cursor = decodeCursor(query.cursor);
   return filters;
 }
 
-/** Valor escalar de la query; los arrays (parametro repetido) son 400. */
-function single(value: unknown, name: string): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string") throw invalidQuery(`${name} debe ser un valor único`);
-  return value;
-}
-
-function parseDate(value: string, name: string): Date {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw invalidQuery(`${name} debe ser una fecha ISO 8601`);
-  }
-  return date;
-}
-
-/** Cursor keyset `(at, id)` codificado en base64url; invalido -> 400. */
+/** Cursor keyset `(at, id)` codificado en base64url; invalido -> 422. */
 function decodeCursor(raw: string): { at: Date; id: string } {
   let decoded: unknown;
   try {
     decoded = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
   } catch {
-    throw invalidQuery("cursor inválido");
+    throw invalidCursor();
   }
   if (typeof decoded !== "object" || decoded === null) {
-    throw invalidQuery("cursor inválido");
+    throw invalidCursor();
   }
   const record = decoded as Record<string, unknown>;
   const at = typeof record["at"] === "string" ? new Date(record["at"]) : undefined;
   const id = record["id"];
   if (!at || Number.isNaN(at.getTime()) || typeof id !== "string" || id.length === 0) {
-    throw invalidQuery("cursor inválido");
+    throw invalidCursor();
   }
   return { at, id };
 }
 
-function invalidQuery(detail: string): BadRequestException {
-  return new BadRequestException({ code: "VALIDATION_ERROR", message: detail });
+function invalidCursor(): ApiProblemException {
+  return new ApiProblemException("VALIDATION_ERROR", "La solicitud no es válida.", [
+    { path: "cursor", message: "cursor inválido" },
+  ]);
 }
