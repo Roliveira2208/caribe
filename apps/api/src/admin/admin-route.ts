@@ -313,6 +313,11 @@ export const BETTER_AUTH_ADMIN_ROUTES: readonly BetterAuthAdminRoute[] = [
       entity: "session",
       // La fila de session se borra al ejecutar la accion: el id y el dueno
       // se guardan en el hook before (preState) porque despues ya no existen.
+      //
+      // M3 del segundo informe: la lib responde 200 {success:true} aunque el
+      // token no corresponda a ninguna fila de session (deleteSession es un
+      // no-op silencioso). Con el preestado vacio el hook after no audita: un
+      // 200 no prueba que se revoco nada. El e2e de auth lo deja documentado.
       preState: "session-by-token",
       entityIdOf: (_returned, _body, pre) => pre?.sessionId,
       afterOf: (_returned, _body, pre) => (pre?.userId ? { userId: pre.userId } : undefined),

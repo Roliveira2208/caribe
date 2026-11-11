@@ -200,6 +200,18 @@ describe("auth-access", () => {
   });
 
   describe("Revocación de sesión (delta de audit, fix de verificación)", () => {
+    // El super admin con TOTP se comparte entre los dos casos del describe:
+    // /sign-in/email tiene rate limit por IP y esta suite ya gasta varios.
+    let superAdmin: { userId: string; cookie: string };
+
+    beforeAll(async () => {
+      superAdmin = await userWithTotp(baseUrl, `super-rev-${suffix}@example.com`);
+      await prisma.user.update({
+        where: { id: superAdmin.userId },
+        data: { role: "super_admin" },
+      });
+    });
+
     it("super admin revoca la sesión de un usuario: 200, fila de plataforma y 401 a la víctima", async () => {
       // La víctima inicia sesión por la API de servidor (acción de sistema):
       // el comportamiento bajo prueba es la revocación, no el login, y así
@@ -209,12 +221,6 @@ describe("auth-access", () => {
       await auth.api.signInEmail({ body: { email: victimEmail, password: TEST_PASSWORD } });
       const victimSession = await prisma.session.findFirstOrThrow({
         where: { userId: victimId },
-      });
-
-      const superAdmin = await userWithTotp(baseUrl, `super-rev-${suffix}@example.com`);
-      await prisma.user.update({
-        where: { id: superAdmin.userId },
-        data: { role: "super_admin" },
       });
 
       const res = await fetch(`${baseUrl}/api/auth/admin/revoke-user-session`, {
@@ -243,6 +249,38 @@ describe("auth-access", () => {
         headers: { cookie: `better-auth.session_token=${victimSession.token}`, origin: authOrigin },
       });
       expect(victim.status).toBe(401);
+    });
+
+    it("un token que no coincide con ninguna sesión responde 200 sin efecto ni fila (M3)", async () => {
+      // M3 del segundo informe: la lib responde 200 {success:true} aunque el
+      // token no corresponda a ninguna fila (deleteSession es un no-op
+      // silencioso). La cookie firmada del propio super admin no es la
+      // columna session.token, así que sirve como token que no coincide.
+      const sessionsBefore = await prisma.session.count({
+        where: { userId: superAdmin.userId },
+      });
+      const auditBefore = await prisma.auditLog.count({
+        where: { action: "auth.admin.revoke-user-session", actorId: superAdmin.userId },
+      });
+
+      const res = await fetch(`${baseUrl}/api/auth/admin/revoke-user-session`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: superAdmin.cookie, origin: authOrigin },
+        body: JSON.stringify({ sessionToken: superAdmin.cookie }),
+      });
+      expect(res.status).toBe(200);
+      await expect(res.json()).resolves.toMatchObject({ success: true });
+
+      // Sin fila que revocar el preestado queda vacío, el hook after no
+      // audita y ninguna sesión se pierde: el 200 no prueba una revocación.
+      await expect(
+        prisma.session.count({ where: { userId: superAdmin.userId } }),
+      ).resolves.toBe(sessionsBefore);
+      await expect(
+        prisma.auditLog.count({
+          where: { action: "auth.admin.revoke-user-session", actorId: superAdmin.userId },
+        }),
+      ).resolves.toBe(auditBefore);
     });
   });
 
