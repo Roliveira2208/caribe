@@ -1,10 +1,10 @@
-# Verificación continua: lint, typecheck, tests y validación de specs.
+# Verificación continua: lint, typecheck, tests, build y validación de specs.
 # Servicios igual que docker compose local: PostgreSQL 17 y Redis 7.
 name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -89,6 +89,13 @@ jobs:
 
       - name: Tests
         run: pnpm test
+
+      # Build completo del monorepo: dist de shared y de la API, y las dos apps
+      # de Next (Turbopack, SSG de /es y /en). No necesita BD ni secretos: las
+      # URL publicas tienen defaults locales (WEB_URL/ADMIN_URL) y el proxy de
+      # la API solo se usa en runtime.
+      - name: Build
+        run: pnpm build
 
       - name: Validar specs
         run: node scripts/check-specs.mjs

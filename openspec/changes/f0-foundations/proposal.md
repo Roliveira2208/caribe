@@ -27,6 +27,11 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
   la shadow database quedó arreglado (REVOKE condicional en la migración del rol + re-baseline del
   checksum local), `migrate dev` vuelve a estar disponible y la CI comprueba con `prisma migrate diff`
   que `schema.prisma` y las migraciones no divergen. Ver `design.md`.
+- Organización activa por sesión (decisión del dueño, 2026-11-10, para implementar en F1): al iniciar
+  sesión se auto-selecciona la organización cuando el usuario tiene una sola membresía; si tiene varias,
+  se muestra un selector antes de entrar al panel. Responde la pregunta abierta surgida en la
+  verificación e2e de T-F0-10 (las sesiones de Better Auth nacen sin organización activa); ver
+  `design.md`.
 
 ## Preguntas abiertas
 - ¿Hosting definitivo de la API y la base de datos (planes gratuitos con arranque en frío)?
@@ -35,9 +40,6 @@ Implementa SDD §4 (arquitectura), §10 (seguridad) y la fase F0 de §13.
 - ¿Qué inventario básico debe crear el seed de demostración? F0 no tiene tablas de catálogo (fuera del
   alcance de esta change): el seed crea solo identidad y el inventario se añade cuando llegue
   specs/catalog en F1 (decisión del dueño, 2026-11-10).
-- Las sesiones de Better Auth nacen sin organización activa y el panel de auditoría la exige: ¿F1
-  monta un selector de organización al login (multi-agencia) o auto-fija la única membresía del
-  usuario? Descubierto en la verificación e2e de T-F0-10; ver `design.md`.
 
 ## Fuera de alcance
 Catálogo, reservas, pagos y tasas (F1 y F2).

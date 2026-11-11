@@ -456,25 +456,40 @@ comportamiento especificado: refuerza pruebas y deja anotadas dos decisiones par
   (mismas claves en web y admin) + `home` (web) / `panel` (admin). Tests de mensajes en cada app:
   extraen namespaces y claves de `useTranslations`/`getTranslations` + llamadas `t("...")`
   literales por regex y exigen que toda clave usada exista y que es/en tengan paridad exacta.
-- **`next-env.d.ts` commiteado y fuera de prettier:** CI no corre `pnpm build` de las apps y el
-  typecheck funciona sin `.next` porque el archivo está commiteado (verificado en ambas apps
-  moviendo `.next` fuera). `.prettierignore` lo excluye (lo genera Next). Igual tratamiento para
-  los `AGENTS.md` de `apps/web` y `apps/admin`: los escribe `next dev` (puntero de 9 líneas a los
-  docs de Next 16) y commitearlos mantiene el árbol limpio.
+- **`next-env.d.ts` commiteado y fuera de prettier:** el typecheck funciona sin `.next` porque el
+  archivo está commiteado (verificado en ambas apps moviendo `.next` fuera). `.prettierignore` lo
+  excluye (lo genera Next). Igual tratamiento para los `AGENTS.md` de `apps/web` y `apps/admin`:
+  los escribe `next dev` (puntero de 9 líneas a los docs de Next 16) y commitearlos mantiene el
+  árbol limpio.
 - **turbo.json:** `build.outputs` pasa a `["dist/**", ".next/**", "!.next/cache/**"]` para que el
   caché de Turborepo registre los artefactos de Next (evita los warnings de "no output files
   found" que salían con solo `dist/**`).
 
-### Pregunta abierta para F1: organización activa por sesión
+### Decisión para F1: organización activa por sesión
 
 Las sesiones de Better Auth nacen **sin organización activa** (el plugin Organization no la
 auto-fija); hoy solo se fija con `POST /api/auth/organization/set-active`, como hacen los tests
 en `auth-helpers.ts`. El panel de auditoría exige agencia activa (o rol de plataforma), así que
 en la verificación e2e un admin recién logueado recibe 403 «La auditoría requiere una agencia
-activa o el rol de plataforma» hasta llamar a set-active con su agencia. F1 debe decidir:
-selector de organización al login (multi-agencia) vs auto-set de la única membresía cuando el
-usuario pertenece a una sola. No se decide aquí porque el SDD no especifica el flujo y es
-comportamiento de producto del panel, no del shell.
+activa o el rol de plataforma» hasta llamar a set-active con su agencia.
+
+Decisión del dueño (2026-11-10), a implementar en F1: al iniciar sesión se auto-selecciona la
+organización cuando el usuario tiene una sola membresía; si tiene varias, se muestra un selector
+antes de entrar al panel. El endpoint set-active de Better Auth ya existe; falta la UX del login.
+No tocó F0 porque es comportamiento de producto del panel, no del shell.
+
+## CI: build del monorepo y rama del push (2026-11-10)
+
+Cambio pedido por el dueño tras aprobar T-F0-10, fuera de `tasks.md`:
+
+- **`pnpm build` entra a la CI** después de typecheck y tests: valida el bundling completo
+  (dist de shared y de la API; las dos apps de Next con Turbopack y SSG de `/es` y `/en`). No
+  necesita BD ni secretos — `WEB_URL`/`ADMIN_URL` tienen defaults locales — y corre después de
+  los tests, antes de la validación de specs.
+- **El trigger de push apuntaba a `master` y la rama es `main`:** CI nunca había corrido en un
+  push (solo en PR y dispatch manual). Corregido a `branches: [main]`; junto con el paso de
+  build, el push que revisa el dueño en la pestaña Actions por fin ejecuta la verificación
+  completa.
 
 
 
