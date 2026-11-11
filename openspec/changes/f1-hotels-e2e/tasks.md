@@ -1,6 +1,10 @@
 # Tareas: f1-hotels-e2e
 Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 
+> Fase 0 (especificar): deltas de specs y `design.md` aprobados por el dueño el 2026-11-11 con seis
+> cambios (inventario por noche, alcance reducido, idempotencia mínima, 422 estricto, `rates_global` y
+> PDFs, `minimumReleaseAge`). El alcance por escenario está en `scope.md`.
+
 - [x] T-F1-0 Endurecer el inventario de rutas (primera tarea, antes de tocar catálogo; análisis en
   `docs/plans/inventory-hardening-f0.md`).
   - Registro cerrado de rutas no administrativas: toda ruta fuera de `/admin`, `/organization` y
@@ -17,26 +21,100 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   - Hecho: 30 rutas fuera de las familias + 15 de allowlist con justificación; métodos exactos;
     paths con `:` solo en no administrativas; sin sesión ninguna ruta admin responde 2xx; plugins
     cerrados a organization/admin/two-factor; registro Nest cerrado; `joinRoutePath` sin barra final.
-- [ ] T-F1-1 Migraciones de catálogo (`destinations`, `products` tipo hotel, `availability`, `cancellation_policies`) con RLS.
-- [ ] T-F1-2 Esquema Zod de `attributes` para hotel en `packages/shared`.  Prueba: catalog › "Atributos inválidos".
-- [ ] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad.  Prueba: catalog › búsqueda y estados.
-- [ ] T-F1-4 CRUD de hoteles para proveedor y admin (API).  Prueba: auth-access › Proveedor.
-- [ ] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo y override con auditoría.  Prueba: exchange-rates (todos).
-- [ ] T-F1-6 Precio VES informativo en catálogo con la tasa vigente.  Prueba: catalog › "Sin tasa disponible".
-- [ ] T-F1-7 `BookingModule`: crear reserva con retención e `Idempotency-Key`.  Prueba: booking › cupo, concurrencia, idempotencia.
-- [ ] T-F1-7b Eliminar los stubs `TODO(F1)` de products/bookings creados en F0.  Prueba: auth-access › "Ruta protegida sin sesión", "Catálogo público" con los endpoints reales.
-- [ ] T-F1-8 Trabajo de expiración de reservas.  Prueba: booking › "Vence sin pago", "Pago tardío".
-- [ ] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, monto calculado en servidor.  Prueba: payments (creación y modo).
-- [ ] T-F1-10 Cancelación y reembolso con `policy_snapshot` y tasa congelada.  Prueba: booking › Cancelación; payments › Reembolso.
-- [ ] T-F1-11 `DocumentModule`: voucher y comprobante PDF, numeración correlativa, reintentos.  Prueba: documents (todos).
-- [ ] T-F1-12 `NotificationModule` con correo de confirmación (SMTP local).
-- [ ] T-F1-13 Web: buscador, resultados, detalle, checkout, pago y confirmación en es/en, accesibles por teclado.
-- [ ] T-F1-14 Web: "Mis reservas" con cancelación y descarga de documentos.
+- [ ] T-F1-0b Implementar `auth_events`: migración, RLS, hooks `before`/`after`, resultado del rechazo
+  TOTP en el `catch`, consulta de solo lectura y prueba de inmutabilidad.
+  Prueba: audit › "Registro de intentos y resultados de acciones administrativas" y "Visibilidad de los intentos".
+- [ ] T-F1-0c Contrato de errores: Problem Details, tabla de códigos, pipe de validación Zod y
+  serialización de dinero/fechas.
+  Prueba: escenarios de `api-errors` (spec nueva).
+- [ ] T-F1-0d Contextos RLS `owner`, `public`, `tenant`+`owner` y `rates_global` en `TenantService`,
+  políticas por dueño directo, por `EXISTS` del `booking` padre, lectura pública de `products`,
+  `availability` y `destinations`, `WITH CHECK` e inventario de tablas con RLS forzada.
+  Prueba: escenarios de `tenant-isolation` (spec nueva) y auth-access › "Aislamiento entre tenants".
+- [ ] T-F1-1a `tenant_settings` y `user.locale`: migración con RLS, defaults y auditoría del cambio.
+  Prueba: auth-access › "Operación de agencia sin agencia activa"; audit › "Cambio de ajustes de la agencia".
+- [ ] T-F1-1b Migraciones de catálogo (`providers`, `destinations`, `products` tipo hotel,
+  `availability` por noche, `cancellation_policies`) con RLS e índices; único
+  `(product_id, room_type, night)` sin `btree_gist`.
+  Prueba: catalog › "Atributos inválidos", "Estados" y "Noche duplicada".
+- [ ] T-F1-1c Migraciones de reservas, pagos y documentos (`bookings`, `booking_items` con precios por
+  noche, `idempotency_keys` sin `tenant_id` y RLS solo por `user_id`, `exchange_rates`, `payments`,
+  `refunds`, `documents`, `document_counters`, `notification_logs`) con RLS, triggers de congelamiento
+  e inmutabilidad y unicidad.
+  Prueba: booking › "Reservas concurrentes sobre el último cupo"; payments › "Reembolso".
+- [ ] T-F1-1d Ampliar `pnpm db:seed` con una agencia, hotel publicado, disponibilidad, política, tasa
+  global y `payment_mode`; idempotente.
+  Prueba: demo manual documentada.
+- [ ] T-F1-2 Esquema Zod de `attributes` para hotel en `packages/shared` (estrellas, huéspedes,
+  amenidades, imágenes con dominios permitidos por `ALLOWED_IMAGE_HOSTS`).
+  Prueba: catalog › "Atributos inválidos".
+- [ ] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad públicos.
+  Prueba: catalog › "Búsqueda y filtros" y "Detalle y disponibilidad públicos".
+- [ ] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
+  Prueba: auth-access › "Proveedor edita su producto" y "Propiedad de productos".
+- [ ] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo, circuit breaker, override con auditoría y
+  tenencia global/agencia.
+  Prueba: exchange-rates › "Fuente disponible", "Ajuste manual" y "Tenencia de las tasas".
+- [ ] T-F1-6 Precio VES informativo en catálogo con la tasa global.
+  Prueba: catalog › "Sin tasa disponible" y "Equivalente en VES".
+- [ ] T-F1-7 `BookingModule`: crear reserva con retención multi-noche, viajeros, código e
+  `Idempotency-Key`.
+  Prueba: booking › "Hay cupo en todas las noches", "Reservas concurrentes sobre el último cupo",
+  "Falta una noche" e "Idempotencia".
+- [ ] T-F1-7b Eliminar los stubs `TODO(F1)` de products/bookings creados en F0.
+  Prueba: auth-access › "Ruta protegida sin sesión" y "Catálogo público" con los endpoints reales.
+- [ ] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión.
+  Prueba: booking › "Vence sin pago" y "Carrera entre pago y expiración".
+- [ ] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, datos por método, monto
+  calculado en servidor y revisor distinto.
+  Prueba: payments › "Pago en VES por Pago Móvil" y "Modo MANUAL aprobado".
+- [ ] T-F1-9b Admin: organización activa (una membresía auto, varias selector, cero sin panel, Super
+  Admin plataforma). Wireframe del selector aprobado antes de construir.
+  Prueba: auth-access › "Organización activa en el panel".
+- [ ] T-F1-9c Admin: pantalla mínima de aprobación de pagos (`IN_REVIEW`, aprobar/rechazar con motivo).
+  Wireframe aprobado antes de construir.
+  Prueba: payments › "Modo MANUAL aprobado" y "Modo MANUAL rechazado".
+- [ ] T-F1-10 Cancelación y reembolso con `policy_snapshot` y tasa congelada (sin nota de reembolso,
+  diferida a F2).
+  Prueba: booking › "Cliente cancela reserva confirmada"; payments › "Reembolso parcial".
+- [ ] T-F1-11 `DocumentModule`: voucher y comprobante PDF en español, QR, numeración correlativa,
+  almacenamiento local (`DOCUMENTS_DIR` en `.env.example`), nombre UUID, descarga autenticada con
+  propiedad y protección de ruta, y reintentos.
+  Prueba: documents › "Voucher", "Comprobante de pago", "Descarga autenticada" y "Ruta manipulada".
+- [ ] T-F1-12 `NotificationModule` con un solo correo de confirmación de reserva (SMTP local, `SMTP_*`
+  en `.env.example`), `user.locale` y deduplicación. Los demás avisos son F2.
+  Prueba: escenarios de `notifications` (spec nueva): confirmación, sin otros avisos e idempotencia.
+- [ ] T-F1-13a Web: buscador y resultados. Wireframe aprobado antes de construir.
+  Prueba: catalog › "Búsqueda y filtros".
+- [ ] T-F1-13b Web: detalle del hotel. Wireframe aprobado antes de construir.
+  Prueba: catalog › "Detalle y disponibilidad públicos".
+- [ ] T-F1-13c Web: checkout (viajero y moneda). Wireframe aprobado antes de construir.
+  Prueba: booking › "Hay cupo en todas las noches" y "Reserva sin viajeros".
+- [ ] T-F1-13d Web: pago con cuenta regresiva y métodos. Wireframe aprobado antes de construir.
+  Prueba: payments › "Pago en VES por Pago Móvil" y "Datos por método de pago".
+- [ ] T-F1-13e Web: confirmación con voucher/comprobante. Wireframe aprobado antes de construir.
+  Prueba: documents › "Voucher" y "Comprobante de pago".
+- [ ] T-F1-14a Web: "Mis reservas" (lista/detalle). Wireframe aprobado antes de construir.
+  Prueba: booking › "Mis reservas entre agencias".
+- [ ] T-F1-14b Web: cancelación y descarga de documentos. Wireframe aprobado antes de construir.
+  Prueba: booking › "Cliente cancela reserva confirmada"; documents › "Descarga autenticada".
 - [ ] T-F1-15 Prueba e2e del flujo completo (Playwright) y prueba k6 de búsqueda y reserva.
+  Prueba: recorrido buscar → reservar → pagar → descargar, más concurrencia de cupo.
 - [ ] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.
+  Prueba: informe de verificación con semáforo y M1/M2 anotados.
+- [ ] T-F1-17 Actualizar `docs/sdd/SDD.md` con las seis desviaciones canónicas de `design.md` §15
+  (`tenant_settings`, `availability` por noche, `PARTIALLY_REFUNDED`,
+  `InvoiceProvider.issue(booking, payment?)`, `PENDING` interno e `idempotency_keys` sin `tenant_id`).
+  Prueba: SDD §5 y §7 coinciden con las specs archivadas; sin cambios en D1–D15.
 
 ## Notas heredadas de f0-foundations (siguen abiertas)
 
 - **M1**: configurar `trustedProxies` al decidir el hosting; hoy la IP tras un proxy resuelve a null y
   el rate limit de login degenera en bucket global.
 - **M2**: Helmet, CSP y CORS antes de cualquier demo pública (faseados en F5 por el SDD §13).
+
+## Notas de F1
+
+- La demo de F1 es local. Una demo pública exige M1 y M2.
+- Las seis desviaciones respecto del SDD están en `design.md` §15 y se aplican al SDD en T-F1-17.
+- OpenAPI/Swagger y los proveedores externos quedan diferidos.
