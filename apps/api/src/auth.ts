@@ -10,6 +10,11 @@ import { admin, organization, twoFactor } from "better-auth/plugins";
 import { TWO_FACTOR_REQUIRED } from "@caribe/shared";
 import { betterAuthAdminRouteOf, targetOrganizationIdOf, tenantOrganizationIdOf, type BetterAuthPreState } from "./admin/admin-route.js";
 import { TWO_FACTOR_REQUIRED_MESSAGE, isAdminLevelSession, type AdminSessionInfo } from "./admin/admin-session.js";
+import {
+  authEventWriteRouteOf,
+  beginAuthEvent,
+  finishAuthEvent,
+} from "./audit/auth-event-hooks.js";
 import type { AuditEntry } from "./audit/audit.service.js";
 import { AuditService } from "./audit/audit.service.js";
 import {
@@ -111,59 +116,88 @@ export const auth = betterAuth({
 
       const session = await getSessionFromCtx(ctx);
       if (!session) return;
-      // getSessionFromCtx tipa la sesion con los tipos base de la lib (sin
-      // las props que anaden los plugins, como activeOrganizationId); la
-      // sesion real si la trae, igual que la que ve el guard de Nest.
-      //
-      // En las escrituras de organizacion la clasificacion usa la agencia
-      // objetivo (B3 del segundo informe): la del cuerpo o la query, o la
-      // activa si no viene. Sin objetivo determinable la sesion falla cerrada
-      // si es administrativa en cualquier agencia; en las rutas que no aceptan
-      // organizationId (cancel-invitation, create) el resolver devuelve null
-      // y tampoco vale la activa: el cuerpo no puede librar del TOTP.
-      const targetOrganizationId =
-        route.authorization === "organization"
-          ? targetOrganizationIdOf(
-              route.targetOrganization,
-              ctx.body as Record<string, unknown> | undefined,
-              ctx.query as Record<string, unknown> | undefined,
-              session.session.activeOrganizationId,
-            )
-          : undefined;
-      if (
-        !session.user.twoFactorEnabled &&
-        (await isAdminLevelSession(session as AdminSessionInfo, targetOrganizationId))
-      ) {
-        throw new APIError("FORBIDDEN", {
-          code: TWO_FACTOR_REQUIRED,
-          message: TWO_FACTOR_REQUIRED_MESSAGE,
-        });
+
+      // T-F1-0b: las escrituras administrativas dejan fila de intento ANTES
+      // de validar el cuerpo y el TOTP. Si la escritura del intento falla, el
+      // hook lanza y la accion no se ejecuta (fallo cerrado).
+      const writeRoute = authEventWriteRouteOf(ctx.path);
+      if (writeRoute) {
+        await beginAuthEvent(ctx, writeRoute, session as AdminSessionInfo);
       }
 
-      // revoke-user-session: la fila de session se borra al ejecutar la
-      // accion, asi que el antes se guarda aqui para poder auditar despues.
-      if (route.audit?.preState === "session-by-token") {
-        const token = (ctx.body as Record<string, unknown> | undefined)?.["sessionToken"];
-        if (typeof token === "string") {
-          const revoked = await prisma.session.findUnique({
-            where: { token },
-            select: { id: true, userId: true },
+      try {
+        // getSessionFromCtx tipa la sesion con los tipos base de la lib (sin
+        // las props que anaden los plugins, como activeOrganizationId); la
+        // sesion real si la trae, igual que la que ve el guard de Nest.
+        //
+        // En las escrituras de organizacion la clasificacion usa la agencia
+        // objetivo (B3 del segundo informe): la del cuerpo o la query, o la
+        // activa si no viene. Sin objetivo determinable la sesion falla cerrada
+        // si es administrativa en cualquier agencia; en las rutas que no aceptan
+        // organizationId (cancel-invitation, create) el resolver devuelve null
+        // y tampoco vale la activa: el cuerpo no puede librar del TOTP.
+        const targetOrganizationId =
+          route.authorization === "organization"
+            ? targetOrganizationIdOf(
+                route.targetOrganization,
+                ctx.body as Record<string, unknown> | undefined,
+                ctx.query as Record<string, unknown> | undefined,
+                session.session.activeOrganizationId,
+              )
+            : undefined;
+        if (
+          !session.user.twoFactorEnabled &&
+          (await isAdminLevelSession(session as AdminSessionInfo, targetOrganizationId))
+        ) {
+          throw new APIError("FORBIDDEN", {
+            code: TWO_FACTOR_REQUIRED,
+            message: TWO_FACTOR_REQUIRED_MESSAGE,
           });
-          if (revoked) {
-            betterAuthPreStates.set(ctx.context, { sessionId: revoked.id, userId: revoked.userId });
+        }
+
+        // revoke-user-session: la fila de session se borra al ejecutar la
+        // accion, asi que el antes se guarda aqui para poder auditar despues.
+        if (route.audit?.preState === "session-by-token") {
+          const token = (ctx.body as Record<string, unknown> | undefined)?.["sessionToken"];
+          if (typeof token === "string") {
+            const revoked = await prisma.session.findUnique({
+              where: { token },
+              select: { id: true, userId: true },
+            });
+            if (revoked) {
+              betterAuthPreStates.set(ctx.context, { sessionId: revoked.id, userId: revoked.userId });
+            }
           }
         }
+      } catch (error) {
+        // El hook after no corre si before lanza: el rechazo (TOTP) o el fallo
+        // del before escriben aqui su fila de resultado.
+        if (writeRoute) {
+          await finishAuthEvent(ctx, error, betterAuthPreStates.get(ctx.context));
+        }
+        throw error;
       }
     }),
     /**
-     * Fila de auditoria de las escrituras administrativas confirmadas (delta
-     * de audit): solo 2xx (los APIError llegan como instancia de Error) y
-     * solo con sesion (las acciones de sistema por auth.api las audita su
-     * llamador, si le toca). Si la escritura de auditoria falla, la accion ya
-     * esta confirmada: se deja el fallo en el log y la respuesta pasa.
+     * Resultado del intento (T-F1-0b) y fila de auditoria de las escrituras
+     * administrativas confirmadas (delta de audit). El resultado se escribe
+     * primero y en su propia transaccion; si falla, el fallo va al log y la
+     * accion ya confirmada se mantiene. La fila de audit_logs solo se escribe
+     * en 2xx (los APIError llegan como instancia de Error) y solo con sesion
+     * (las acciones de sistema por auth.api las audita su llamador, si le
+     * toca).
      */
     after: createAuthMiddleware(async (ctx) => {
       const route = betterAuthAdminRouteOf(ctx.path);
+      const pre = betterAuthPreStates.get(ctx.context);
+      if (authEventWriteRouteOf(ctx.path)) {
+        await finishAuthEvent(
+          ctx,
+          ctx.context.returned instanceof Error ? ctx.context.returned : undefined,
+          pre,
+        );
+      }
+
       const audit = route?.audit;
       if (!audit) return;
 
@@ -175,7 +209,6 @@ export const auth = betterAuth({
       const body = (ctx.body ?? {}) as Record<string, unknown>;
       const returnedRecord =
         typeof returned === "object" && returned !== null ? (returned as Record<string, unknown>) : {};
-      const pre = betterAuthPreStates.get(ctx.context);
       if (audit.preState === "session-by-token" && !pre) return;
 
       const entityId = audit.entityIdOf(returnedRecord, body, pre);

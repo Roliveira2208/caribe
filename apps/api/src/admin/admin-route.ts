@@ -774,6 +774,38 @@ export function betterAuthAdminRouteOf(path: string | undefined): BetterAuthAdmi
   return betterAuthRouteByPath.get(path);
 }
 
+/**
+ * Rutas administrativas de solo lectura (T-F1-0b): exigen TOTP pero no
+ * generan filas en auth_events porque no escriben nada. Las dos primeras usan
+ * GET; list-user-sessions y has-permission usan POST por el cliente de la lib.
+ * La lista es cerrada: un path que no esté en la tabla administrativa falla al
+ * cargar el módulo.
+ */
+export const BETTER_AUTH_ADMIN_READ_ONLY_PATHS: readonly string[] = [
+  "/admin/get-user",
+  "/admin/list-users",
+  "/admin/list-user-sessions",
+  "/admin/has-permission",
+];
+
+const betterAuthAdminReadOnlyPaths = new Set(BETTER_AUTH_ADMIN_READ_ONLY_PATHS);
+
+for (const path of BETTER_AUTH_ADMIN_READ_ONLY_PATHS) {
+  if (!betterAuthRouteByPath.has(path)) {
+    throw new Error(`${path} no está en BETTER_AUTH_ADMIN_ROUTES`);
+  }
+}
+
+/**
+ * true si el path es una escritura administrativa de Better Auth y por tanto
+ * deja intento y resultado en auth_events (delta de audit, T-F1-0b). Las
+ * rutas de solo lectura y las que no son administrativas devuelven false.
+ */
+export function isBetterAuthAdminWriteRoute(path: string | undefined): boolean {
+  const route = betterAuthAdminRouteOf(path);
+  return route !== undefined && !betterAuthAdminReadOnlyPaths.has(route.path);
+}
+
 // ---------------------------------------------------------------------------
 // Organizacion objetivo de una escritura (B3 del segundo informe)
 // ---------------------------------------------------------------------------

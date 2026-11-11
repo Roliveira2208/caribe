@@ -181,3 +181,33 @@ model AuditLog {
   @@index([tenantId])
   @@map("audit_logs")
 }
+
+// Tabla propia de Caribe (no de Better Auth): intentos y resultados de las
+// escrituras administrativas de Better Auth y de los rechazos por segundo
+// factor (delta de audit, T-F1-0b). Separada de audit_logs a proposito:
+// audit_logs conserva la accion sensible confirmada con antes/despues y un
+// intento NUNCA se escribe alli. Append-only con trigger y RLS por tenant_id
+// (migracion SQL, invisible para Prisma). Dos filas por intento unidas por
+// correlation_id: phase attempt y phase result.
+model AuthEvent {
+  id            String   @id
+  tenantId      String?  @map("tenant_id")
+  correlationId String   @map("correlation_id")
+  phase         String
+  actorId       String?  @map("actor_id")
+  route         String
+  method        String
+  ip            String?
+  outcome       String?
+  errorCode     String?  @map("error_code")
+  errorStatus   Int?     @map("error_status")
+  errorName     String?  @map("error_name")
+  entity        String?
+  entityId      String?  @map("entity_id")
+  at            DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([correlationId])
+  @@index([at, id])
+  @@map("auth_events")
+}

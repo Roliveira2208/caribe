@@ -21,7 +21,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   - Hecho: 30 rutas fuera de las familias + 15 de allowlist con justificación; métodos exactos;
     paths con `:` solo en no administrativas; sin sesión ninguna ruta admin responde 2xx; plugins
     cerrados a organization/admin/two-factor; registro Nest cerrado; `joinRoutePath` sin barra final.
-- [ ] T-F1-0b Implementar `auth_events`: migración, RLS, hooks `before`/`after`, resultado del rechazo
+- [x] T-F1-0b Implementar `auth_events`: migración, RLS, hooks `before`/`after`, resultado del rechazo
   TOTP en el `catch`, consulta de solo lectura y prueba de inmutabilidad.
   Prueba: audit › "Registro de intentos y resultados de acciones administrativas" y "Visibilidad de los intentos".
 - [ ] T-F1-0c Contrato de errores: Problem Details, tabla de códigos, pipe de validación Zod y
