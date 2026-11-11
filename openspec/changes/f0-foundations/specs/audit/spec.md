@@ -37,13 +37,25 @@ Las escrituras administrativas atendidas por el middleware de Better Auth —las
 `/api/auth/admin/*` y las escrituras administrativas de `/api/auth/organization/*`— SHALL dejar fila en
 `audit_logs` con actor, acción, entidad, identificador de la entidad afectada, estado resultante, IP y
 fecha. Las acciones del plugin admin SHALL registrarse con `tenant_id` NULL (plataforma) y las de
-organización con el `tenant_id` de la agencia afectada. Las acciones de sistema ejecutadas por la API de
-servidor (`auth.api`) sin sesión HTTP quedan fuera de este registro.
+organización con el `tenant_id` de la agencia afectada. La agencia afectada SHALL resolverse de la
+organización objetivo de la escritura —la del cuerpo, la de la entidad afectada o, en su defecto, la
+activa— y no solo de la organización activa de la sesión. Las acciones de sistema ejecutadas por la API
+de servidor (`auth.api`) sin sesión HTTP quedan fuera de este registro.
 
 #### Scenario: Owner invita a un miembro
 - GIVEN un owner de agencia autenticado con TOTP activo
 - WHEN invita a un miembro por `/api/auth/organization/invite-member`
 - THEN existe una fila de auditoría con la agencia como `tenant_id`, el owner como actor y la invitación como entidad afectada
+
+#### Scenario: Owner invita sin organización activa
+- GIVEN un owner de agencia autenticado con TOTP activo y sin organización activa
+- WHEN invita a un miembro por `/api/auth/organization/invite-member` con `organizationId` de su agencia en el cuerpo
+- THEN existe una fila de auditoría con esa agencia como `tenant_id` y el owner como actor
+
+#### Scenario: Owner cancela una invitación sin organización activa
+- GIVEN un owner de agencia autenticado con TOTP activo y sin organización activa
+- WHEN cancela una invitación de su agencia por `/api/auth/organization/cancel-invitation`
+- THEN existe una fila de auditoría con la agencia de la invitación como `tenant_id` y el owner como actor
 
 #### Scenario: Super Admin revoca una sesión
 - GIVEN un Super Admin autenticado con TOTP activo

@@ -23,6 +23,14 @@ comprobar permisos: un rol administrativo sin segundo factor recibe 403 con cód
 administrativo SHALL recibir el 403 normal de permisos, sin el código de aplicación. Las acciones de
 sistema ejecutadas por la API de servidor (`auth.api`) sin sesión HTTP SHALL saltarse la exigencia.
 
+En las escrituras de `/api/auth/organization/*` la condición de rol administrativo SHALL evaluarse
+contra la organización objetivo de la escritura —la del cuerpo o la query, o la organización activa de
+la sesión si no viene— y no solo contra la organización activa: Better Auth autoriza esas escrituras por
+membresía en la organización afectada. Si la organización objetivo no puede determinarse, la escritura
+SHALL fallar cerrada: una sesión con rol de plataforma o con rol administrativo en cualquier agencia y
+sin segundo factor recibe 403 con código de aplicación `TWO_FACTOR_REQUIRED`; una sesión sin ningún rol
+administrativo recibe el rechazo normal de la lib, sin el código de aplicación.
+
 #### Scenario: Admin sin TOTP
 - GIVEN un admin de agencia autenticado y sin segundo factor activado
 - WHEN abre el panel o llama a un endpoint administrativo
@@ -43,6 +51,34 @@ sistema ejecutadas por la API de servidor (`auth.api`) sin sesión HTTP SHALL sa
 - GIVEN un agente autenticado sin segundo factor activado
 - WHEN llama por HTTP a una escritura administrativa de `/api/auth/organization/*`
 - THEN la API responde 403 por permisos, sin el código de aplicación `TWO_FACTOR_REQUIRED`
+
+#### Scenario: Admin sin TOTP ni organización activa escribe en su agencia
+- GIVEN un owner de agencia autenticado sin segundo factor activado y sin organización activa
+- WHEN llama por HTTP a `/api/auth/organization/invite-member` o `update-member-role` con `organizationId` de su agencia en el cuerpo
+- THEN la API responde 403 con código de aplicación `TWO_FACTOR_REQUIRED`
+- AND no se crea la invitación ni cambia el rol del miembro
+
+#### Scenario: Admin con TOTP y sin organización activa escribe en su agencia
+- GIVEN un owner de agencia autenticado con segundo factor activado y sin organización activa
+- WHEN llama por HTTP a `/api/auth/organization/invite-member` con `organizationId` de su agencia en el cuerpo
+- THEN la API responde 2xx
+
+#### Scenario: Escritura de organización sin objetivo determinable
+- GIVEN un owner de agencia autenticado sin segundo factor activado y sin organización activa
+- WHEN llama por HTTP a una escritura de `/api/auth/organization/*` sin `organizationId` en el cuerpo ni en la query
+- THEN la API responde 403 con código de aplicación `TWO_FACTOR_REQUIRED`
+
+#### Scenario: Rol no administrativo sin objetivo determinable
+- GIVEN un agente autenticado sin segundo factor, sin rol administrativo en ninguna agencia y sin organización activa
+- WHEN llama por HTTP a una escritura de `/api/auth/organization/*` sin `organizationId` en el cuerpo ni en la query
+- THEN la API responde el rechazo normal de la lib, sin el código de aplicación `TWO_FACTOR_REQUIRED`
+- AND la escritura no se confirma
+
+#### Scenario: Owner de una agencia escribe en otra
+- GIVEN el owner de la agencia A autenticado sin segundo factor, sin organización activa y con rol no administrativo en la agencia B
+- WHEN llama por HTTP a una escritura de `/api/auth/organization/*` con `organizationId` de la agencia B en el cuerpo
+- THEN la API responde el rechazo normal de la lib, sin el código de aplicación `TWO_FACTOR_REQUIRED`
+- AND la escritura no se confirma
 
 #### Scenario: Activación de TOTP accesible
 - GIVEN un admin de agencia autenticado y sin segundo factor activado
