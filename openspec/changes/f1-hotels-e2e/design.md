@@ -29,15 +29,19 @@ Auth:
 | Columna | Tipo | Regla |
 | --- | --- | --- |
 | `tenant_id` | TEXT PK | FK a `organization.id` |
-| `hold_minutes` | INTEGER | default 30, > 0 |
+| `hold_minutes` | INTEGER | default 30; CHECK 5–1440 |
 | `payment_mode` | ENUM `AUTO`/`MANUAL` | default `AUTO` para la demo; el seed crea una agencia `MANUAL` |
-| `base_currency` | CHAR(3) | default `USD` |
+| `base_currency` | TEXT | default `USD`; CHECK `^[A-Z]{3}$` (Prisma no modela CHAR(3) y evita drift) |
 | `legal_name` | TEXT | razón social para el comprobante |
 | `rif` | TEXT | RIF para el comprobante |
 | `address` | TEXT | contacto del voucher |
 | `phone` | TEXT | contacto del voucher |
 | `email` | TEXT | contacto del voucher |
 | `updated_at` | TIMESTAMP | — |
+
+La migración refuerza los límites con `CHECK` y deja RLS habilitada y forzada: la política de agencia
+(`FOR ALL`, con `WITH CHECK`) permite leer y escribir solo `tenant_id = app.tenant_id`, y la de
+plataforma (`FOR SELECT`) permite leer con `app.platform = 'on'` pero no escribir.
 
 El SDD §5 pone `base_currency`, `payment_mode` y `hold_minutes` en `organization`. No se edita el modelo
 generado por Better Auth: la tabla propia evita migraciones que la lib pueda pisar y permite auditoría

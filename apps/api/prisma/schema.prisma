@@ -34,6 +34,9 @@ model User {
   banReason        String?
   banExpires       DateTime?
   twoFactorEnabled Boolean?     @default(false)
+  // Idioma de la interfaz (additionalFields de Better Auth, T-F1-1a). Lo
+  // genera el CLI a partir de auth.ts; no editar a mano.
+  locale           String?      @default("es")
   sessions         Session[]
   accounts         Account[]
   members          Member[]
@@ -103,6 +106,11 @@ model Organization {
   metadata    String?
   members     Member[]
   invitations Invitation[]
+  // Relación 1:1 con la tabla propia tenant_settings. El CLI de Better Auth
+  // NO genera este campo (ni el modelo TenantSettings): al regenerar el
+  // esquema hay que volver a añadirlo para que `prisma migrate diff` quede
+  // limpio con la FK a organization.id.
+  tenantSettings TenantSettings?
 
   @@unique([slug])
   @@map("organization")
@@ -210,4 +218,35 @@ model AuthEvent {
   @@index([correlationId])
   @@index([at, id])
   @@map("auth_events")
+}
+
+// Modo de cobro de la agencia (T-F1-1a, specs/auth-access y design §2.1).
+// AUTO cobra en línea; MANUAL exige aprobación del admin. La base impone el
+// enum: cualquier otro valor es imposible incluso por SQL directo.
+enum PaymentMode {
+  AUTO
+  MANUAL
+}
+
+// Ajustes operativos de la agencia (T-F1-1a, design §2.1): tabla propia 1:1
+// con organization.id, separada del modelo que genera Better Auth. Las
+// columnas de contacto son opcionales; los defaults de negocio son 30
+// minutos, cobro AUTO y USD. La base refuerza los límites con CHECK
+// (hold_minutes 5-1440 y base_currency ISO de 3 mayúsculas) y RLS forzada
+// con política de agencia (FOR ALL) y de plataforma (solo lectura), en la
+// migración SQL invisible para Prisma.
+model TenantSettings {
+  tenantId     String      @id @map("tenant_id")
+  organization Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  holdMinutes  Int         @default(30) @map("hold_minutes")
+  paymentMode  PaymentMode @default(AUTO) @map("payment_mode")
+  baseCurrency String      @default("USD") @map("base_currency")
+  legalName    String?     @map("legal_name")
+  rif          String?
+  address      String?
+  phone        String?
+  email        String?
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@map("tenant_settings")
 }

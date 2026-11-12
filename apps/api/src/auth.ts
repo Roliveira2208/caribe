@@ -88,6 +88,20 @@ export const auth = betterAuth({
     .filter(Boolean),
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: { enabled: true },
+  // Idioma del usuario para avisos y documentos (T-F1-1a, design.md §2.1).
+  // Campo adicional de Better Auth, no una tabla propia: la lib lo escribe en
+  // user.locale y el CLI oficial lo refleja en schema.prisma. `es` por defecto
+  // (la columna tambien lo trae) y `en` soportado; el respaldo al leer es `es`.
+  user: {
+    additionalFields: {
+      locale: {
+        type: "string",
+        required: false,
+        defaultValue: "es",
+        input: true,
+      },
+    },
+  },
   advanced: { useSecureCookies: isProduction },
   rateLimit: {
     // Activo siempre (por defecto Better Auth solo lo aplica en produccion).

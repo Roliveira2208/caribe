@@ -8,6 +8,7 @@ import { BookingsModule } from "./bookings/bookings.module.js";
 import { CatalogModule } from "./catalog/catalog.module.js";
 import { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
 import { TenantModule } from "./tenant/tenant.module.js";
+import { TenantSettingsModule } from "./tenant-settings/tenant-settings.module.js";
 
 @Module({
   // disableGlobalAuthGuard: la subclase AdminTwoFactorGuard (AdminModule) es
@@ -19,6 +20,7 @@ import { TenantModule } from "./tenant/tenant.module.js";
     CatalogModule,
     BookingsModule,
     TenantModule,
+    TenantSettingsModule,
   ],
   // Contrato de errores de /api/v1 (T-F1-0c): un unico filtro global.
   providers: [{ provide: APP_FILTER, useClass: ProblemDetailsFilter }],

@@ -44,7 +44,11 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   habilitada y forzada (excepciones explícitas: tablas de Better Auth y `_prisma_migrations`).
   Las políticas por tabla llegan con su migración (T-F1-1a/1b/1c): el inventario es la barrera que
   impide que una tabla nueva se cuele sin RLS.
-- [ ] T-F1-1a `tenant_settings` y `user.locale`: migración con RLS, defaults y auditoría del cambio.
+- [x] T-F1-1a `tenant_settings` y `user.locale`: migración con RLS, defaults y auditoría del cambio.
+  `tenant_settings` es 1:1 con `organization.id`, con CHECK 5–1440 y moneda ISO, RLS forzada (agencia
+  `FOR ALL` con `WITH CHECK`, plataforma solo lectura) y auditoría antes/después del PUT. `user.locale`
+  se añade por `additionalFields` de Better Auth y el CLI regenera la columna con default `es`. API:
+  GET/PUT `/api/v1/admin/tenant-settings` (owner/admin con TOTP; GET devuelve defaults sin crear fila).
   Prueba: auth-access › "Operación de agencia sin agencia activa"; audit › "Cambio de ajustes de la agencia".
 - [ ] T-F1-1b Migraciones de catálogo (`providers`, `destinations`, `products` tipo hotel,
   `availability` por noche, `cancellation_policies`) con RLS e índices; único
@@ -90,6 +94,11 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [ ] T-F1-10 Cancelación y reembolso con `policy_snapshot` y tasa congelada (sin nota de reembolso,
   diferida a F2).
   Prueba: booking › "Cliente cancela reserva confirmada"; payments › "Reembolso parcial".
+- [ ] T-F1-10b Pausa planificada: verificación independiente y revisión de seguridad en sesión limpia
+  con reservas y pagos ya cerrados (T-F1-7 a T-F1-10), antes de documentos (T-F1-11) y del resto del
+  panel y la web (T-F1-13/T-F1-14).
+  Prueba: informe de verificación con semáforo y hallazgos de seguridad; los bloqueantes se corrigen
+  antes de T-F1-11.
 - [ ] T-F1-11 `DocumentModule`: voucher y comprobante PDF en español, QR, numeración correlativa,
   almacenamiento local (`DOCUMENTS_DIR` en `.env.example`), nombre UUID, descarga autenticada con
   propiedad y protección de ruta, y reintentos.

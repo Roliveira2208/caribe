@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Client } from "pg";
 
 // vitest siempre corre con cwd en la raiz del paquete (pnpm test / turbo run test).
 const apiDir = process.cwd();
@@ -85,6 +86,29 @@ describe("prisma/schema.prisma", () => {
     expect(schema).toContain("model AuditLog");
     expect(schema).toContain('@@map("audit_logs")');
     expect(schema).toMatch(/tenantId\s+String\?\s+@map\("tenant_id"\)/);
+  });
+
+  it("declara user.locale con default es (additionalFields de Better Auth)", () => {
+    const schema = readFileSync(schemaPath, "utf-8");
+    expect(schema).toMatch(/locale\s+String\?\s+@default\("es"\)/);
+  });
+
+  it("declara tenant_settings con el enum PaymentMode y la relación 1:1 a organization", () => {
+    const schema = readFileSync(schemaPath, "utf-8");
+    expect(schema).toContain("enum PaymentMode");
+    expect(schema).toContain("model TenantSettings");
+    expect(schema).toContain('@@map("tenant_settings")');
+    expect(schema).toMatch(/holdMinutes\s+Int\s+@default\(30\)\s+@map\("hold_minutes"\)/);
+    expect(schema).toMatch(
+      /paymentMode\s+PaymentMode\s+@default\(AUTO\)\s+@map\("payment_mode"\)/,
+    );
+    expect(schema).toMatch(
+      /baseCurrency\s+String\s+@default\("USD"\)\s+@map\("base_currency"\)/,
+    );
+    expect(schema).toMatch(
+      /organization\s+Organization\s+@relation\(fields:\s*\[tenantId\],\s*references:\s*\[id\]/,
+    );
+    expect(schema).toMatch(/tenantSettings\s+TenantSettings\?/);
   });
 });
 
@@ -185,6 +209,130 @@ describe("prisma/migrations", () => {
     expect(sql).toContain("current_setting('app.platform', true)");
     // WITH CHECK en ambas: ni escribir filas de otro tenant ni fuera de contexto.
     expect(sql.match(/WITH CHECK/g)?.length).toBe(2);
+  });
+
+  it("crea tenant_settings con defaults, CHECKs, FK, RLS forzada y políticas", () => {
+    const migration = readMigrations().find(({ sql }) =>
+      sql.includes('CREATE TABLE "tenant_settings"'),
+    );
+    expect(migration).toBeDefined();
+    const sql = stripSqlComments(migration?.sql ?? "");
+
+    // Defaults de negocio (spec: 30 min, AUTO y USD).
+    expect(sql).toContain('"hold_minutes" INTEGER NOT NULL DEFAULT 30');
+    expect(sql).toContain('"payment_mode" "PaymentMode" NOT NULL DEFAULT \'AUTO\'');
+    expect(sql).toContain('"base_currency" TEXT NOT NULL DEFAULT \'USD\'');
+    expect(sql).toContain('CREATE TYPE "PaymentMode" AS ENUM (\'AUTO\', \'MANUAL\')');
+
+    // Límites en la base, no solo en Zod (defensa en profundidad).
+    expect(sql).toContain(
+      'CHECK ("hold_minutes" BETWEEN 5 AND 1440)',
+    );
+    expect(sql).toContain('CHECK ("base_currency" ~ \'^[A-Z]{3}$\')');
+
+    // 1:1 con organization y cascada al borrar la agencia.
+    expect(sql).toContain('REFERENCES "organization"("id") ON DELETE CASCADE');
+
+    // RLS forzada + política de agencia (FOR ALL con WITH CHECK) y de
+    // plataforma (solo lectura).
+    expect(sql).toContain('ALTER TABLE "tenant_settings" ENABLE ROW LEVEL SECURITY');
+    expect(sql).toContain('ALTER TABLE "tenant_settings" FORCE ROW LEVEL SECURITY');
+    expect(sql).toContain('CREATE POLICY "tenant_settings_tenant"');
+    expect(sql).toContain('CREATE POLICY "tenant_settings_platform"');
+    expect(sql).toContain("current_setting('app.tenant_id', true)");
+    expect(sql).toContain("current_setting('app.platform', true)");
+    expect(sql).toMatch(/CREATE POLICY "tenant_settings_platform"[\s\S]*?FOR SELECT/);
+    expect(sql).toMatch(/CREATE POLICY "tenant_settings_tenant"[\s\S]*?FOR ALL/);
+  });
+});
+
+interface SchemaColumn {
+  table: string;
+  column: string;
+  nullable: boolean;
+}
+
+/**
+ * Columnas escalares declaradas en `schema.prisma`: modelo -> tabla con
+ * `@@map`, campo -> columna con `@map`. Las relaciones y las listas no son
+ * columnas: se descartan comparando el tipo contra los nombres de modelo.
+ */
+function parseSchemaColumns(schema: string): SchemaColumn[] {
+  const models = [...schema.matchAll(/^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm)];
+  const modelNames = new Set(models.map((match) => match[1]));
+  const columns: SchemaColumn[] = [];
+  for (const match of models) {
+    const modelName = match[1] ?? "";
+    const body = match[2] ?? "";
+    const table = /@@map\("([^"]+)"\)/.exec(body)?.[1] ?? modelName;
+    for (const rawLine of body.split("\n")) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("//") || line.startsWith("@@")) continue;
+      const field = /^(\w+)\s+(\w+)(\[\])?(\?)?/.exec(line);
+      if (!field) continue;
+      const [, fieldName = "", typeName = "", list, optional] = field;
+      if (list || modelNames.has(typeName)) continue;
+      const column = /@map\("([^"]+)"\)/.exec(line)?.[1] ?? fieldName;
+      columns.push({ table, column, nullable: optional === "?" });
+    }
+  }
+  return columns;
+}
+
+/**
+ * Comparación esquema <-> base de datos (T-F1-1a): `prisma migrate diff`
+ * comprueba que las migraciones producen el esquema, y este test comprueba
+ * que la BD realmente migrada coincide columna a columna con lo declarado
+ * (incluida la nulabilidad). CI aplica las migraciones antes de `pnpm test`.
+ */
+describe("esquema Prisma vs base de datos migrada", () => {
+  let client: Client;
+
+  beforeAll(async () => {
+    client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+  });
+
+  afterAll(async () => {
+    await client?.end();
+  });
+
+  it("cada columna del esquema existe con la misma nulabilidad y no sobran columnas", async () => {
+    const schema = readFileSync(schemaPath, "utf-8");
+    const expected = parseSchemaColumns(schema);
+    // No puede pasar en vacío: si el parser deja de encontrar modelos, el
+    // test no probaría nada.
+    expect(expected.length).toBeGreaterThan(50);
+
+    const { rows } = await client.query<{
+      table_name: string;
+      column_name: string;
+      is_nullable: "YES" | "NO";
+    }>(
+      `SELECT table_name, column_name, is_nullable
+         FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name <> '_prisma_migrations'`,
+    );
+    const actual = new Map(
+      rows.map((row) => [`${row.table_name}.${row.column_name}`, row.is_nullable === "YES"]),
+    );
+
+    const missing = expected
+      .filter((column) => !actual.has(`${column.table}.${column.column}`))
+      .map((column) => `${column.table}.${column.column}`);
+    expect(missing, `columnas del esquema ausentes en la BD: ${missing.join(", ")}`).toEqual([]);
+
+    const nullability = expected
+      .filter((column) => actual.get(`${column.table}.${column.column}`) !== column.nullable)
+      .map((column) => `${column.table}.${column.column}`);
+    expect(
+      nullability,
+      `columnas con nulabilidad distinta al esquema: ${nullability.join(", ")}`,
+    ).toEqual([]);
+
+    const expectedKeys = new Set(expected.map((column) => `${column.table}.${column.column}`));
+    const extra = [...actual.keys()].filter((key) => !expectedKeys.has(key));
+    expect(extra, `columnas en la BD sin modelo en schema.prisma: ${extra.join(", ")}`).toEqual([]);
   });
 });
 
