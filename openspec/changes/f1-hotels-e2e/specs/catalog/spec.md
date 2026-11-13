@@ -7,20 +7,28 @@ El catálogo SHALL usar un único tipo `products` con `type` y `attributes` (JSO
 esquema Zod por tipo). El esquema SHALL rechazar claves desconocidas. En F1 el único tipo implementado
 es `hotel`; los demás tipos quedan fuera de alcance.
 
+Cada fila de `products` SHALL ser un tipo de habitación vendible de un hotel, identificado por
+`room_type` (código estable en minúsculas) y agrupado por `hotel_key` (UUID del hotel). El título SHALL
+ser el del hotel y la descripción la del tipo de habitación, ambos en JSONB `es`/`en`. No existe una
+tabla `hotels` separada en F1: los datos de hotel (`stars`, `amenities`, `images`) se repiten en cada
+tipo. La normalización en una tabla `hotels` queda como deuda conocida para F2.
+
 #### Scenario: Atributos inválidos
-- WHEN un proveedor guarda un hotel sin `attributes.stars` requerido por su esquema
+- WHEN un proveedor guarda un tipo de habitación sin `attributes.stars` requerido por su esquema
 - THEN 422 con el campo en falta
 
 #### Scenario: Clave desconocida en los atributos
-- WHEN un proveedor guarda un hotel con una clave que el esquema no declara
+- WHEN un proveedor guarda un tipo de habitación con una clave que el esquema no declara
 - THEN 422 con el campo desconocido señalado
 
 ### Requirement: Búsqueda y filtros
 `GET /products` SHALL filtrar por `destinationId`, fechas (`checkIn`, `checkOut`), personas (`guests`) y
-tipo, con búsqueda opcional `q` sobre el título i18n y paginación por cursor. El orden SHALL ser
-explícito y estable: precio ascendente y, a igualdad, identificador ascendente. El cursor SHALL ser
-opaco y codificar la última fila devuelta; el tamaño de página por defecto SHALL ser 20 y el máximo 50.
-La estancia SHALL cubrir las noches `[checkIn, checkOut)`; la noche de salida no se ocupa.
+tipo, con búsqueda opcional `q` sobre el título i18n y paginación por cursor. Cada resultado SHALL ser
+una oferta de un tipo de habitación (`roomType`, `hotelKey`); la web MAY agruparlas por `hotelKey`. El
+orden SHALL ser explícito y estable: precio ascendente y, a igualdad, identificador ascendente. El
+cursor SHALL ser opaco y codificar la última fila devuelta; el tamaño de página por defecto SHALL ser
+20 y el máximo 50. La estancia SHALL cubrir las noches `[checkIn, checkOut)` en `America/Caracas`; la
+noche de salida no se ocupa.
 
 #### Scenario: Filtro por destino y fechas
 - WHEN se busca "Mérida" del 10 al 15 con 2 personas
@@ -50,9 +58,9 @@ La estancia SHALL cubrir las noches `[checkIn, checkOut)`; la noche de salida no
 - THEN 422 con código `VALIDATION_ERROR`
 
 #### Scenario: Personas por encima de la capacidad
-- GIVEN un hotel con `maxGuests` 2
+- GIVEN un tipo de habitación con `maxGuests` 2
 - WHEN se busca para 3 personas
-- THEN el hotel no aparece
+- THEN el tipo de habitación no aparece
 
 ### Requirement: Precios
 Los precios SHALL almacenarse en USD; el VES mostrado SHALL ser informativo (USD × tasa vigente,
@@ -115,10 +123,11 @@ El esquema de hotel SHALL exigir `stars` (entero de 1 a 5) y `maxGuests` (entero
 aceptar `amenities` (lista de códigos estables, máximo 30) e `images` (lista de URLs, máximo 10). Cada
 imagen SHALL ser una URL `https` absoluta cuyo dominio esté en la lista de dominios permitidos; no se
 aceptan rutas locales, `data:` ni otros esquemas. Las imágenes SHALL usarse en el orden recibido y su
-texto alternativo accesible SHALL ser el título del producto.
+texto alternativo accesible SHALL ser el título del producto. `stars`, `amenities` e `images` son del
+hotel y se repiten en cada tipo de habitación; `maxGuests` es la ocupación del tipo.
 
 #### Scenario: Hotel válido
-- WHEN un proveedor guarda un hotel con 4 estrellas, 2 personas, 5 amenidades y 3 imágenes `https` de un dominio permitido
+- WHEN un proveedor guarda un tipo de habitación de un hotel con 4 estrellas, 2 personas, 5 amenidades y 3 imágenes `https` de un dominio permitido
 - THEN 201 y el producto queda en `DRAFT`
 
 #### Scenario: Más de diez imágenes
@@ -138,39 +147,40 @@ texto alternativo accesible SHALL ser el título del producto.
 - THEN 422 con el campo señalado
 
 ### Requirement: Disponibilidad por noche
-La disponibilidad SHALL guardarse en una fila por `(product_id, room_type, night)` con `capacity`,
-`reserved` y `price_usd` por noche. `capacity` y `reserved` SHALL contarse en habitaciones del tipo, y
-`quantity` de una reserva SHALL expresarse en habitaciones. `room_type` SHALL ser un código estable en
-minúsculas y un producto SHALL tener como máximo 5 tipos. Una estancia SHALL cubrir las noches
-`[checkIn, checkOut)`: la noche de salida no se ocupa. Un producto SHALL estar disponible para un rango
-y un tipo de habitación cuando exista una fila para cada noche del rango y en todas se cumpla
+La disponibilidad SHALL guardarse en una fila por `(product_id, night)` con `capacity`, `reserved` y
+`price_usd` por noche. `capacity` y `reserved` SHALL contarse en habitaciones del producto, y `quantity`
+de una reserva SHALL expresarse en habitaciones. `room_type` SHALL ser un código estable en minúsculas
+en `products`; un mismo `hotel_key` SHALL agrupar como máximo 5 productos (el límite se valida en el
+panel, no en la base). La noche SHALL ser una fecha calendario en `America/Caracas`. Una estancia SHALL
+cubrir las noches `[checkIn, checkOut)`: la noche de salida no se ocupa. Un producto SHALL estar
+disponible para un rango cuando exista una fila para cada noche del rango y en todas se cumpla
 `reserved + quantity <= capacity`. El total SHALL ser la suma de `price_usd_de_la_noche × quantity` de
 todas las noches; con precio constante equivale a `precio por noche × habitaciones × noches`. La base
-SHALL imponer `UNIQUE (product_id, room_type, night)`, `reserved >= 0`, `reserved <= capacity` y
+SHALL imponer `UNIQUE (product_id, night)`, `reserved >= 0`, `reserved <= capacity` y
 `price_usd > 0`. Las fechas SHALL ser válidas (`checkIn < checkOut`), no pasadas y con un máximo de 30
 noches.
 
 #### Scenario: Hay cupo en todas las noches
-- GIVEN un tipo de habitación con capacity 5 y reserved 3 en cada noche del rango
+- GIVEN un producto con capacity 5 y reserved 3 en cada noche del rango
 - WHEN se consulta disponibilidad para quantity 2
 - THEN el producto está disponible
 
 #### Scenario: Falta una noche
-- GIVEN un rango con una noche sin fila de disponibilidad para el tipo
+- GIVEN un rango con una noche sin fila de disponibilidad para el producto
 - WHEN se consulta la disponibilidad
 - THEN 409 con código `AVAILABILITY_UNAVAILABLE`
 
 #### Scenario: Una noche sin cupo
-- GIVEN un tipo con capacity 5 y reserved 4 en una de las noches
+- GIVEN un producto con capacity 5 y reserved 4 en una de las noches
 - WHEN se consulta disponibilidad para quantity 2
 - THEN el producto no está disponible en ese rango
 
 #### Scenario: Noche duplicada
-- WHEN un proveedor intenta crear dos filas para el mismo producto, tipo y noche
+- WHEN un proveedor intenta crear dos filas para el mismo producto y noche
 - THEN 409 con código `AVAILABILITY_DUPLICATED` y solo existe una fila
 
 #### Scenario: Precio o fechas inválidos
-- WHEN `price_usd` es 0 o negativo, o `checkIn` es igual o posterior a `checkOut`
+- WHEN `price_usd` es 0 o negativo, `checkIn` es igual o posterior a `checkOut`, o las fechas son pasadas
 - THEN 422 con código `VALIDATION_ERROR`
 
 #### Scenario: Estancia demasiado larga
@@ -178,7 +188,7 @@ noches.
 - THEN 422 con código `VALIDATION_ERROR`
 
 #### Scenario: Total por noche y habitación
-- GIVEN un precio de 100 USD por noche y una reserva de 2 habitaciones para 3 noches
+- GIVEN un precio de 100 USD por noche y una reserva de 2 habitaciones del producto para 3 noches
 - WHEN se crea la reserva
 - THEN el total es 600,00 USD
 
@@ -189,17 +199,18 @@ noches.
 
 ### Requirement: Detalle y disponibilidad públicos
 `GET /products/:id` y `GET /products/:id/availability` SHALL ser públicos para productos `PUBLISHED` y
-sin borrado lógico. El detalle SHALL incluir los atributos de hotel, las imágenes y el destino; la
-disponibilidad SHALL devolver las noches agrupadas por tipo de habitación con cupo restante
-(`capacity - reserved`) y el precio de cada noche. Un producto no público SHALL responder 404, no 403.
+sin borrado lógico. El detalle SHALL incluir `roomType`, `hotelKey`, los atributos de hotel, las imágenes
+y el destino; la disponibilidad SHALL devolver las noches del producto con cupo restante
+(`capacity - reserved`) y el precio de cada noche. La respuesta pública SHALL NOT incluir `capacity` ni
+`reserved` exactos, solo `remaining`. Un producto no público SHALL responder 404, no 403.
 
 #### Scenario: Detalle de un producto publicado
 - WHEN un visitante anónimo pide un producto `PUBLISHED`
-- THEN 200 con atributos, imágenes y precio en USD
+- THEN 200 con `roomType`, `hotelKey`, atributos, imágenes y precio en USD
 
 #### Scenario: Disponibilidad de un producto publicado
 - WHEN un visitante anónimo pide la disponibilidad de un producto `PUBLISHED`
-- THEN 200 con las noches por tipo de habitación y el cupo restante de cada una
+- THEN 200 con las noches del producto y el cupo restante de cada una, sin `capacity` ni `reserved`
 
 #### Scenario: Detalle de un producto no público
 - WHEN un visitante anónimo pide un producto `DRAFT`, `ARCHIVED` o borrado
@@ -207,9 +218,9 @@ disponibilidad SHALL devolver las noches agrupadas por tipo de habitación con c
 
 ### Requirement: Lectura pública entre agencias
 El contexto público SHALL ver los productos `PUBLISHED` y sin borrado lógico de todas las agencias, no
-solo de una. La respuesta pública SHALL limitarse a los campos de catálogo (título, descripción,
-atributos, imágenes, destino, precio y disponibilidad) y SHALL NOT exponer datos internos de la
-agencia, del proveedor ni de otras tablas. El contexto público SHALL ser de solo lectura.
+solo de una. La respuesta pública SHALL limitarse a los campos de catálogo (título, descripción, `roomType`,
+`hotelKey`, atributos, imágenes, destino, precio y disponibilidad) y SHALL NOT exponer datos internos de
+la agencia, del proveedor ni de otras tablas. El contexto público SHALL ser de solo lectura.
 
 #### Scenario: Catálogo de dos agencias
 - GIVEN productos publicados de las agencias A y B
@@ -225,7 +236,7 @@ agencia, del proveedor ni de otras tablas. El contexto público SHALL ser de sol
 - THEN 401
 
 ## Casos límite
-- Precio <= 0 → 422. Dos filas para el mismo producto, tipo y noche → 409 `AVAILABILITY_DUPLICATED`.
+- Precio <= 0 → 422. Dos filas para el mismo producto y noche → 409 `AVAILABILITY_DUPLICATED`.
 - Imágenes: máximo 10 por producto, URLs `https` de dominios permitidos; la UI las sirve con
   `next/image`.
 - Un producto sin disponibilidad se muestra en el catálogo pero no se puede reservar.
@@ -233,8 +244,8 @@ agencia, del proveedor ni de otras tablas. El contexto público SHALL ser de sol
 - La noche de salida no se ocupa ni se cobra; una estancia de una noche ocupa solo `checkIn`.
 
 ## Acceptance
-- Índices `products (tenant_id, type, destination_id, status)` y
-  `availability (product_id, room_type, night)` presentes, con único por producto, tipo y noche.
+- Índices `products (tenant_id, type, destination_id, status)`, `products (type, destination_id, status,
+  deleted_at)` y `availability (night, product_id)` presentes, con único por producto y noche.
 - Prueba de lectura pública con productos de dos agencias y de que un borrador no aparece.
 - Pruebas de validación de atributos e imágenes con el esquema Zod compartido.
 - Prueba del total con precios constantes y con precios distintos por noche.

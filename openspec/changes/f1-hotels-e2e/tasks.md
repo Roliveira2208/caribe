@@ -4,6 +4,10 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 > Fase 0 (especificar): deltas de specs y `design.md` aprobados por el dueño el 2026-11-11 con seis
 > cambios (inventario por noche, alcance reducido, idempotencia mínima, 422 estricto, `rates_global` y
 > PDFs, `minimumReleaseAge`). El alcance por escenario está en `scope.md`.
+>
+> **Regla de alcance (2026-11-12):** solo los **186 escenarios obligatorios** bloquean el cierre de F1.
+> Los **93 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota aquí. Los
+> aplazables ya están listados en `scope.md` y no cuentan en los deltas.
 
 - [x] T-F1-0 Endurecer el inventario de rutas (primera tarea, antes de tocar catálogo; análisis en
   `docs/plans/inventory-hardening-f0.md`).
@@ -50,21 +54,32 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   se añade por `additionalFields` de Better Auth y el CLI regenera la columna con default `es`. API:
   GET/PUT `/api/v1/admin/tenant-settings` (owner/admin con TOTP; GET devuelve defaults sin crear fila).
   Prueba: auth-access › "Operación de agencia sin agencia activa"; audit › "Cambio de ajustes de la agencia".
-- [ ] T-F1-1b Migraciones de catálogo (`providers`, `destinations`, `products` tipo hotel,
-  `availability` por noche, `cancellation_policies`) con RLS e índices; único
-  `(product_id, room_type, night)` sin `btree_gist`.
-  Prueba: catalog › "Atributos inválidos", "Estados" y "Noche duplicada".
+- [ ] T-F1-1b Catálogo y disponibilidad (absorbe T-F1-2): migraciones de `providers`, `destinations`,
+  `products` (cada fila es un tipo de habitación con `hotel_key` y `room_type`, sin tabla `hotels`),
+  `availability` por noche y `cancellation_policies`, con RLS e índices; único `(product_id, night)`
+  sin `btree_gist`; `CHECK (reserved BETWEEN 0 AND capacity)`, `CHECK (price_usd > 0)`; función SQL
+  `public_availability` que devuelve solo `remaining` y `price_usd` de productos publicados.
+  - Esquema Zod de `attributes` de hotel en `packages/shared`: `stars` 1–5, `maxGuests` 1–20,
+    `amenities` (máx. 30), `images` (máx. 10 URLs `https` de `ALLOWED_IMAGE_HOSTS`), estricto.
+  - Esquema Zod de `rules` de cancelación (1–10 reglas, horas no negativas estrictamente descendentes,
+    porcentajes enteros 0–100) y trigger que lo refuerza en la base.
+  - Esquema Zod de rango de estancia: fechas calendario en `America/Caracas`, `checkOut > checkIn`,
+    no pasadas y máximo 30 noches.
+  - Pruebas primero: `database.test.ts` (esquema, RLS, CHECKs, triggers, índices), e2e de RLS de
+    catálogo como `caribe_app` (`withPublic` no ve borradores ni borrados y no escribe; una agencia no
+    toca el catálogo de otra), tests Zod de atributos, reglas y rango de fechas.
+  - Prueba: catalog › "Atributos inválidos", "Estados", "Noche duplicada" y "Precio o fechas inválidos".
 - [ ] T-F1-1c Migraciones de reservas, pagos y documentos (`bookings`, `booking_items` con precios por
   noche, `idempotency_keys` sin `tenant_id` y RLS solo por `user_id`, `exchange_rates`, `payments`,
   `refunds`, `documents`, `document_counters`, `notification_logs`) con RLS, triggers de congelamiento
-  e inmutabilidad y unicidad.
-  Prueba: booking › "Reservas concurrentes sobre el último cupo"; payments › "Reembolso".
-- [ ] T-F1-1d Ampliar `pnpm db:seed` con una agencia, hotel publicado, disponibilidad, política, tasa
-  global y `payment_mode`; idempotente.
+  e inmutabilidad y unicidad. `booking_items` guarda copias de `hotel_key`, `room_type` y
+  `product_title`; un trigger `BEFORE UPDATE` rechaza cambios en `policy_snapshot`, `nightly_prices`,
+  `subtotal_usd`, `product_title`, `hotel_key`, `room_type`, `check_in`, `check_out` y `quantity`.
+  Prueba: booking › "Reservas concurrentes sobre el último cupo" y "Fechas inválidas"; payments ›
+  "Reembolso".
+- [ ] T-F1-1d Ampliar `pnpm db:seed` con una agencia, un tipo de habitación publicado, disponibilidad,
+  política, tasa global y `payment_mode`; idempotente.
   Prueba: demo manual documentada.
-- [ ] T-F1-2 Esquema Zod de `attributes` para hotel en `packages/shared` (estrellas, huéspedes,
-  amenidades, imágenes con dominios permitidos por `ALLOWED_IMAGE_HOSTS`).
-  Prueba: catalog › "Atributos inválidos".
 - [ ] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad públicos.
   Prueba: catalog › "Búsqueda y filtros" y "Detalle y disponibilidad públicos".
 - [ ] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
@@ -124,9 +139,10 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Prueba: recorrido buscar → reservar → pagar → descargar, más concurrencia de cupo.
 - [ ] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.
   Prueba: informe de verificación con semáforo y M1/M2 anotados.
-- [ ] T-F1-17 Actualizar `docs/sdd/SDD.md` con las seis desviaciones canónicas de `design.md` §15
+- [ ] T-F1-17 Actualizar `docs/sdd/SDD.md` con las siete desviaciones canónicas de `design.md` §15
   (`tenant_settings`, `availability` por noche, `PARTIALLY_REFUNDED`,
-  `InvoiceProvider.issue(booking, payment?)`, `PENDING` interno e `idempotency_keys` sin `tenant_id`).
+  `InvoiceProvider.issue(booking, payment?)`, `PENDING` interno, `idempotency_keys` sin `tenant_id` y
+  producto = tipo de habitación con `hotel_key`, sin tabla `hotels`).
   Prueba: SDD §5 y §7 coinciden con las specs archivadas; sin cambios en D1–D15.
 
 ## Notas heredadas de f0-foundations (siguen abiertas)
@@ -138,5 +154,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 ## Notas de F1
 
 - La demo de F1 es local. Una demo pública exige M1 y M2.
-- Las seis desviaciones respecto del SDD están en `design.md` §15 y se aplican al SDD en T-F1-17.
+- Las siete desviaciones respecto del SDD están en `design.md` §15 y se aplican al SDD en T-F1-17.
 - OpenAPI/Swagger y los proveedores externos quedan diferidos.
+- Cierre de F1: solo bloquean los 186 escenarios obligatorios de `scope.md`. Si un deseable no entra,
+  se mueve a F2 con una nota en la tarea correspondiente; no se recorta un obligatorio.

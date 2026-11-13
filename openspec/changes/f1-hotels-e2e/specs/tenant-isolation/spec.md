@@ -72,9 +72,9 @@ SHALL ser `user_id = app.user_id` tanto en lectura como en escritura. En las tab
 (`booking_items`, `refunds`, `documents`), la política SHALL derivar el propietario del `booking`
 padre mediante `EXISTS`, porque la línea no tiene dueño propio. La misma condición SHALL aplicarse en
 escritura: una persona SHALL NOT insertar ni modificar filas de otra persona ni de otra agencia. En las
-tablas sin dueño (`providers`, `products`, `availability`, `cancellation_policies`, `tenant_settings`),
-solo la agencia activa o el contexto `platform` (lectura) SHALL dar acceso; el contexto `public` solo
-SHALL leer catálogo publicado. `exchange_rates` añade la lectura de filas globales (`tenant_id` NULL)
+tablas sin dueño (`providers`, `destinations`, `products`, `availability`, `cancellation_policies`,
+`tenant_settings`), solo la agencia activa o el contexto `platform` (lectura) SHALL dar acceso; el
+contexto `public` solo SHALL leer catálogo publicado y los destinos que referencia, sin datos internos. `exchange_rates` añade la lectura de filas globales (`tenant_id` NULL)
 para los contextos `tenant`, `owner` y `public`; la escritura global solo se permite con `rates_global`,
 que no puede leer ni escribir ninguna otra tabla ni filas de agencia.
 

@@ -32,6 +32,10 @@ Clasificación de los escenarios de los diez deltas de la fase 0, aprobada por e
 
 Los aplazables no son escenarios de estos deltas: se listan al final como capacidades movidas a F2.
 
+**Regla de cierre (aprobada 2026-11-12):** solo los **186 obligatorios** bloquean el cierre de F1. Los
+**93 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota en `tasks.md`. Ningún
+obligatorio se recorta para meter un deseable.
+
 ## api-errors (17)
 
 - **Obligatorio (10)**: Sin sesión · Sin permiso · Cupo agotado · Reserva vencida · Sin tasa · Campo

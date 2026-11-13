@@ -5,37 +5,44 @@
 ### Requirement: Retención de cupo sin sobreventa
 Al crear una reserva el sistema SHALL exigir sesión, resolver la agencia desde el producto y fijar el
 `user_id` desde la sesión. Dentro de una transacción SHALL bloquear con `SELECT ... FOR UPDATE` todas
-las filas de `availability` del tipo de habitación y las noches del rango `[checkIn, checkOut)`, en
-orden ascendente de `night`; SHALL exigir que exista una fila por noche y que en todas se cumpla
+las filas de `availability` del producto y las noches del rango `[checkIn, checkOut)`, en orden
+ascendente de `night`; SHALL exigir que exista una fila por noche y que en todas se cumpla
 `reserved + quantity <= capacity`; SHALL incrementar `reserved` en cada una y crear la reserva en
-`PENDING_PAYMENT` con `expires_at`, sus líneas con `room_type`, `check_in`, `check_out`, `quantity`,
-`nightly_prices`, `subtotal_usd` y `policy_snapshot`. `subtotal_usd` SHALL ser la suma de
+`PENDING_PAYMENT` con `expires_at`, sus líneas con `hotel_key`, `room_type`, `check_in`, `check_out`,
+`quantity`, `nightly_prices`, `subtotal_usd`, `product_title` y `policy_snapshot`. `hotel_key`,
+`room_type` y `product_title` son copias del producto al reservar. `subtotal_usd` SHALL ser la suma de
 `precio_de_la_noche × quantity` de las noches de la línea y `total_usd` la suma de los subtotales. El
 total y los precios SHALL calcularse en el servidor; un monto, una tasa, un precio, un `tenant_id`, un
 `user_id` o un `code` enviados por el cliente SHALL rechazarse con 422 `VALIDATION_ERROR`. La base SHALL
 impedir `reserved < 0` y `reserved > capacity`.
+
+`check_in` y `check_out` SHALL ser fechas calendario en `America/Caracas`; se SHALL exigir
+`check_out > check_in`, fechas no pasadas y un máximo de 30 noches por reserva. `policy_snapshot`,
+`nightly_prices`, `subtotal_usd`, `product_title`, `hotel_key`, `room_type`, `check_in`, `check_out` y
+`quantity` de una línea SHALL ser inmutables: un trigger `BEFORE UPDATE` SHALL rechazar cualquier
+cambio.
 
 El orden de bloqueo SHALL ser determinista: al crear se bloquea primero `availability`; al aprobar,
 expirar o cancelar se bloquea primero `bookings` y después `availability`. Las filas de disponibilidad
 se bloquean siempre en orden ascendente de `night`.
 
 #### Scenario: Hay cupo en todas las noches
-- GIVEN un tipo de habitación con capacity 5 y reserved 3 en cada una de las 3 noches
+- GIVEN un producto con capacity 5 y reserved 3 en cada una de las 3 noches
 - WHEN un cliente reserva quantity 2
 - THEN la reserva queda en `PENDING_PAYMENT` y reserved pasa a 5 en las 3 noches
 
 #### Scenario: Falta una noche
-- GIVEN un rango con una noche sin fila de disponibilidad para el tipo
+- GIVEN un rango con una noche sin fila de disponibilidad para el producto
 - WHEN un cliente intenta reservar
 - THEN 409 con código `AVAILABILITY_UNAVAILABLE` y no cambia ningún reserved
 
 #### Scenario: No hay cupo suficiente en una noche
-- GIVEN un tipo con capacity 5 y reserved 4 en la segunda noche del rango
+- GIVEN un producto con capacity 5 y reserved 4 en la segunda noche del rango
 - WHEN un cliente reserva quantity 2
 - THEN la API responde 409 con código `AVAILABILITY_EXHAUSTED` y reserved no cambia en ninguna noche
 
 #### Scenario: Reservas concurrentes sobre el último cupo
-- GIVEN un tipo con un solo cupo libre en una de las noches
+- GIVEN un producto con un solo cupo libre en una de las noches
 - WHEN dos clientes reservan a la vez el mismo rango
 - THEN exactamente una reserva se crea y la otra recibe `AVAILABILITY_EXHAUSTED`
 
@@ -54,7 +61,7 @@ se bloquean siempre en orden ascendente de `night`.
 - THEN 409 con código `PRODUCT_INACTIVE`
 
 #### Scenario: Fechas inválidas
-- WHEN `quantity` es 0 o negativa, o `checkIn` es igual o posterior a `checkOut`, o las fechas son pasadas
+- WHEN `quantity` es 0 o negativa, `checkIn` es igual o posterior a `checkOut`, las fechas son pasadas o el rango supera 30 noches
 - THEN 422 con código `VALIDATION_ERROR`
 
 ### Requirement: Vencimiento de la retención

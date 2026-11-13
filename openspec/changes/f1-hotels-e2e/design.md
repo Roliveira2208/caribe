@@ -54,34 +54,54 @@ defecto y `en` soportado. No se crea una tabla `user_settings` para un solo camp
 
 - `providers`: `id`, `tenant_id`, `user_id`, `name`, `contact`. `user_id` identifica al proveedor que
   puede editar sus productos.
-- `destinations`: `id`, `tenant_id`, `name` JSONB `{es,en}`, `country`, `code`.
-- `products`: `id`, `tenant_id`, `provider_id`, `type` (`hotel` en F1), `title`/`description` JSONB,
-  `destination_id`, `status` (`DRAFT`/`PUBLISHED`/`ARCHIVED`), `base_price_usd` DECIMAL(14,2),
-  `cancellation_policy_id`, `source` (`OWN`), `external_ref` NULL, `attributes` JSONB, `deleted_at`.
+- `destinations`: `id`, `tenant_id`, `name` JSONB `{es,en}`, `country`, `code`. Lectura pública solo de
+  nombre, país y código.
+- `products`: `id`, `tenant_id`, `provider_id`, `type` (`hotel` en F1), `hotel_key` UUID, `room_type`
+  (código estable en minúsculas), `title`/`description` JSONB, `destination_id`, `status`
+  (`DRAFT`/`PUBLISHED`/`ARCHIVED`), `base_price_usd` DECIMAL(14,2), `cancellation_policy_id`,
+  `source` (`OWN`), `external_ref` NULL, `attributes` JSONB, `deleted_at`.
+- **Unidad de venta:** cada fila de `products` es un tipo de habitación vendible de un hotel.
+  `hotel_key` agrupa los tipos del mismo hotel y `room_type` los distingue (`standard`, `suite`…). No
+  hay tabla `hotels` en F1: título del hotel, `stars`, `amenities` e `images` se repiten en cada tipo.
+  Editar los datos de hotel desde el panel actualiza todos los tipos con la misma `hotel_key` en una
+  sola transacción; `maxGuests` es la ocupación del tipo. El panel limita a 5 tipos por `hotel_key`
+  (validación de aplicación, no de base). La normalización en una tabla `hotels` queda como deuda
+  conocida para F2.
 - `attributes` de hotel: `stars` 1–5, `maxGuests` 1–20, `amenities` (máx. 30 códigos),
   `images` (máx. 10 URLs `https` de dominios permitidos). Esquema Zod estricto en `packages/shared`;
   el orden del array es el orden de presentación y el alt accesible es el título del producto. La lista
   de dominios permitidos se configura por `ALLOWED_IMAGE_HOSTS` (separada por comas) y el esquema
   compartido la recibe como parámetro.
-- `availability`: `id`, `tenant_id`, `product_id`, `room_type` (código estable), `night` DATE,
-  `capacity`, `reserved`, `price_usd` DECIMAL(14,2). Una fila por producto, tipo y noche; `capacity` y
-  `reserved` se cuentan en habitaciones del tipo y `quantity` de reserva son habitaciones. La estancia
-  ocupa las noches `[check_in, check_out)`; la noche de salida no se bloquea ni se cobra. El total es
-  `Σ(price_usd_de_la_noche × quantity)`. `CHECK (reserved >= 0 AND reserved <= capacity)` y
-  `CHECK (price_usd > 0)`. Único `(product_id, room_type, night)` e índice
-  `(product_id, room_type, night)`. Sin rangos ni `btree_gist`: dos filas para la misma noche chocan
-  con el único y responden 409 `AVAILABILITY_DUPLICATED`.
-- `cancellation_policies`: `id`, `tenant_id`, `name`, `rules` JSONB
-  `[{ hours_before, percentage }]`.
+- `availability`: `id`, `tenant_id`, `product_id`, `night` DATE, `capacity`, `reserved`, `price_usd`
+  DECIMAL(14,2). Una fila por producto y noche; `capacity` y `reserved` se cuentan en habitaciones del
+  producto y `quantity` de reserva son habitaciones. `night` es una fecha calendario en
+  `America/Caracas`; la estancia ocupa `[check_in, check_out)`, la noche de salida no se bloquea ni se
+  cobra. El total es `Σ(price_usd_de_la_noche × quantity)`. `CHECK (reserved >= 0 AND reserved <=
+  capacity)` y `CHECK (price_usd > 0)`. Único `(product_id, night)`, índice `(night, product_id)` para
+  búsquedas por rango e índices `products (type, destination_id, status, deleted_at)` y
+  `products (tenant_id, type, destination_id, status)`. Sin rangos ni `btree_gist`: dos filas para la
+  misma noche chocan con el único y responden 409 `AVAILABILITY_DUPLICATED`.
+- La lectura pública de disponibilidad NO expone `capacity` ni `reserved`: una función SQL
+  `public_availability(product_id, from, to)` (o vista equivalente) devuelve solo `night`, `remaining`
+  y `price_usd`, y exige producto `PUBLISHED` sin borrado lógico.
+- `cancellation_policies`: `id`, `tenant_id`, `name`, `rules` JSONB `[{ hours_before, percentage }]`.
+  `rules` tiene entre 1 y 10 reglas, `hours_before` es entero no negativo estrictamente descendente y
+  `percentage` entero 0–100; lo valida el esquema Zod y lo refuerza un trigger en la base.
 
 ### 2.3 Reservas
 
 - `bookings`: `id`, `tenant_id`, `code` único global `CRB-[0-9A-HJKMNP-TV-Z]{8}`, `user_id`, `status`,
   `total_usd` DECIMAL(14,2), `travelers` JSONB (1–9), `expires_at`, `created_at`.
-- `booking_items`: `booking_id`, `tenant_id`, `product_id`, `room_type`, `check_in`, `check_out`,
-  `quantity`, `nightly_prices` JSONB `[{ night, price_usd }]`, `subtotal_usd` DECIMAL(14,2),
-  `product_title` JSONB `{es,en}` (copia del título al reservar), `policy_snapshot` JSONB. El detalle y
-  el voucher usan `product_title`, no el producto actual.
+- `booking_items`: `booking_id`, `tenant_id`, `product_id`, `hotel_key`, `room_type`, `check_in`,
+  `check_out`, `quantity`, `nightly_prices` JSONB `[{ night, price_usd }]`, `subtotal_usd`
+  DECIMAL(14,2), `product_title` JSONB `{es,en}` (copia del título al reservar), `policy_snapshot`
+  JSONB. `hotel_key` y `room_type` son copias del producto al reservar; el detalle y el voucher usan
+  `product_title`, no el producto actual. `policy_snapshot` y los precios congelados son inmutables:
+  un trigger `BEFORE UPDATE` rechaza cambios en `policy_snapshot`, `nightly_prices`, `subtotal_usd`,
+  `product_title`, `hotel_key`, `room_type`, `check_in`, `check_out` y `quantity`.
+- Fechas: `check_in` y `check_out` son fechas calendario en `America/Caracas`; se exige
+  `check_out > check_in` y un máximo de 30 noches por reserva. Las fechas pasadas se rechazan con 422
+  `VALIDATION_ERROR`.
 - `idempotency_keys`: `id`, `user_id`, `endpoint`, `key`, `request_hash`, `response_status`,
   `response_body` JSONB, `expires_at`, `created_at`; único `(user_id, endpoint, key)`; TTL 24 h; RLS
   solo por `user_id` (`user_id = app.user_id`), sin `tenant_id`. `response_body` guarda solo `{ id,
@@ -319,7 +339,7 @@ instalar se revisa `pnpm-workspace.yaml`: pnpm 12 reescribe `allowBuilds` y pued
 previas (ya ocurrió con `esbuild`).
 
 No se habilita `btree_gist` ni ninguna extensión nueva: la disponibilidad por noche se protege con el
-único `(product_id, room_type, night)`. Las variables nuevas (`ALLOWED_IMAGE_HOSTS`, `DOCUMENTS_DIR`,
+único `(product_id, night)`. Las variables nuevas (`ALLOWED_IMAGE_HOSTS`, `DOCUMENTS_DIR`,
 `SMTP_*`) se documentan en `.env.example`; los secretos no se versionan.
 
 No se añaden pasarelas, SDK de Duffel/LiteAPI ni librerías de UI nuevas en F1.
@@ -351,14 +371,15 @@ aprobado por el dueño antes de implementarla. Pantallas F1:
 
 ## 15. Desviaciones canónicas respecto del SDD
 
-Seis decisiones de F1 difieren del SDD §5 y §7. Se aplican en el código y en las specs; al cerrar F1 se
+Siete decisiones de F1 difieren del SDD §5 y §7. Se aplican en el código y en las specs; al cerrar F1 se
 actualiza el SDD con esta lista (tarea T-F1-17), sin cambiar las decisiones D1–D15.
 
 | # | SDD | F1 | Motivo |
 | --- | --- | --- | --- |
 | 1 | Ajustes de agencia en `organization` | Tabla `tenant_settings` | No editar el modelo generado por Better Auth |
-| 2 | Disponibilidad por rango (`starts_on`/`ends_on`, exclusión `gist`) | Una fila `availability` por `(product_id, room_type, night)` | Precio y cupo por noche; sin `btree_gist` |
+| 2 | Disponibilidad por rango (`starts_on`/`ends_on`, exclusión `gist`) | Una fila `availability` por `(product_id, night)` | Precio y cupo por noche; sin `btree_gist` |
 | 3 | Estados de pago sin reembolso parcial | `PARTIALLY_REFUNDED` añadido | Reembolso por política sobre el total |
 | 4 | `InvoiceProvider.issue(booking)` | `InvoiceProvider.issue(booking, payment?)` | Una interfaz cubre voucher y comprobante |
 | 5 | Pago creado `PENDING` visible | `PENDING` interno; sale `IN_REVIEW` o `APPROVED` | Evitar un estado intermedio observable |
 | 6 | `idempotency_keys` con `tenant_id` | Sin `tenant_id`; RLS solo por `user_id` | La agencia se resuelve después de consumir la clave |
+| 7 | Producto de hotel con tabla `hotels` separada | `products` es el tipo de habitación, agrupado por `hotel_key`; sin tabla `hotels` en F1 | Una fila vendible por tipo; normalización a `hotels` como deuda de F2 |
