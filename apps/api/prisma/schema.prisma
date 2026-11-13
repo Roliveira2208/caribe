@@ -111,6 +111,13 @@ model Organization {
   // esquema hay que volver a añadirlo para que `prisma migrate diff` quede
   // limpio con la FK a organization.id.
   tenantSettings TenantSettings?
+  // Relaciones propias de F1 (T-F1-1b). Tampoco las genera el CLI de Better
+  // Auth: al regenerar hay que volver a añadirlas junto con sus modelos.
+  providers            Provider[]
+  destinations         Destination[]
+  products             Product[]
+  availability         Availability[]
+  cancellationPolicies CancellationPolicy[]
 
   @@unique([slug])
   @@map("organization")
@@ -249,4 +256,115 @@ model TenantSettings {
   updatedAt    DateTime    @updatedAt @map("updated_at")
 
   @@map("tenant_settings")
+}
+
+// Catálogo de F1 (T-F1-1b, design §2.2). Cada fila de Product es un tipo de
+// habitación vendible: hotel_key agrupa los tipos del mismo hotel y room_type
+// los distingue. No hay tabla hotels en F1; stars, amenities e images se
+// repiten en cada tipo y la normalización queda para F2.
+enum ProductType {
+  HOTEL
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ProductSource {
+  OWN
+}
+
+model Provider {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  organization Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String?  @map("user_id")
+  name      String
+  contact   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  products  Product[]
+
+  @@index([tenantId])
+  @@map("providers")
+}
+
+model Destination {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  organization Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      Json
+  country   String
+  code      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  products  Product[]
+
+  @@index([tenantId])
+  @@map("destinations")
+}
+
+model CancellationPolicy {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  organization Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  rules     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  products  Product[]
+
+  @@index([tenantId])
+  @@map("cancellation_policies")
+}
+
+model Product {
+  id                   String             @id
+  tenantId             String             @map("tenant_id")
+  organization         Organization       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  providerId           String             @map("provider_id")
+  provider             Provider           @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  type                 ProductType
+  hotelKey             String             @map("hotel_key")
+  roomType             String             @map("room_type")
+  title                Json
+  description          Json
+  destinationId        String             @map("destination_id")
+  destination          Destination        @relation(fields: [destinationId], references: [id], onDelete: Restrict)
+  status               ProductStatus      @default(DRAFT)
+  basePriceUsd         Decimal            @db.Decimal(14, 2) @map("base_price_usd")
+  cancellationPolicyId String?            @map("cancellation_policy_id")
+  cancellationPolicy   CancellationPolicy? @relation(fields: [cancellationPolicyId], references: [id], onDelete: SetNull)
+  source               ProductSource      @default(OWN)
+  externalRef          String?            @map("external_ref")
+  attributes           Json
+  deletedAt            DateTime?          @map("deleted_at")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  availability         Availability[]
+
+  @@index([tenantId, type, destinationId, status])
+  @@index([type, destinationId, status, deletedAt])
+  @@index([hotelKey])
+  @@map("products")
+}
+
+model Availability {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  organization Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  night     DateTime @db.Date
+  capacity  Int
+  reserved  Int      @default(0)
+  priceUsd  Decimal  @db.Decimal(14, 2) @map("price_usd")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([productId, night])
+  @@index([night, productId])
+  @@map("availability")
 }

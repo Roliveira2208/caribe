@@ -246,6 +246,116 @@ describe("prisma/migrations", () => {
   });
 });
 
+describe("catálogo y disponibilidad (T-F1-1b)", () => {
+  function catalogSchema(): string {
+    return readFileSync(schemaPath, "utf-8");
+  }
+
+  function catalogMigration(): Migration | undefined {
+    return readMigrations().find(({ sql }) => sql.includes('CREATE TABLE "products"'));
+  }
+
+  it("declara producto = tipo de habitación con hotel_key, room_type y dinero Decimal", () => {
+    const schema = catalogSchema();
+    expect(schema).toContain("model Product");
+    expect(schema).toContain('@@map("products")');
+    expect(schema).toMatch(/hotelKey\s+String\s+@map\("hotel_key"\)/);
+    expect(schema).toMatch(/roomType\s+String\s+@map\("room_type"\)/);
+    expect(schema).toMatch(/basePriceUsd\s+Decimal\s+@db\.Decimal\(14,\s*2\)/);
+    expect(schema).not.toMatch(/\bFloat\b/);
+    expect(schema).toContain("model Availability");
+    expect(schema).toContain('@@map("availability")');
+    expect(schema).toMatch(/night\s+DateTime\s+@db\.Date/);
+    expect(schema).toMatch(/@@unique\(\[productId,\s*night\]\)/);
+    expect(schema).toContain("model Provider");
+    expect(schema).toContain("model Destination");
+    expect(schema).toContain("model CancellationPolicy");
+  });
+
+  it("crea las tablas del catálogo con CHECKs e índices de búsqueda", () => {
+    const migration = catalogMigration();
+    expect(migration).toBeDefined();
+    const sql = stripSqlComments(migration?.sql ?? "");
+
+    expect(sql).toContain('CREATE TABLE "providers"');
+    expect(sql).toContain('CREATE TABLE "destinations"');
+    expect(sql).toContain('CREATE TABLE "products"');
+    expect(sql).toContain('CREATE TABLE "availability"');
+    expect(sql).toContain('CREATE TABLE "cancellation_policies"');
+
+    expect(sql).toContain('"hotel_key" TEXT NOT NULL');
+    expect(sql).toContain('"room_type" TEXT NOT NULL');
+    expect(sql).toContain('"price_usd" DECIMAL(14,2) NOT NULL');
+    expect(sql).toContain('CHECK ("reserved" >= 0 AND "reserved" <= "capacity")');
+    expect(sql).toContain('CHECK ("price_usd" > 0)');
+    expect(sql).toContain('CHECK ("capacity" > 0)');
+    expect(sql).toContain('CHECK ("room_type" ~ \'^[a-z][a-z0-9_-]*$\')');
+
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "availability_product_id_night_key" ON "availability"("product_id", "night")',
+    );
+    expect(sql).toContain(
+      'CREATE INDEX "availability_night_product_id_idx" ON "availability"("night", "product_id")',
+    );
+    expect(sql).toContain(
+      'CREATE INDEX "products_type_destination_id_status_deleted_at_idx" ON "products"("type", "destination_id", "status", "deleted_at")',
+    );
+    expect(sql).toContain(
+      'CREATE INDEX "products_tenant_id_type_destination_id_status_idx" ON "products"("tenant_id", "type", "destination_id", "status")',
+    );
+  });
+
+  it("activa RLS forzada en todo el catálogo y publica solo lo publicado", () => {
+    const migration = catalogMigration();
+    const sql = stripSqlComments(migration?.sql ?? "");
+    for (const table of [
+      "providers",
+      "destinations",
+      "products",
+      "availability",
+      "cancellation_policies",
+    ]) {
+      expect(sql).toContain(`ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`);
+      expect(sql).toContain(`ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`);
+      expect(sql).toContain(`CREATE POLICY "${table}_tenant"`);
+      expect(sql).toContain(`CREATE POLICY "${table}_platform"`);
+    }
+    expect(sql).toContain('CREATE POLICY "products_public"');
+    expect(sql).toContain('CREATE POLICY "availability_public"');
+    expect(sql).toContain('CREATE POLICY "destinations_public"');
+    expect(sql).toMatch(
+      /CREATE POLICY "products_public"[\s\S]*?current_setting\('app\.public', true\) = 'on'[\s\S]*?"status" = 'PUBLISHED'[\s\S]*?"deleted_at" IS NULL/,
+    );
+    expect(sql).toMatch(
+      /CREATE POLICY "availability_public"[\s\S]*?EXISTS \([\s\S]*?FROM "products" p[\s\S]*?p\."status" = 'PUBLISHED'[\s\S]*?p\."deleted_at" IS NULL/,
+    );
+  });
+
+  it("define la función pública de disponibilidad sin capacity ni reserved", () => {
+    const migration = catalogMigration();
+    const sql = stripSqlComments(migration?.sql ?? "");
+    expect(sql).toContain('CREATE FUNCTION "public_availability"');
+    expect(sql).toContain("RETURNS TABLE");
+    expect(sql).toMatch(/night\s+DATE/);
+    expect(sql).toMatch(/remaining\s+INTEGER/);
+    expect(sql).toMatch(/price_usd\s+DECIMAL\(14,2\)/);
+    expect(sql).toContain("SECURITY DEFINER");
+    expect(sql).toContain('REVOKE ALL ON FUNCTION "public_availability"');
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION "public_availability"');
+  });
+
+  it("refuerza las reglas de cancelación con un trigger", () => {
+    const migration = catalogMigration();
+    const sql = stripSqlComments(migration?.sql ?? "");
+    expect(sql).toContain('CREATE FUNCTION "cancellation_policies_validate_rules"');
+    expect(sql).toContain('CREATE TRIGGER "cancellation_policies_rules_valid"');
+    expect(sql).toContain("jsonb_array_length");
+    expect(sql).toContain("hours_before");
+    expect(sql).toContain("percentage");
+    expect(sql).toContain("BEFORE INSERT OR UPDATE");
+  });
+});
+
 interface SchemaColumn {
   table: string;
   column: string;

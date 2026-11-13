@@ -54,7 +54,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   se añade por `additionalFields` de Better Auth y el CLI regenera la columna con default `es`. API:
   GET/PUT `/api/v1/admin/tenant-settings` (owner/admin con TOTP; GET devuelve defaults sin crear fila).
   Prueba: auth-access › "Operación de agencia sin agencia activa"; audit › "Cambio de ajustes de la agencia".
-- [ ] T-F1-1b Catálogo y disponibilidad (absorbe T-F1-2): migraciones de `providers`, `destinations`,
+- [x] T-F1-1b Catálogo y disponibilidad (absorbe T-F1-2): migraciones de `providers`, `destinations`,
   `products` (cada fila es un tipo de habitación con `hotel_key` y `room_type`, sin tabla `hotels`),
   `availability` por noche y `cancellation_policies`, con RLS e índices; único `(product_id, night)`
   sin `btree_gist`; `CHECK (reserved BETWEEN 0 AND capacity)`, `CHECK (price_usd > 0)`; función SQL
