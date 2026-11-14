@@ -886,6 +886,19 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
     reason: "Catálogo público (spec auth-access, 'Catálogo público').",
   },
   {
+    method: "GET",
+    path: "products/:id",
+    justification: "public",
+    reason: "Detalle público del catálogo (spec catalog, 'Detalle y disponibilidad públicos').",
+  },
+  {
+    method: "GET",
+    path: "products/:id/availability",
+    justification: "public",
+    reason:
+      "Disponibilidad pública del catálogo (spec catalog, 'Detalle y disponibilidad públicos').",
+  },
+  {
     method: "PUT",
     path: "products/:id",
     justification: "shared-permission",

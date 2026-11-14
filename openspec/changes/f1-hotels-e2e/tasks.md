@@ -80,7 +80,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [x] T-F1-1d Ampliar `pnpm db:seed` con una agencia, un tipo de habitación publicado, disponibilidad,
   política, tasa global y `payment_mode`; idempotente.
   Prueba: demo manual documentada.
-- [ ] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad públicos.
+- [x] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad públicos.
   Prueba: catalog › "Búsqueda y filtros" y "Detalle y disponibilidad públicos".
 - [ ] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
   Prueba: auth-access › "Proveedor edita su producto" y "Propiedad de productos".

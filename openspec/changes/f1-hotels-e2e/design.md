@@ -87,6 +87,19 @@ defecto y `en` soportado. No se crea una tabla `user_settings` para un solo camp
 - `cancellation_policies`: `id`, `tenant_id`, `name`, `rules` JSONB `[{ hours_before, percentage }]`.
   `rules` tiene entre 1 y 10 reglas, `hours_before` es entero no negativo estrictamente descendente y
   `percentage` entero 0–100; lo valida el esquema Zod y lo refuerza un trigger en la base.
+- **Contrato de lectura pública (T-F1-3).** `GET /products` acepta `destinationId`, `checkIn`+`checkOut`
+  (juntos), `guests` 1–20, `type=hotel`, `q` (coincidencia simple sin mayúsculas sobre
+  `title.es`/`title.en`), `limit` (20 por defecto, máximo 50) y `cursor` opaco. Con fechas exige una
+  fila de disponibilidad por cada noche de `[checkIn, checkOut)` con `reserved + 1 <= capacity`, y
+  `totalUsd` es la suma de `price_usd` para una habitación; sin fechas lista los publicados aunque no
+  tengan disponibilidad y ordena por `basePriceUsd`. Orden precio ASC + id ASC; el cursor base64url
+  codifica `{ order, price, id }` con `order` = `base` o `stay:<checkIn>:<checkOut>` y se rechaza con
+  422 si no corresponde. Respuesta `{ items, nextCursor }`; cada oferta lleva `id`, `hotelKey`,
+  `roomType`, `type`, `title`, `description`, `destination`, `attributes` (incluye `images`),
+  `basePriceUsd` y `totalUsd` (`null` sin fechas). El detalle repite la oferta sin `totalUsd`.
+  `GET /products/:id/availability` acepta `from`/`to` y devuelve
+  `{ productId, from, to, nights: [{ night, remaining, priceUsd }] }`, por defecto 31 noches desde hoy
+  en Caracas, nunca `capacity` ni `reserved`. Un producto no público responde 404 en ambas lecturas.
 
 ### 2.3 Reservas
 
