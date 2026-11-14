@@ -356,6 +356,181 @@ describe("catálogo y disponibilidad (T-F1-1b)", () => {
   });
 });
 
+describe("reservas, pagos y documentos (T-F1-1c)", () => {
+  function transactionsSchema(): string {
+    return readFileSync(schemaPath, "utf-8");
+  }
+
+  function transactionsMigration(): Migration | undefined {
+    return readMigrations().find(({ sql }) => sql.includes('CREATE TABLE "bookings"'));
+  }
+
+  it("declara las tablas, enums y dinero Decimal de reservas, pagos y documentos", () => {
+    const schema = transactionsSchema();
+    for (const model of [
+      "Booking",
+      "BookingItem",
+      "IdempotencyKey",
+      "ExchangeRate",
+      "Payment",
+      "Refund",
+      "Document",
+      "DocumentCounter",
+      "NotificationLog",
+    ]) {
+      expect(schema).toContain(`model ${model}`);
+    }
+    for (const table of [
+      "bookings",
+      "booking_items",
+      "idempotency_keys",
+      "exchange_rates",
+      "payments",
+      "refunds",
+      "documents",
+      "document_counters",
+      "notification_logs",
+    ]) {
+      expect(schema).toContain(`@@map("${table}")`);
+    }
+    for (const enumName of [
+      "BookingStatus",
+      "PaymentMethod",
+      "PaymentStatus",
+      "DocumentType",
+      "DocumentStatus",
+      "DocumentLanguage",
+      "NotificationStatus",
+    ]) {
+      expect(schema).toContain(`enum ${enumName}`);
+    }
+    expect(schema).toMatch(/totalUsd\s+Decimal\s+@db\.Decimal\(14,\s*2\)/);
+    expect(schema).toMatch(/subtotalUsd\s+Decimal\s+@db\.Decimal\(14,\s*2\)/);
+    expect(schema).toMatch(/amountUsd\s+Decimal\s+@db\.Decimal\(14,\s*2\)/);
+    expect(schema).toMatch(/rate\s+Decimal\s+@db\.Decimal\(18,\s*4\)/);
+    expect(schema).toMatch(/ES\s+@map\("es"\)/);
+    expect(schema).toMatch(/EN\s+@map\("en"\)/);
+    expect(schema).toMatch(/PARTIALLY_REFUNDED/);
+    expect(schema).not.toMatch(/\bFloat\b/);
+  });
+
+  it("crea las tablas con CHECKs de código, viajeros, fechas, cantidades y montos", () => {
+    const migration = transactionsMigration();
+    expect(migration).toBeDefined();
+    const sql = stripSqlComments(migration?.sql ?? "");
+
+    for (const table of [
+      "bookings",
+      "booking_items",
+      "idempotency_keys",
+      "exchange_rates",
+      "payments",
+      "refunds",
+      "documents",
+      "document_counters",
+      "notification_logs",
+    ]) {
+      expect(sql).toContain(`CREATE TABLE "${table}"`);
+    }
+
+    expect(sql).toContain('CHECK ("code" ~ \'^CRB-[0-9A-HJKMNP-TV-Z]{8}$\')');
+    expect(sql).toContain("jsonb_array_length");
+    expect(sql).toContain('CHECK ("total_usd" > 0)');
+    expect(sql).toContain('CHECK ("quantity" > 0)');
+    expect(sql).toContain('CHECK ("check_out" > "check_in")');
+    expect(sql).toContain('CHECK (("check_out" - "check_in") <= 30)');
+    expect(sql).toContain('CHECK ("subtotal_usd" > 0)');
+    expect(sql).toContain('CHECK ("amount_usd" > 0)');
+    expect(sql).toContain('CHECK ("amount_ves" > 0)');
+    expect(sql).toContain('CHECK ("rate" > 0)');
+    expect(sql).toContain('CHECK ("next_value" >= 1)');
+    expect(sql).toContain('CHECK ("attempts" >= 0)');
+  });
+
+  it("impone los únicos parciales de documentos, referencias y tasas globales", () => {
+    const migration = transactionsMigration();
+    // El SQL propio parte las sentencias en varias líneas; se compara con los
+    // espacios colapsados para no atarse al formato.
+    const sql = stripSqlComments(migration?.sql ?? "").replace(/\s+/g, " ");
+
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "documents_voucher_unique" ON "documents"("booking_id") WHERE "type" = \'VOUCHER\'',
+    );
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "documents_receipt_unique" ON "documents"("payment_id") WHERE "type" = \'RECEIPT\'',
+    );
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "documents_refund_note_unique" ON "documents"("refund_id") WHERE "type" = \'REFUND_NOTE\'',
+    );
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "payments_reference_unique" ON "payments"("tenant_id", "method", "reference") WHERE "reference" IS NOT NULL',
+    );
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "exchange_rates_global_value_date_unique" ON "exchange_rates"("value_date") WHERE "tenant_id" IS NULL',
+    );
+    expect(sql).toContain('CREATE UNIQUE INDEX "refunds_payment_id_key"');
+  });
+
+  it("activa RLS forzada y separa los contextos de agencia, dueño y tasas", () => {
+    const migration = transactionsMigration();
+    const sql = stripSqlComments(migration?.sql ?? "");
+
+    for (const table of [
+      "bookings",
+      "booking_items",
+      "idempotency_keys",
+      "exchange_rates",
+      "payments",
+      "refunds",
+      "documents",
+      "document_counters",
+      "notification_logs",
+    ]) {
+      expect(sql).toContain(`ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`);
+      expect(sql).toContain(`ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`);
+    }
+
+    expect(sql).toContain('CREATE POLICY "bookings_tenant_owner"');
+    expect(sql).toMatch(
+      /CREATE POLICY "bookings_tenant_owner"[\s\S]*?app\.tenant_id[\s\S]*?app\.user_id/,
+    );
+    expect(sql).toContain('CREATE POLICY "payments_tenant_owner"');
+    expect(sql).toContain('CREATE POLICY "booking_items_tenant_owner"');
+    expect(sql).toContain('CREATE POLICY "refunds_tenant_owner"');
+    expect(sql).toContain('CREATE POLICY "documents_tenant_owner"');
+    expect(sql).toContain("EXISTS (");
+    expect(sql).toContain('CREATE POLICY "idempotency_keys_owner"');
+    expect(sql).toMatch(
+      /CREATE POLICY "idempotency_keys_owner"[\s\S]*?app\.user_id/,
+    );
+    expect(sql).toContain('CREATE POLICY "exchange_rates_global_read"');
+    expect(sql).toContain('CREATE POLICY "exchange_rates_rates_global"');
+    expect(sql).toMatch(
+      /CREATE POLICY "exchange_rates_rates_global"[\s\S]*?app\.rates_global/,
+    );
+    expect(sql).toContain('CREATE POLICY "notification_logs_tenant"');
+  });
+
+  it("congela precios, identidad y reembolsos con triggers", () => {
+    const migration = transactionsMigration();
+    const sql = stripSqlComments(migration?.sql ?? "");
+
+    expect(sql).toContain('CREATE FUNCTION "bookings_identity_immutable"');
+    expect(sql).toContain('CREATE TRIGGER "bookings_identity_immutable"');
+    expect(sql).toContain('CREATE FUNCTION "bookings_validate_travelers"');
+    expect(sql).toContain('CREATE FUNCTION "booking_items_frozen"');
+    expect(sql).toContain('CREATE TRIGGER "booking_items_frozen"');
+    expect(sql).toContain('CREATE FUNCTION "payments_frozen"');
+    expect(sql).toContain('CREATE TRIGGER "payments_frozen"');
+    expect(sql).toContain('CREATE FUNCTION "documents_identity_immutable"');
+    expect(sql).toContain('CREATE TRIGGER "documents_identity_immutable"');
+    expect(sql).toContain('CREATE FUNCTION "refunds_append_only"');
+    expect(sql).toContain('CREATE TRIGGER "refunds_append_only"');
+    expect(sql).toContain('CREATE FUNCTION "refunds_limit_sum"');
+    expect(sql).toContain('REVOKE UPDATE, DELETE ON "refunds" FROM caribe_app');
+  });
+});
+
 interface SchemaColumn {
   table: string;
   column: string;

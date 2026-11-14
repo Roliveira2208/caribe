@@ -118,6 +118,16 @@ model Organization {
   products             Product[]
   availability         Availability[]
   cancellationPolicies CancellationPolicy[]
+  // Relaciones propias de F1 (T-F1-1c). Tampoco las genera el CLI de Better
+  // Auth: al regenerar hay que volver a añadirlas junto con sus modelos.
+  bookings         Booking[]
+  bookingItems     BookingItem[]
+  exchangeRates    ExchangeRate[]
+  payments         Payment[]
+  refunds          Refund[]
+  documents        Document[]
+  documentCounters DocumentCounter[]
+  notificationLogs NotificationLog[]
 
   @@unique([slug])
   @@map("organization")
@@ -344,6 +354,7 @@ model Product {
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
   availability         Availability[]
+  bookingItems         BookingItem[]
 
   @@index([tenantId, type, destinationId, status])
   @@index([type, destinationId, status, deletedAt])
@@ -367,4 +378,247 @@ model Availability {
   @@unique([productId, night])
   @@index([night, productId])
   @@map("availability")
+}
+
+// Reservas, pagos, documentos y avisos de F1 (T-F1-1c, design §2.3–2.7).
+// Igual que en el catálogo, RLS, CHECK, índices parciales y triggers viven en
+// la migración SQL: Prisma no los modela. Los campos de usuario (user_id,
+// reported_by, reviewed_by, created_by) no llevan relación a User, como en
+// providers.user_id: el CLI de Better Auth no debe perderlos al regenerar y
+// los datos de negocio sobreviven a cambios de cuenta.
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  PAGO_MOVIL
+  ZELLE
+  BINANCE_PAY
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum DocumentType {
+  VOUCHER
+  RECEIPT
+  REFUND_NOTE
+}
+
+enum DocumentStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum DocumentLanguage {
+  ES @map("es")
+  EN @map("en")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Booking {
+  id          String        @id
+  tenantId    String        @map("tenant_id")
+  organization Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String
+  userId      String        @map("user_id")
+  status      BookingStatus @default(PENDING_PAYMENT)
+  totalUsd    Decimal       @db.Decimal(14, 2) @map("total_usd")
+  travelers   Json
+  expiresAt   DateTime      @map("expires_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  items       BookingItem[]
+  payments    Payment[]
+  refunds     Refund[]
+  documents   Document[]
+
+  @@unique([code])
+  @@index([tenantId, status, createdAt])
+  @@index([userId, createdAt])
+  @@map("bookings")
+}
+
+model BookingItem {
+  id             String       @id
+  bookingId      String       @map("booking_id")
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tenantId       String       @map("tenant_id")
+  organization   Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId      String       @map("product_id")
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  hotelKey       String       @map("hotel_key")
+  roomType       String       @map("room_type")
+  checkIn        DateTime     @db.Date @map("check_in")
+  checkOut       DateTime     @db.Date @map("check_out")
+  quantity       Int
+  nightlyPrices  Json         @map("nightly_prices")
+  subtotalUsd    Decimal      @db.Decimal(14, 2) @map("subtotal_usd")
+  productTitle   Json         @map("product_title")
+  policySnapshot Json         @map("policy_snapshot")
+
+  @@index([bookingId])
+  @@index([tenantId])
+  @@index([productId])
+  @@map("booking_items")
+}
+
+model IdempotencyKey {
+  id             String   @id
+  userId         String   @map("user_id")
+  endpoint       String
+  key            String
+  requestHash    String   @map("request_hash")
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, endpoint, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+model ExchangeRate {
+  id         String       @id
+  tenantId   String?      @map("tenant_id")
+  organization Organization? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  source     String
+  rate       Decimal      @db.Decimal(18, 4)
+  valueDate  DateTime     @db.Date @map("value_date")
+  fetchedAt  DateTime     @map("fetched_at")
+  isOverride Boolean      @default(false) @map("is_override")
+  reason     String?
+  createdBy  String?      @map("created_by")
+  payments   Payment[]
+  refunds    Refund[]
+
+  @@unique([tenantId, valueDate])
+  @@index([valueDate])
+  @@map("exchange_rates")
+}
+
+model Payment {
+  id              String        @id
+  tenantId        String        @map("tenant_id")
+  organization    Organization  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookingId       String        @map("booking_id")
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  method          PaymentMethod
+  amountUsd       Decimal       @db.Decimal(14, 2) @map("amount_usd")
+  amountVes       Decimal       @db.Decimal(14, 2) @map("amount_ves")
+  exchangeRateId  String        @map("exchange_rate_id")
+  exchangeRate    ExchangeRate  @relation(fields: [exchangeRateId], references: [id], onDelete: Restrict)
+  rate            Decimal       @db.Decimal(18, 4)
+  valueDate       DateTime      @db.Date @map("value_date")
+  reference       String?
+  status          PaymentStatus @default(PENDING)
+  reportedBy      String        @map("reported_by")
+  reviewedBy      String?       @map("reviewed_by")
+  reviewedAt      DateTime?     @map("reviewed_at")
+  rejectionReason String?       @map("rejection_reason")
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  refunds         Refund[]
+  documents       Document[]
+
+  @@index([bookingId])
+  @@index([tenantId, status, createdAt])
+  @@index([exchangeRateId])
+  @@map("payments")
+}
+
+model Refund {
+  id             String       @id
+  tenantId       String       @map("tenant_id")
+  organization   Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentId      String       @map("payment_id")
+  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  bookingId      String       @map("booking_id")
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  amountUsd      Decimal      @db.Decimal(14, 2) @map("amount_usd")
+  amountVes      Decimal      @db.Decimal(14, 2) @map("amount_ves")
+  exchangeRateId String       @map("exchange_rate_id")
+  exchangeRate   ExchangeRate @relation(fields: [exchangeRateId], references: [id], onDelete: Restrict)
+  rate           Decimal      @db.Decimal(18, 4)
+  valueDate      DateTime     @db.Date @map("value_date")
+  reason         String
+  createdBy      String       @map("created_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  documents      Document[]
+
+  @@unique([paymentId])
+  @@index([bookingId])
+  @@index([tenantId])
+  @@map("refunds")
+}
+
+model Document {
+  id         String           @id
+  tenantId   String           @map("tenant_id")
+  organization Organization   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookingId  String           @map("booking_id")
+  booking    Booking          @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  paymentId  String?          @map("payment_id")
+  payment    Payment?         @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  refundId   String?          @map("refund_id")
+  refund     Refund?          @relation(fields: [refundId], references: [id], onDelete: Restrict)
+  type       DocumentType
+  number     Int
+  fileUrl    String?          @map("file_url")
+  language   DocumentLanguage @default(ES)
+  status     DocumentStatus   @default(PENDING)
+  issuedAt   DateTime?        @map("issued_at")
+  error      String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  @@unique([tenantId, type, number])
+  @@index([bookingId])
+  @@index([paymentId])
+  @@index([refundId])
+  @@index([tenantId, status])
+  @@map("documents")
+}
+
+model DocumentCounter {
+  tenantId     String         @map("tenant_id")
+  organization Organization   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type         DocumentType
+  nextValue    Int            @default(1) @map("next_value")
+
+  @@id([tenantId, type])
+  @@map("document_counters")
+}
+
+model NotificationLog {
+  id        String             @id
+  tenantId  String             @map("tenant_id")
+  organization Organization     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  dedupeKey String             @unique @map("dedupe_key")
+  template  String
+  recipient String
+  locale    String
+  status    NotificationStatus @default(PENDING)
+  attempts  Int                @default(0)
+  lastError String?            @map("last_error")
+  createdAt DateTime           @default(now()) @map("created_at")
+  sentAt    DateTime?          @map("sent_at")
+
+  @@index([tenantId, status])
+  @@map("notification_logs")
 }

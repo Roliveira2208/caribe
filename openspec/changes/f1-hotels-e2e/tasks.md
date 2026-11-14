@@ -69,7 +69,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
     catálogo como `caribe_app` (`withPublic` no ve borradores ni borrados y no escribe; una agencia no
     toca el catálogo de otra), tests Zod de atributos, reglas y rango de fechas.
   - Prueba: catalog › "Atributos inválidos", "Estados", "Noche duplicada" y "Precio o fechas inválidos".
-- [ ] T-F1-1c Migraciones de reservas, pagos y documentos (`bookings`, `booking_items` con precios por
+- [x] T-F1-1c Migraciones de reservas, pagos y documentos (`bookings`, `booking_items` con precios por
   noche, `idempotency_keys` sin `tenant_id` y RLS solo por `user_id`, `exchange_rates`, `payments`,
   `refunds`, `documents`, `document_counters`, `notification_logs`) con RLS, triggers de congelamiento
   e inmutabilidad y unicidad. `booking_items` guarda copias de `hotel_key`, `room_type` y
