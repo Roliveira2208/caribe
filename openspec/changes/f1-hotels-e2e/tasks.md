@@ -77,7 +77,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   `subtotal_usd`, `product_title`, `hotel_key`, `room_type`, `check_in`, `check_out` y `quantity`.
   Prueba: booking › "Reservas concurrentes sobre el último cupo" y "Fechas inválidas"; payments ›
   "Reembolso".
-- [ ] T-F1-1d Ampliar `pnpm db:seed` con una agencia, un tipo de habitación publicado, disponibilidad,
+- [x] T-F1-1d Ampliar `pnpm db:seed` con una agencia, un tipo de habitación publicado, disponibilidad,
   política, tasa global y `payment_mode`; idempotente.
   Prueba: demo manual documentada.
 - [ ] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad públicos.

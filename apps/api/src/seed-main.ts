@@ -1,7 +1,15 @@
 // Entrada del seed de demostracion: `pnpm db:seed` construye apps/api con
 // turbo y ejecuta este archivo con node (dist/seed-main.js). La logica vive
 // en seed.ts para que los tests la importen sin procesos ni consola.
-import { DEMO_PASSWORD, demoOrganization, demoUsers, seedDemo } from "./seed.js";
+import {
+  DEMO_PASSWORD,
+  demoDestination,
+  demoHotel,
+  demoOrganization,
+  demoPaymentMode,
+  demoUsers,
+  seedDemo,
+} from "./seed.js";
 
 seedDemo()
   .then((summary) => {
@@ -11,10 +19,24 @@ seedDemo()
       console.log(`  ${user.email} - ${role}`);
     }
     console.log(`Contrasena de todos los usuarios de demostracion: ${DEMO_PASSWORD}`);
+    console.log(
+      `Inventario: ${demoHotel.title.es} (${demoHotel.roomType}) en ` +
+        `${demoDestination.name.es}, ${demoHotel.nights} noches desde hoy, ` +
+        `modo de pago ${demoPaymentMode}.`,
+    );
     const creado = [
       ...(summary.organizationCreated ? ["la agencia"] : []),
       ...summary.createdUserEmails,
       ...summary.createdMembershipEmails,
+      ...(summary.createdProvider ? ["el proveedor"] : []),
+      ...(summary.createdDestination ? ["el destino"] : []),
+      ...(summary.createdPolicy ? ["la politica de cancelacion"] : []),
+      ...(summary.createdProduct ? ["el tipo de habitacion"] : []),
+      ...(summary.createdAvailabilityNights > 0
+        ? [`${summary.createdAvailabilityNights} noches de disponibilidad`]
+        : []),
+      ...(summary.createdExchangeRate ? ["la tasa global del dia"] : []),
+      ...(summary.createdTenantSettings ? ["los ajustes de la agencia"] : []),
     ];
     console.log(
       creado.length > 0
