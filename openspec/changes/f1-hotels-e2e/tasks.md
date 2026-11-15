@@ -90,10 +90,16 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Prueba: exchange-rates › "Fuente disponible", "Ajuste manual" y "Tenencia de las tasas".
 - [x] T-F1-6 Precio VES informativo en catálogo con la tasa global.
   Prueba: catalog › "Sin tasa disponible" y "Equivalente en VES".
-- [ ] T-F1-7 `BookingModule`: crear reserva con retención multi-noche, viajeros, código e
+- [x] T-F1-7 `BookingModule`: crear reserva con retención multi-noche, viajeros, código e
   `Idempotency-Key`.
   Prueba: booking › "Hay cupo en todas las noches", "Reservas concurrentes sobre el último cupo",
   "Falta una noche" e "Idempotencia".
+  Nota: deseables cubiertos aquí: fechas inválidas, clave expirada, reserva sin viajeros, demasiados
+  viajeros, viajero sin documento, falta la clave, reintento sin auditoría duplicada y alta con
+  auditoría. Deseables que siguen a su tarea natural: datos del viajero en el voucher (T-F1-11),
+  filtro por estado y producto despublicado después de reservar (T-F1-7b), cancelación repetida y
+  cancelar una reserva vencida (T-F1-10), expirar deja auditoría (T-F1-8). La colisión de código se
+  cubre en unitarios de `withCodeRetry`; forzarla por HTTP queda para T-F1-7b si sale barata.
 - [ ] T-F1-7b Eliminar los stubs `TODO(F1)` de products/bookings creados en F0.
   Prueba: auth-access › "Ruta protegida sin sesión" y "Catálogo público" con los endpoints reales.
 - [ ] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión; más la

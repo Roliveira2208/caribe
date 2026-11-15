@@ -922,6 +922,13 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
     justification: "self-service",
     reason: "Reserva propia; la propiedad se comprueba en F1 (hoy es un stub).",
   },
+  {
+    method: "POST",
+    path: "bookings",
+    justification: "self-service",
+    reason:
+      "Reserva propia: la agencia se resuelve desde el producto y el dueño se fija desde la sesión (spec booking).",
+  },
 ];
 
 /**
