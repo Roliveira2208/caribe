@@ -142,9 +142,15 @@ async function readInventory(): Promise<InventoryState> {
     wrongRows: 0,
   };
   if (product) {
+    // El seed conserva las noches de corridas anteriores (no borra inventario),
+    // así que se mira solo la ventana que la corrida de hoy debe garantizar.
+    const window = {
+      gte: caracasNight(0),
+      lte: caracasNight(demoHotel.nights - 1),
+    };
     const [aggregate, wrongRows] = await Promise.all([
       prisma.availability.aggregate({
-        where: { productId: product.id },
+        where: { productId: product.id, night: window },
         _count: { _all: true },
         _min: { night: true },
         _max: { night: true },
@@ -152,6 +158,7 @@ async function readInventory(): Promise<InventoryState> {
       prisma.availability.count({
         where: {
           productId: product.id,
+          night: window,
           OR: [
             { capacity: { not: demoHotel.capacity } },
             { reserved: { not: 0 } },
