@@ -16,8 +16,10 @@ import {
   generateBookingCode,
   withCodeRetry,
 } from "./booking-code.js";
+import { decodeBookingsCursor, encodeBookingsCursor } from "./bookings.cursor.js";
 import {
   BOOKINGS_CREATE_ENDPOINT,
+  BOOKINGS_DEFAULT_LIMIT,
   IDEMPOTENCY_KEY_MAX_LENGTH,
   IDEMPOTENCY_KEY_MIN_LENGTH,
   IDEMPOTENCY_KEY_TTL_MS,
@@ -26,7 +28,11 @@ import {
   type BookingDetailResponse,
   type BookingItemResponse,
   type BookingNightPrice,
+  type BookingPage,
+  type BookingStatusValue,
+  type BookingSummaryResponse,
   type CreateBookingBody,
+  type ListBookingsQuery,
 } from "./bookings.schemas.js";
 
 /** Producto visible en el catalogo publico: solo necesitamos su agencia. */
@@ -442,23 +448,96 @@ export class BookingsService {
 
   /** Detalle de una reserva propia (reintento idempotente). */
   private async detailForUser(userId: string, bookingId: string): Promise<BookingDetailResponse> {
-    const booking = await this.tenantService.withOwner(userId, (tx) =>
-      tx.booking.findFirst({
-        where: { id: bookingId, userId },
-        include: { items: true },
-      }),
-    );
+    return this.detail({ userId, activeOrganizationId: null, bookingId });
+  }
+
+  /**
+   * Detalle de una reserva (T-F1-7b, spec booking "Consulta y propiedad").
+   *
+   * El dueño la lee sin agencia activa; el personal de una agencia la lee con
+   * su agencia activa. La consulta corre en `owner`+`tenant` cuando hay agencia
+   * (la política RLS combinada deja ver la fila por dueño o por agencia) y en
+   * `owner` cuando no la hay. Una reserva ajena responde 404, nunca 403.
+   */
+  async detail(input: {
+    userId: string;
+    activeOrganizationId: string | null;
+    bookingId: string;
+  }): Promise<BookingDetailResponse> {
+    const activeOrganizationId = input.activeOrganizationId;
+    const booking = activeOrganizationId
+      ? await this.tenantService.withOwnerTenant(input.userId, activeOrganizationId, (tx) =>
+          tx.booking.findFirst({
+            where: {
+              id: input.bookingId,
+              OR: [{ userId: input.userId }, { tenantId: activeOrganizationId }],
+            },
+            include: { items: true },
+          }),
+        )
+      : await this.tenantService.withOwner(input.userId, (tx) =>
+          tx.booking.findFirst({
+            where: { id: input.bookingId, userId: input.userId },
+            include: { items: true },
+          }),
+        );
     if (!booking) {
       throw new ApiProblemException("NOT_FOUND", "La reserva no existe.");
     }
+    return toBookingDetail(booking);
+  }
 
+  /**
+   * "Mis reservas" (T-F1-7b): las del usuario en todas las agencias cuando no
+   * hay agencia activa, o las de su agencia activa cuando la hay (panel). El
+   * orden es `created_at DESC, id DESC` y la paginación por cursor opaco.
+   */
+  async list(input: {
+    userId: string;
+    activeOrganizationId: string | null;
+    query: ListBookingsQuery;
+  }): Promise<BookingPage> {
+    const limit = input.query.limit ?? BOOKINGS_DEFAULT_LIMIT;
+    const cursor = input.query.cursor ? decodeBookingsCursor(input.query.cursor) : null;
+    const where: Prisma.BookingWhereInput = {
+      ...(input.query.status ? { status: input.query.status } : {}),
+      ...(cursor
+        ? {
+            OR: [
+              { createdAt: { lt: new Date(cursor.createdAt) } },
+              { createdAt: new Date(cursor.createdAt), id: { lt: cursor.id } },
+            ],
+          }
+        : {}),
+      ...(input.activeOrganizationId
+        ? { tenantId: input.activeOrganizationId }
+        : { userId: input.userId }),
+    };
+
+    const rows = input.activeOrganizationId
+      ? await this.tenantService.withTenant(input.activeOrganizationId, (tx) =>
+          tx.booking.findMany({
+            where,
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: limit + 1,
+          }),
+        )
+      : await this.tenantService.withOwner(input.userId, (tx) =>
+          tx.booking.findMany({
+            where,
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: limit + 1,
+          }),
+        );
+
+    const page = rows.slice(0, limit);
+    const last = page[page.length - 1];
     return {
-      id: booking.id,
-      code: booking.code,
-      status: booking.status,
-      expiresAt: formatTimestamp(booking.expiresAt),
-      totalUsd: formatAmount(booking.totalUsd),
-      items: booking.items.map(toBookingItem),
+      items: page.map(toBookingSummary),
+      nextCursor:
+        rows.length > limit && last
+          ? encodeBookingsCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+          : null,
     };
   }
 }
@@ -506,6 +585,47 @@ function nightsBetween(checkIn: string, checkOut: string): number {
 /** Fecha calendario YYYY-MM-DD a la medianoche UTC que espera una columna DATE. */
 function toDateOnly(date: string): Date {
   return new Date(`${date}T00:00:00.000Z`);
+}
+
+/** Fila de reserva con sus líneas, tal como la devuelve Prisma. */
+interface BookingRowWithItems {
+  id: string;
+  code: string;
+  status: BookingStatusValue;
+  expiresAt: Date;
+  totalUsd: DecimalValue;
+  items: Parameters<typeof toBookingItem>[0][];
+}
+
+/** Detalle completo de una reserva leída de la base. */
+function toBookingDetail(booking: BookingRowWithItems): BookingDetailResponse {
+  return {
+    id: booking.id,
+    code: booking.code,
+    status: booking.status,
+    expiresAt: formatTimestamp(booking.expiresAt),
+    totalUsd: formatAmount(booking.totalUsd),
+    items: booking.items.map(toBookingItem),
+  };
+}
+
+/** Fila del listado "Mis reservas". */
+function toBookingSummary(booking: {
+  id: string;
+  code: string;
+  status: BookingStatusValue;
+  expiresAt: Date;
+  totalUsd: DecimalValue;
+  createdAt: Date;
+}): BookingSummaryResponse {
+  return {
+    id: booking.id,
+    code: booking.code,
+    status: booking.status,
+    expiresAt: formatTimestamp(booking.expiresAt),
+    totalUsd: formatAmount(booking.totalUsd),
+    createdAt: formatTimestamp(booking.createdAt),
+  };
 }
 
 /** Linea de reserva con los precios congelados al crear. */

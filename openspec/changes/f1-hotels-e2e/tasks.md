@@ -100,8 +100,14 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   filtro por estado y producto despublicado después de reservar (T-F1-7b), cancelación repetida y
   cancelar una reserva vencida (T-F1-10), expirar deja auditoría (T-F1-8). La colisión de código se
   cubre en unitarios de `withCodeRetry`; forzarla por HTTP queda para T-F1-7b si sale barata.
-- [ ] T-F1-7b Eliminar los stubs `TODO(F1)` de products/bookings creados en F0.
-  Prueba: auth-access › "Ruta protegida sin sesión" y "Catálogo público" con los endpoints reales.
+- [x] T-F1-7b Eliminar los stubs `TODO(F1)` de products/bookings creados en F0.
+  Prueba: auth-access › "Ruta protegida sin sesión" y "Catálogo público" con los endpoints reales;
+  booking › "Consulta y propiedad".
+  Nota: `GET /bookings` y `GET /bookings/:id` son reales; el `PUT /products/:id` de F0 se retiró
+  porque la escritura real vive en `/admin/products/:id` (T-F1-4) y la matriz de permisos de
+  auth-access apunta al endpoint real sin duplicar products-admin. Deseables cubiertos: filtro por
+  estado y producto despublicado después de reservar. La colisión de código sigue cubierta solo en
+  unitarios de `withCodeRetry`: forzarla por HTTP exige mockear el generador y no sale barata.
 - [ ] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión; más la
   programación diaria del refresco de la tasa global (`refreshGlobalRate()` de T-F1-5) con BullMQ.
   Prueba: booking › "Vence sin pago" y "Carrera entre pago y expiración"; exchange-rates › "Fuente

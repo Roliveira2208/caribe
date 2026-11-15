@@ -68,6 +68,33 @@ export const createBookingSchema = z
 
 export type CreateBookingBody = z.infer<typeof createBookingSchema>;
 
+/** Estados posibles de una reserva (espejo del enum `BookingStatus`). */
+export const BOOKING_STATUSES = [
+  "PENDING_PAYMENT",
+  "CONFIRMED",
+  "CANCELLED",
+  "EXPIRED",
+] as const;
+
+export type BookingStatusValue = (typeof BOOKING_STATUSES)[number];
+
+/** Tamaño de página por defecto y máximo de "Mis reservas". */
+export const BOOKINGS_DEFAULT_LIMIT = 20;
+export const BOOKINGS_MAX_LIMIT = 50;
+
+/**
+ * Query de `GET /bookings`: filtro por estado y paginación por cursor. El
+ * cursor lo valida el servicio, que responde 422 `VALIDATION_ERROR` con
+ * `path = "cursor"` si no corresponde.
+ */
+export const listBookingsQuerySchema = z.strictObject({
+  status: z.enum(BOOKING_STATUSES).optional(),
+  limit: z.coerce.number().int().min(1).max(BOOKINGS_MAX_LIMIT).optional(),
+  cursor: z.string().min(1).optional(),
+});
+
+export type ListBookingsQuery = z.infer<typeof listBookingsQuerySchema>;
+
 /** Una noche del precio congelado de la linea. */
 export interface BookingNightPrice {
   night: string;
@@ -89,15 +116,30 @@ export interface BookingItemResponse {
 
 /**
  * Detalle completo de una reserva. El mismo esquema sirve para
- * `GET /bookings/:id` en T-F1-7b.
+ * `GET /bookings/:id` (T-F1-7b).
  */
 export interface BookingDetailResponse {
   id: string;
   code: string;
-  status: "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "EXPIRED";
+  status: BookingStatusValue;
   expiresAt: string;
   totalUsd: string;
   items: BookingItemResponse[];
+}
+
+/** Fila del listado "Mis reservas" (sin líneas para no inflar la página). */
+export interface BookingSummaryResponse {
+  id: string;
+  code: string;
+  status: BookingStatusValue;
+  expiresAt: string;
+  totalUsd: string;
+  createdAt: string;
+}
+
+export interface BookingPage {
+  items: BookingSummaryResponse[];
+  nextCursor: string | null;
 }
 
 /**

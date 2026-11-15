@@ -451,11 +451,9 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
 
   it("admin sin TOTP en un endpoint no administrativo responde 2xx", async () => {
     const cookie = await ownerCookieWithoutTotp();
-    // product:update lo comparte el proveedor: ruta no administrativa.
-    const res = await fetch(`${baseUrl}/api/v1/products/de-este-owner`, {
-      method: "PUT",
-      headers: { "content-type": "application/json", cookie, origin: authOrigin },
-      body: JSON.stringify({}),
+    // "Mis reservas" es autoservicio: no es ruta administrativa.
+    const res = await fetch(`${baseUrl}/api/v1/bookings`, {
+      headers: { cookie, origin: authOrigin },
     });
     expect(res.status).toBe(200);
   });
@@ -910,17 +908,18 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
       "Disponibilidad pública del catálogo (spec catalog, 'Detalle y disponibilidad públicos').",
   },
   {
-    method: "PUT",
-    path: "products/:id",
-    justification: "shared-permission",
+    method: "GET",
+    path: "bookings",
+    justification: "self-service",
     reason:
-      "product:update lo comparten proveedor y admin; la propiedad del producto se comprueba en F1.",
+      "Mis reservas: el usuario ve las suyas en todas las agencias o, con agencia activa, las de su agencia (spec booking).",
   },
   {
     method: "GET",
     path: "bookings/:id",
     justification: "self-service",
-    reason: "Reserva propia; la propiedad se comprueba en F1 (hoy es un stub).",
+    reason:
+      "Reserva propia o de la agencia activa; una reserva ajena responde 404 (spec booking, 'Consulta y propiedad').",
   },
   {
     method: "POST",

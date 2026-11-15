@@ -13,7 +13,7 @@ import {
 } from "../src/bookings/bookings.schemas.js";
 import { addDays } from "../src/catalog/catalog.schemas.js";
 import { prisma } from "../src/prisma.js";
-import { authOrigin, createUser, signIn } from "./auth-helpers.js";
+import { authOrigin, addMember, createUser, setActiveOrg, signIn } from "./auth-helpers.js";
 
 /**
  * E2E de creacion de reservas (T-F1-7, delta de booking "Retencion de cupo sin
@@ -37,6 +37,10 @@ describe("bookings (creacion de reservas)", () => {
   let clientB = "";
   let cookieA = "";
   let cookieB = "";
+  let staffA = "";
+  let staffHold = "";
+  let staffACookie = "";
+  let staffHoldCookie = "";
 
   const suffix = randomUUID().slice(0, 8);
 
@@ -117,6 +121,18 @@ describe("bookings (creacion de reservas)", () => {
         `reservas-fail-${suffix}`,
       ],
     );
+
+    // Personal de cada agencia para "Consulta y propiedad": owner con la
+    // agencia activa. La membresía se inserta directo y la sesión se fija por
+    // HTTP, como en el resto de la suite.
+    staffA = await createUser(`bookings-staff-a-${suffix}@example.com`);
+    staffHold = await createUser(`bookings-staff-hold-${suffix}@example.com`);
+    await addMember(orgA, staffA, "owner");
+    await addMember(orgHold, staffHold, "owner");
+    staffACookie = await signIn(baseUrl, `bookings-staff-a-${suffix}@example.com`);
+    staffHoldCookie = await signIn(baseUrl, `bookings-staff-hold-${suffix}@example.com`);
+    await setActiveOrg(baseUrl, staffACookie, orgA);
+    await setActiveOrg(baseUrl, staffHoldCookie, orgHold);
 
     await owner.query(
       `INSERT INTO "providers" (id, tenant_id, name, created_at, updated_at)
@@ -396,6 +412,20 @@ describe("bookings (creacion de reservas)", () => {
     expiresAt: string;
     totalUsd: string;
     items: BookingItemBody[];
+  }
+
+  interface BookingSummaryBody {
+    id: string;
+    code: string;
+    status: string;
+    expiresAt: string;
+    totalUsd: string;
+    createdAt: string;
+  }
+
+  interface BookingPageBody {
+    items: BookingSummaryBody[];
+    nextCursor: string | null;
   }
 
   interface ProblemBody {
@@ -1044,6 +1074,163 @@ describe("bookings (creacion de reservas)", () => {
         name: "Flexible",
         rules: flexibleRules,
       });
+    });
+  });
+
+  describe("Consulta y propiedad", () => {
+    async function createBooking(
+      cookie: string,
+      overrides: Partial<CreateBookingBody> = {},
+    ): Promise<BookingBody> {
+      const res = await postBooking(cookie, keyFor(), bookingBody(overrides));
+      expect(res.status).toBe(201);
+      return jsonOf<BookingBody>(res);
+    }
+
+    async function getJson<T>(
+      path: string,
+      cookie?: string,
+    ): Promise<{ status: number; body: T }> {
+      const headers: Record<string, string> = { origin: authOrigin };
+      if (cookie) headers["cookie"] = cookie;
+      const res = await fetch(url(path), { headers });
+      return { status: res.status, body: (await res.json()) as T };
+    }
+
+    it("el dueño consulta su reserva con líneas, estado y vencimiento", async () => {
+      const created = await createBooking(cookieA);
+      const { status, body } = await getJson<BookingBody>(`/bookings/${created.id}`, cookieA);
+      expect(status).toBe(200);
+      expect(body).toEqual(created);
+      expect(body.items[0]?.title).toEqual(titleA);
+      expect(body.expiresAt).toMatch(/Z$/);
+    });
+
+    it("el personal de la agencia consulta una reserva de su agencia", async () => {
+      const created = await createBooking(cookieA);
+      const { status, body } = await getJson<BookingBody>(
+        `/bookings/${created.id}`,
+        staffACookie,
+      );
+      expect(status).toBe(200);
+      expect(body).toEqual(created);
+    });
+
+    it("el personal de otra agencia recibe 404", async () => {
+      const created = await createBooking(cookieA);
+      const res = await fetch(url(`/bookings/${created.id}`), {
+        headers: { cookie: staffHoldCookie, origin: authOrigin },
+      });
+      await expectProblem(res, 404, "NOT_FOUND");
+    });
+
+    it("un cliente ajeno recibe 404, nunca 403", async () => {
+      const created = await createBooking(cookieA);
+      const res = await fetch(url(`/bookings/${created.id}`), {
+        headers: { cookie: cookieB, origin: authOrigin },
+      });
+      await expectProblem(res, 404, "NOT_FOUND");
+    });
+
+    it("un visitante anónimo recibe 401 en la lista y en el detalle", async () => {
+      const list = await fetch(url("/bookings"));
+      await expectProblem(list, 401, "UNAUTHENTICATED");
+      const detail = await fetch(url(`/bookings/${randomUUID()}`));
+      await expectProblem(detail, 401, "UNAUTHENTICATED");
+    });
+
+    it("mis reservas reúne las del usuario en todas las agencias y excluye las ajenas", async () => {
+      const ownA = await createBooking(cookieA);
+      const ownHold = await createBooking(cookieA, {
+        productId: pHold,
+        checkIn: night1,
+        checkOut: night3,
+      });
+      const other = await createBooking(cookieB);
+
+      const { status, body } = await getJson<BookingPageBody>("/bookings", cookieA);
+      expect(status).toBe(200);
+      const ids = body.items.map((item) => item.id);
+      expect(ids).toEqual(expect.arrayContaining([ownA.id, ownHold.id]));
+      expect(ids).not.toContain(other.id);
+      expect(body.items.find((item) => item.id === ownHold.id)).toMatchObject({
+        status: "PENDING_PAYMENT",
+        totalUsd: "200.00",
+      });
+    });
+
+    it("filtra por estado", async () => {
+      const pending = await createBooking(cookieA);
+      const confirmed = await createBooking(cookieA);
+      await prisma.booking.update({
+        where: { id: confirmed.id },
+        data: { status: "CONFIRMED" },
+      });
+
+      const { body } = await getJson<BookingPageBody>("/bookings?status=CONFIRMED", cookieA);
+      expect(body.items.map((item) => item.id)).toEqual([confirmed.id]);
+
+      const pendingPage = await getJson<BookingPageBody>(
+        "/bookings?status=PENDING_PAYMENT",
+        cookieA,
+      );
+      const pendingIds = pendingPage.body.items.map((item) => item.id);
+      expect(pendingIds).toContain(pending.id);
+      expect(pendingIds).not.toContain(confirmed.id);
+    });
+
+    it("pagina por cursor sin repetir ni perder reservas", async () => {
+      const first = await createBooking(cookieA);
+      const second = await createBooking(cookieA);
+      const third = await createBooking(cookieA, {
+        productId: pHold,
+        checkIn: night1,
+        checkOut: night3,
+      });
+
+      const page1 = await getJson<BookingPageBody>("/bookings?limit=2", cookieA);
+      expect(page1.status).toBe(200);
+      expect(page1.body.items).toHaveLength(2);
+      expect(page1.body.nextCursor).toBeTruthy();
+
+      const page2 = await getJson<BookingPageBody>(
+        `/bookings?limit=2&cursor=${encodeURIComponent(page1.body.nextCursor as string)}`,
+        cookieA,
+      );
+      expect(page2.status).toBe(200);
+      expect(page2.body.items).toHaveLength(1);
+      expect(page2.body.nextCursor).toBe(null);
+
+      const seen = [...page1.body.items, ...page2.body.items].map((item) => item.id);
+      expect(new Set(seen).size).toBe(3);
+      expect(seen).toEqual(expect.arrayContaining([first.id, second.id, third.id]));
+    });
+
+    it("rechaza un cursor inválido con 422", async () => {
+      const res = await fetch(url("/bookings?cursor=no-es-un-cursor"), {
+        headers: { cookie: cookieA, origin: authOrigin },
+      });
+      const problem = await expectProblem(res, 422, "VALIDATION_ERROR");
+      expect(problem.errors?.map((issue) => issue.path)).toEqual(["cursor"]);
+    });
+
+    it("el detalle usa el título guardado cuando el producto se despublica", async () => {
+      const created = await createBooking(cookieA);
+      const changedTitle = { es: "Hotel Cambiado", en: "Changed Hotel" };
+      await owner.query(
+        `UPDATE "products" SET status = 'DRAFT', title = $1::jsonb WHERE id = $2`,
+        [JSON.stringify(changedTitle), pStd],
+      );
+      try {
+        const { status, body } = await getJson<BookingBody>(`/bookings/${created.id}`, cookieA);
+        expect(status).toBe(200);
+        expect(body.items[0]?.title).toEqual(titleA);
+      } finally {
+        await owner.query(
+          `UPDATE "products" SET status = 'PUBLISHED', title = $1::jsonb WHERE id = $2`,
+          [JSON.stringify(titleA), pStd],
+        );
+      }
     });
   });
 });

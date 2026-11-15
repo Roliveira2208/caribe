@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Put, Query } from "@nestjs/common";
-import { AllowAnonymous, MemberHasPermission } from "@thallesp/nestjs-better-auth";
+import { Controller, Get, Param, Query } from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
 import {
   availabilityQuerySchema,
@@ -10,14 +10,13 @@ import {
 import { CatalogService } from "./catalog.service.js";
 
 /**
- * Catálogo público (T-F1-3, specs/catalog) y el PUT protegido por permiso de
- * agencia que se conserva de F0 (matriz T-F0-6, spec auth-access "Proveedor
- * edita su producto"). El CRUD real y la comprobación de propiedad del
- * producto llegan con T-F1-4/T-F1-7b; este stub las ignora.
+ * Catálogo público (T-F1-3, specs/catalog). Las tres lecturas son anónimas: la
+ * búsqueda con filtros y cursor, el detalle y la disponibilidad por noche. Las
+ * queries se validan con los esquemas compartidos y responden 422 ante
+ * cualquier clave o valor inválido.
  *
- * Las tres lecturas son anónimas: la búsqueda con filtros y cursor, el detalle
- * y la disponibilidad por noche. Las queries se validan con los esquemas
- * compartidos y responden 422 ante cualquier clave o valor inválido.
+ * La escritura de productos vive en el panel (`/admin/products`, T-F1-4); el
+ * stub de F0 se retiró en T-F1-7b.
  */
 @Controller("products")
 export class ProductsController {
@@ -42,12 +41,5 @@ export class ProductsController {
   @Get(":id")
   detail(@Param("id") id: string) {
     return this.catalogService.detail(id);
-  }
-
-  @MemberHasPermission({ permissions: { product: ["update"] } })
-  @Put(":id")
-  update() {
-    // TODO(F1): catalogo real de specs/catalog; T-F1-7b sustituye este stub.
-    return { updated: true };
   }
 }

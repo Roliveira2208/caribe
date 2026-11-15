@@ -47,8 +47,8 @@ describe("auth-access", () => {
       expect(res.status).toBe(401);
     });
 
-    it("PUT /api/v1/products/:id sin cookie responde 401", async () => {
-      const res = await fetch(`${baseUrl}/api/v1/products/does-not-exist`, {
+    it("PUT /api/v1/admin/products/:id sin cookie responde 401", async () => {
+      const res = await fetch(`${baseUrl}/api/v1/admin/products/does-not-exist`, {
         method: "PUT",
         headers: { origin: authOrigin },
       });
@@ -97,7 +97,7 @@ describe("auth-access", () => {
   });
 
   describe("Matriz de permisos (T-F0-6)", () => {
-    it("proveedor edita su producto: 200 (permiso product:update; propiedad en F1)", async () => {
+    it("proveedor edita su producto: el permiso product:update pasa el guard (404 sin producto)", async () => {
       const ownerEmail = `owner-pu-${suffix}@example.com`;
       const providerEmail = `provider-pu-${suffix}@example.com`;
       const org = await createAgency(
@@ -105,13 +105,25 @@ describe("auth-access", () => {
         `Agencia PU ${suffix}`,
         `agencia-pu-${suffix}`,
       );
-      await addMember(org.id, await createUser(providerEmail), "provider");
+      const providerUser = await createUser(providerEmail);
+      await addMember(org.id, providerUser, "provider");
+      await prisma.provider.create({
+        data: {
+          id: randomUUID(),
+          tenantId: org.id,
+          userId: providerUser,
+          name: `Proveedor PU ${suffix}`,
+        },
+      });
 
       const cookie = await signIn(baseUrl, providerEmail);
       await setActiveOrg(baseUrl, cookie, org.id);
 
+      // El guard deja pasar al proveedor con product:update; el servicio no
+      // encuentra el producto y responde 404 (la propiedad real se cubre en
+      // products-admin.e2e.ts, no se duplica aquí).
       const res = await putProduct(cookie, "producto-de-este-proveedor");
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(404);
     });
 
     it("agente sin product:update recibe 403", async () => {
@@ -285,10 +297,10 @@ describe("auth-access", () => {
   });
 
   async function putProduct(cookie: string, id: string): Promise<Response> {
-    return fetch(`${baseUrl}/api/v1/products/${id}`, {
+    return fetch(`${baseUrl}/api/v1/admin/products/${id}`, {
       method: "PUT",
       headers: { "content-type": "application/json", cookie, origin: authOrigin },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ basePriceUsd: "150.00" }),
     });
   }
 
