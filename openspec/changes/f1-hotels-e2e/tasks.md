@@ -85,7 +85,8 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [x] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
   Prueba: auth-access › "Proveedor edita su producto" y "Propiedad de productos".
 - [ ] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo, circuit breaker, override con auditoría y
-  tenencia global/agencia.
+  tenencia global/agencia. Incluye `refreshGlobalRate()` (cuerpo del job) bajo `rates_global`; la
+  programación diaria con BullMQ entra en T-F1-8.
   Prueba: exchange-rates › "Fuente disponible", "Ajuste manual" y "Tenencia de las tasas".
 - [ ] T-F1-6 Precio VES informativo en catálogo con la tasa global.
   Prueba: catalog › "Sin tasa disponible" y "Equivalente en VES".
@@ -95,8 +96,10 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   "Falta una noche" e "Idempotencia".
 - [ ] T-F1-7b Eliminar los stubs `TODO(F1)` de products/bookings creados en F0.
   Prueba: auth-access › "Ruta protegida sin sesión" y "Catálogo público" con los endpoints reales.
-- [ ] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión.
-  Prueba: booking › "Vence sin pago" y "Carrera entre pago y expiración".
+- [ ] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión; más la
+  programación diaria del refresco de la tasa global (`refreshGlobalRate()` de T-F1-5) con BullMQ.
+  Prueba: booking › "Vence sin pago" y "Carrera entre pago y expiración"; exchange-rates › "Fuente
+  disponible" con el job programado.
 - [ ] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, datos por método, monto
   calculado en servidor y revisor distinto.
   Prueba: payments › "Pago en VES por Pago Móvil" y "Modo MANUAL aprobado".

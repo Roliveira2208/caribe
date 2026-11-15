@@ -21,7 +21,8 @@ siguientes:
 - `owner`: persona sobre sus propias filas, sin exigir membresía ni organización activa.
 - `tenant`+`owner`: cliente que opera sobre una reserva propia dentro de una agencia (por ejemplo, al
   pagar); se fijan ambos GUC y las políticas combinan con OR.
-- `platform`: Super Admin de plataforma; lectura de todas las agencias y de las filas de plataforma.
+- `platform`: Super Admin de plataforma; lectura de todas las agencias y de las filas de plataforma, y
+  escritura únicamente de overrides globales de `exchange_rates` (`tenant_id` NULL).
 - `rates_global`: trabajo diario de la tasa BCV; solo escribe filas de `exchange_rates` con
   `tenant_id` NULL y no lee ni escribe ninguna otra tabla.
 
@@ -47,6 +48,17 @@ NOT heredarse de una petición, transacción o trabajo anterior.
 - GIVEN filas de las agencias A y B y filas de plataforma con `tenant_id` NULL
 - WHEN se consulta con el contexto de plataforma
 - THEN se devuelven las filas de A, de B y las de plataforma
+
+#### Scenario: Contexto de plataforma escribe tasas globales
+- GIVEN el contexto de plataforma
+- WHEN escribe un override de `exchange_rates` con `tenant_id` NULL
+- THEN la escritura se acepta y la fila queda con `is_override = true`
+
+#### Scenario: Contexto de plataforma no escribe filas de agencia
+- GIVEN el contexto de plataforma
+- WHEN intenta escribir una fila de `exchange_rates` con `tenant_id` de una agencia o cualquier fila de
+  otra tabla de negocio
+- THEN la base rechaza la escritura
 
 #### Scenario: Contexto de agencia no ve filas de plataforma
 - GIVEN filas de plataforma con `tenant_id` NULL
@@ -75,8 +87,9 @@ escritura: una persona SHALL NOT insertar ni modificar filas de otra persona ni 
 tablas sin dueño (`providers`, `destinations`, `products`, `availability`, `cancellation_policies`,
 `tenant_settings`), solo la agencia activa o el contexto `platform` (lectura) SHALL dar acceso; el
 contexto `public` solo SHALL leer catálogo publicado y los destinos que referencia, sin datos internos. `exchange_rates` añade la lectura de filas globales (`tenant_id` NULL)
-para los contextos `tenant`, `owner` y `public`; la escritura global solo se permite con `rates_global`,
-que no puede leer ni escribir ninguna otra tabla ni filas de agencia.
+para los contextos `tenant`, `owner` y `public`; la escritura global se permite con `rates_global` y con
+`platform`, siempre que la fila tenga `tenant_id` NULL. `rates_global` no puede leer ni escribir ninguna
+otra tabla ni filas de agencia; `platform` tampoco escribe filas de agencia.
 
 #### Scenario: Cliente A no ve la reserva de cliente B
 - GIVEN una reserva de otra persona
@@ -229,7 +242,8 @@ nueva sin RLS habilitada y forzada SHALL hacer fallar la suite de aislamiento.
 - `idempotency_keys` es una tabla técnica sin `tenant_id`: su único es `(user_id, endpoint, key)`, su
   RLS es solo por `user_id` y la agencia se resuelve después de consumir la clave.
 - Las filas globales de `exchange_rates` (`tenant_id` NULL) son legibles por cualquier agencia y por el
-  catálogo público; las escribe solo `rates_global`, que no accede a ninguna otra tabla.
+  catálogo público; las escribe solo `rates_global` y, para overrides de plataforma, `platform`, ambos
+  limitados a filas globales. Ninguno de los dos escribe filas de agencia.
 - Cambiar de agencia activa en la misma sesión no arrastra filas de la agencia anterior: cada
   transacción fija su contexto.
 
@@ -239,6 +253,8 @@ nueva sin RLS habilitada y forzada SHALL hacer fallar la suite de aislamiento.
 - Prueba de que el catálogo público ve productos de dos agencias y ningún borrador.
 - Prueba de `rates_global` como `caribe_app`: solo escribe filas globales de `exchange_rates` y no lee
   otras tablas.
+- Prueba de `platform` como `caribe_app`: escribe overrides globales de `exchange_rates` y no escribe
+  filas de agencia ni de otras tablas.
 
 ## Out of scope
 SaaS multiagencia con dominios y planes, contexto `system` para trabajos y roles de base de datos con

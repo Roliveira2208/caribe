@@ -204,7 +204,7 @@ GUC (parámetros de sesión, `set_config(..., true)` dentro de la transacción):
 | `owner` | `app.user_id` | Cliente autenticado | Filas propias |
 | `tenant`+`owner` | `app.tenant_id` + `app.user_id` | Cliente pagando su reserva | Filas de esa agencia o del usuario |
 | `public` | `app.public = 'on'` | Catálogo anónimo | `products` `PUBLISHED` sin borrado, su disponibilidad y sus destinos, solo lectura |
-| `platform` | `app.platform = 'on'` | Super Admin | Todas las agencias y filas `tenant_id` NULL |
+| `platform` | `app.platform = 'on'` | Super Admin | Todas las agencias y filas `tenant_id` NULL; escribe solo overrides globales de `exchange_rates` (`tenant_id` NULL) |
 | `rates_global` | `app.rates_global = 'on'` | Job BCV | Solo escritura de `exchange_rates` con `tenant_id` NULL; ninguna otra tabla |
 
 `TenantService` gana `withOwner(userId)`, `withOwnerTenant(userId, tenantId)`, `withPublic()` y
@@ -223,8 +223,9 @@ GUC (parámetros de sesión, `set_config(..., true)` dentro de la transacción):
 - Sin dueño (`providers`, `products`, `availability`, `cancellation_policies`, `tenant_settings`):
   lectura por `tenant_id = app.tenant_id` o `app.platform = 'on'`; escritura por
   `tenant_id = app.tenant_id`. `exchange_rates` añade lectura global (`tenant_id IS NULL`) para los
-  contextos `tenant`, `owner` y `public`, y escritura global solo con `app.rates_global = 'on'`, que no
-  puede leer ni escribir ninguna otra tabla ni filas de agencia.
+  contextos `tenant`, `owner` y `public`, y escritura global con `app.rates_global = 'on'` (job BCV) o
+  `app.platform = 'on'` (override del Super Admin), siempre con `tenant_id IS NULL`. Ninguno de los dos
+  puede leer ni escribir otra tabla ni filas de agencia.
 - `products` y `availability`: política `public` de solo lectura con
   `status = 'PUBLISHED' AND deleted_at IS NULL`; la disponibilidad pública exige producto publicado y
   `destinations` es de lectura pública (solo nombre, país y código).
@@ -247,7 +248,7 @@ cliente puede tener reservas en varias agencias; "Mis reservas" consulta por `us
   registra y sigue la siguiente. Dentro: `FOR UPDATE SKIP LOCKED` sobre reservas vencidas, omite pagos
   `IN_REVIEW`/`APPROVED`, marca `EXPIRED` y decrementa.
 - BCV: `withRatesGlobal`, sin tenant, solo escribe `exchange_rates` globales y no lee ninguna otra
-  tabla.
+  tabla. `refreshGlobalRate()` se implementa en T-F1-5; BullMQ lo programa una vez al día en T-F1-8.
 - PDF y correo: `withTenant` de la reserva/pago para leer y escribir el documento o el registro de
   aviso.
 - Ningún job usa `withPlatform` ni un rol con `BYPASSRLS`.
@@ -290,11 +291,31 @@ inventario de tablas de negocio falla si alguna no tiene RLS habilitada y forzad
 
 ## 6. Tasas
 
-- `DolarApiProvider`: `getRate(date)`, timeout 5 s, un reintento, circuit breaker 3 fallos / 60 s.
-- `ManualOverrideProvider`: filas `is_override`; nunca las pisa el job.
-- Caché Redis 1 h; job diario; respaldo en la última `value_date <= hoy` (Caracas).
-- El job corre con `rates_global`, escribe solo filas con `tenant_id` NULL y no lee ninguna otra tabla;
-  nunca toca overrides de agencia.
+- `ExchangeRateProvider` (interfaz en `packages/shared`): `getRate(date: string)`, timeout 5 s, un
+  reintento, circuit breaker 3 fallos consecutivos / 60 s. `DolarApiProvider` la implementa contra
+  `DOLARAPI_URL`; recibe la tasa como texto decimal y la acepta solo si es > 0 y tiene ≤ 4 decimales.
+  Un valor inválido se trata como fallo del proveedor.
+- `ExchangeRateService`: precedencia por fecha y ámbito: override de agencia > override global > tasa
+  BCV global. Respaldo: última `value_date <= hoy` (Caracas) del ámbito. Sin ninguna fila → 503
+  `RATE_UNAVAILABLE`.
+- Caché en Redis (`REDIS_URL`) con TTL de 1 h por ámbito y fecha; si Redis no responde, caché en memoria
+  del proceso. La caché no sustituye la lectura de respaldo: al expirar se vuelve a resolver.
+- `refreshGlobalRate()`: corre con `rates_global`, obtiene la tasa del proveedor, hace upsert de la fila
+  global BCV del día (`tenant_id NULL`, `is_override = false`) y nunca pisa una fila `is_override`. Se
+  implementa y prueba en T-F1-5; la programación diaria con BullMQ se añade en T-F1-8.
+- Override de agencia: `PUT /api/v1/admin/exchange-rates/override`, cuerpo estricto
+  `{ rate: string, valueDate?: string, reason: string }` (motivo obligatorio, no vacío; `valueDate` por
+  defecto hoy en Caracas; fecha no pasada). Exige organización activa y permiso `exchange-rate:update`;
+  escribe la fila con el `tenant_id` de la agencia y `is_override = true` en `withTenant`, y deja
+  auditoría con antes/después en la misma transacción.
+- Override global: `PUT /api/v1/admin/exchange-rates/global-override`, mismo cuerpo, solo Super Admin
+  (`@Auditable({ platform: true })`); escribe con `withPlatform` una fila `tenant_id NULL` e
+  `is_override = true`, y deja auditoría de plataforma en la misma transacción. Reemplaza la fila BCV
+  global de esa fecha (unicidad parcial por `value_date`).
+- Lectura: `GET /api/v1/admin/exchange-rates/current` devuelve `{ scope, valueDate, rate, source,
+  isOverride }` con la tasa vigente del ámbito de la sesión (agencia con organización activa; global para
+  el Super Admin). Las tasas se serializan como cadena con 4 decimales.
+- El catálogo público usa la tasa global (T-F1-6); el pago usa la tasa de la agencia (T-F1-9).
 - Sin tasa global: catálogo solo USD; sin tasa de agencia: pago en VES deshabilitado, USD disponible.
 - Trigger de pago congelado y copia de `rate`/`value_date` en `payments`.
 
@@ -356,7 +377,8 @@ inventario de tablas de negocio falla si alguna no tiene RLS habilitada y forzad
 
 Justificadas aquí, con pin exacto al instalar y revisión de `pnpm-workspace.yaml` (`allowBuilds`) después:
 
-- `bullmq` + `ioredis`: expiración, PDF, correo y caché de tasa (D13).
+- `bullmq` + `ioredis`: expiración, PDF, correo y caché de tasa (D13). `ioredis` entra en T-F1-5 para
+  la caché de 1 h; `bullmq` entra en T-F1-8 con el primer trabajo programado.
 - `nodemailer`: correo SMTP.
 - `pdfkit`: generación de PDF sin navegador.
 - `qrcode`: QR del voucher.
