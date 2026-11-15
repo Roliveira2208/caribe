@@ -60,12 +60,22 @@ describe("catalog", () => {
   const codeNoEn = `noe-${suffix}`;
 
   beforeAll(async () => {
+    // El catálogo usa la tasa global. En este archivo el proveedor debe fallar
+    // para controlar la tasa desde la base: se apunta a un puerto muerto antes
+    // de crear la aplicación (el proveedor lee DOLARAPI_URL al construirse).
+    process.env.DOLARAPI_URL = "http://127.0.0.1:9/dolar";
+
     app = await createApp();
     await app.listen(0);
     baseUrl = (await app.getUrl()).replace(/\/$/, "");
 
     owner = new Client({ connectionString: process.env.DATABASE_URL });
     await owner.connect();
+
+    // Estado de partida determinista: sin tasa global vigente, el catálogo
+    // solo muestra USD. Las filas referenciadas por pagos o reembolsos no se
+    // tocan (FK), aunque en F1 todavía no existen.
+    await deleteUnreferencedGlobalRates();
 
     await owner.query(
       `INSERT INTO "organization" (id, name, slug, "createdAt")
@@ -315,8 +325,29 @@ describe("catalog", () => {
     await availability(bStd, orgB, night3, 3, 1, "80.00");
   });
 
+  /**
+   * Borra las tasas globales no referenciadas por pagos o reembolsos. La BD es
+   * compartida entre archivos e2e; este archivo controla la tasa global para
+   * probar "sin tasa" y "equivalente en VES" de forma determinista.
+   */
+  async function deleteUnreferencedGlobalRates(): Promise<void> {
+    await owner.query(`
+      DELETE FROM "exchange_rates" er
+      WHERE er."tenant_id" IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM "payments" p WHERE p."exchange_rate_id" = er."id"
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM "refunds" r WHERE r."exchange_rate_id" = er."id"
+        )
+    `);
+  }
+
   afterAll(async () => {
     if (owner) {
+      // Deja la tasa global como la encontró: la BD es compartida entre
+      // archivos e2e y el seed espera crear la suya si no hay fila.
+      await deleteUnreferencedGlobalRates();
       await owner.query(`DELETE FROM "availability" WHERE "tenant_id" = ANY($1::text[])`, [
         [orgA, orgB],
       ]);
@@ -348,7 +379,9 @@ describe("catalog", () => {
     destination: { id: string; name: { es: string; en: string }; country: string; code: string };
     attributes: { stars: number; maxGuests: number; amenities: string[]; images: string[] };
     basePriceUsd: string;
+    basePriceVes: string | null;
     totalUsd: string | null;
+    totalVes: string | null;
   }
 
   interface PageBody {
@@ -360,7 +393,7 @@ describe("catalog", () => {
     productId: string;
     from: string;
     to: string;
-    nights: Array<{ night: string; remaining: number; priceUsd: string }>;
+    nights: Array<{ night: string; remaining: number; priceUsd: string; priceVes: string | null }>;
   }
 
   interface ProblemBody {
@@ -557,9 +590,9 @@ describe("catalog", () => {
         from: checkIn,
         to: checkOut,
         nights: [
-          { night: night1, remaining: 4, priceUsd: "100.00" },
-          { night: night2, remaining: 4, priceUsd: "120.00" },
-          { night: night3, remaining: 4, priceUsd: "90.00" },
+          { night: night1, remaining: 4, priceUsd: "100.00", priceVes: null },
+          { night: night2, remaining: 4, priceUsd: "120.00", priceVes: null },
+          { night: night3, remaining: 4, priceUsd: "90.00", priceVes: null },
         ],
       });
       const serialized = JSON.stringify(body);
@@ -589,6 +622,65 @@ describe("catalog", () => {
       );
       expect(status).toBe(422);
       expect(body.code).toBe("VALIDATION_ERROR");
+    });
+  });
+
+  describe("Precio VES informativo", () => {
+    it("sin tasa disponible muestra solo precios en USD", async () => {
+      const page = await getJson<PageBody>(
+        `/products?destinationId=${destA}&checkIn=${checkIn}&checkOut=${checkOut}`,
+      );
+      expect(page.status).toBe(200);
+      expect(page.body.items[0]).toMatchObject({
+        id: aStd,
+        basePriceVes: null,
+        totalVes: null,
+      });
+
+      const detail = await getJson<Record<string, unknown>>(`/products/${aStd}`);
+      expect(detail.status).toBe(200);
+      expect(detail.body).toMatchObject({ basePriceUsd: "100.00", basePriceVes: null });
+
+      const availability = await getJson<AvailabilityBody>(
+        `/products/${aStd}/availability?from=${checkIn}&to=${checkOut}`,
+      );
+      expect(availability.status).toBe(200);
+      expect(availability.body.nights.every((night) => night.priceVes === null)).toBe(true);
+    });
+
+    it("usa la tasa global para el precio, el total y cada noche", async () => {
+      await owner.query(
+        `INSERT INTO "exchange_rates"
+           (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
+         VALUES ($1, NULL, 'TEST', '900.0000', $2::date, now(), false, NULL, NULL)`,
+        [randomUUID(), today],
+      );
+
+      const page = await getJson<PageBody>(
+        `/products?destinationId=${destA}&checkIn=${checkIn}&checkOut=${checkOut}`,
+      );
+      expect(page.status).toBe(200);
+      expect(page.body.items[0]).toMatchObject({
+        id: aStd,
+        basePriceUsd: "100.00",
+        basePriceVes: "90000.00",
+        totalUsd: "310.00",
+        totalVes: "279000.00",
+      });
+
+      const detail = await getJson<Record<string, unknown>>(`/products/${aStd}`);
+      expect(detail.status).toBe(200);
+      expect(detail.body).toMatchObject({ basePriceVes: "90000.00" });
+
+      const availability = await getJson<AvailabilityBody>(
+        `/products/${aStd}/availability?from=${checkIn}&to=${checkOut}`,
+      );
+      expect(availability.status).toBe(200);
+      expect(availability.body.nights.map((night) => night.priceVes)).toEqual([
+        "90000.00",
+        "108000.00",
+        "81000.00",
+      ]);
     });
   });
 });

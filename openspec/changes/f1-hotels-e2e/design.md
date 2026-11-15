@@ -96,10 +96,13 @@ defecto y `en` soportado. No se crea una tabla `user_settings` para un solo camp
   codifica `{ order, price, id }` con `order` = `base` o `stay:<checkIn>:<checkOut>` y se rechaza con
   422 si no corresponde. Respuesta `{ items, nextCursor }`; cada oferta lleva `id`, `hotelKey`,
   `roomType`, `type`, `title`, `description`, `destination`, `attributes` (incluye `images`),
-  `basePriceUsd` y `totalUsd` (`null` sin fechas). El detalle repite la oferta sin `totalUsd`.
+  `basePriceUsd`, `basePriceVes` y `totalUsd`/`totalVes` (`null` sin fechas). El detalle repite la
+  oferta sin `totalUsd`/`totalVes`.
   `GET /products/:id/availability` acepta `from`/`to` y devuelve
-  `{ productId, from, to, nights: [{ night, remaining, priceUsd }] }`, por defecto 31 noches desde hoy
-  en Caracas, nunca `capacity` ni `reserved`. Un producto no público responde 404 en ambas lecturas.
+  `{ productId, from, to, nights: [{ night, remaining, priceUsd, priceVes }] }`, por defecto 31 noches
+  desde hoy en Caracas, nunca `capacity` ni `reserved`. Un producto no público responde 404 en ambas
+  lecturas. El VES es informativo y usa la tasa global vigente (USD × tasa, `ROUND_HALF_UP` a 2
+  decimales); sin tasa global los campos VES son `null` y el catálogo muestra solo USD (T-F1-6).
 - **Contrato del panel (T-F1-4).** `GET/POST /admin/products`, `GET/PUT/DELETE /admin/products/:id` y
   `POST /admin/products/:id/publish|archive`. El listado usa keyset `updated_at DESC, id DESC` con
   `limit` 20 por defecto (máximo 100), cursor opaco y filtros `status`, `providerId`, `hotelKey`,

@@ -88,7 +88,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   tenencia global/agencia. Incluye `refreshGlobalRate()` (cuerpo del job) bajo `rates_global`; la
   programación diaria con BullMQ entra en T-F1-8.
   Prueba: exchange-rates › "Fuente disponible", "Ajuste manual" y "Tenencia de las tasas".
-- [ ] T-F1-6 Precio VES informativo en catálogo con la tasa global.
+- [x] T-F1-6 Precio VES informativo en catálogo con la tasa global.
   Prueba: catalog › "Sin tasa disponible" y "Equivalente en VES".
 - [ ] T-F1-7 `BookingModule`: crear reserva con retención multi-noche, viajeros, código e
   `Idempotency-Key`.

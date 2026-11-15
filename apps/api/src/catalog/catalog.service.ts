@@ -7,7 +7,9 @@ import {
 } from "@caribe/shared";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { Prisma } from "../generated/prisma/client.js";
+import { ExchangeRateService } from "../rates/exchange-rate.service.js";
 import { TenantService } from "../tenant/tenant.service.js";
+import { vesAmount } from "./catalog.pricing.js";
 import {
   AVAILABILITY_DEFAULT_NIGHTS,
   CATALOG_DEFAULT_LIMIT,
@@ -71,7 +73,10 @@ interface StayRange {
  */
 @Injectable()
 export class CatalogService {
-  constructor(private readonly tenantService: TenantService) {}
+  constructor(
+    private readonly tenantService: TenantService,
+    private readonly exchangeRates: ExchangeRateService,
+  ) {}
 
   /** Búsqueda con filtros, orden precio/identificador y cursor opaco. */
   async search(query: CatalogQuery): Promise<CatalogPage> {
@@ -83,16 +88,17 @@ export class CatalogService {
     const order = catalogOrderKey(range);
     const cursor = query.cursor ? decodeCatalogCursor(query.cursor, order) : null;
 
-    const rows = await this.tenantService.withPublic((tx) =>
-      this.searchRows(tx, query, range, limit, cursor),
-    );
+    const [rows, rate] = await Promise.all([
+      this.tenantService.withPublic((tx) => this.searchRows(tx, query, range, limit, cursor)),
+      this.globalRateOrNull(),
+    ]);
 
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page.at(-1);
 
     return {
-      items: page.map(toOffer),
+      items: page.map((row) => toOffer(row, rate)),
       nextCursor:
         hasMore && last
           ? encodeCatalogCursor({
@@ -106,6 +112,7 @@ export class CatalogService {
 
   /** Ficha pública de un producto `PUBLISHED` sin borrado lógico. */
   async detail(id: string): Promise<CatalogProduct> {
+    const rate = await this.globalRateOrNull();
     const rows = await this.tenantService.withPublic((tx) =>
       tx.$queryRaw<ProductRow[]>(Prisma.sql`
         SELECT p."id" AS id,
@@ -130,7 +137,7 @@ export class CatalogService {
 
     const product = rows[0];
     if (!product) throw productNotFound();
-    return toProduct(product);
+    return toProduct(product, rate);
   }
 
   /**
@@ -141,6 +148,7 @@ export class CatalogService {
   async availability(id: string, query: AvailabilityQuery): Promise<CatalogAvailability> {
     const from = query.from ?? todayInCaracas();
     const to = query.to ?? addDays(from, AVAILABILITY_DEFAULT_NIGHTS);
+    const rate = await this.globalRateOrNull();
 
     return this.tenantService.withPublic(async (tx) => {
       const exists = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -169,9 +177,26 @@ export class CatalogService {
           night: formatValueDate(row.night),
           remaining: Number(row.remaining),
           priceUsd: formatAmount(row.price_usd),
+          priceVes: vesAmount(row.price_usd, rate),
         })),
       };
     });
+  }
+
+  /**
+   * Tasa global vigente para el VES informativo. Sin tasa global el catálogo
+   * sigue sirviendo USD (spec catalog, "Sin tasa disponible"); un fallo
+   * distinto de la ausencia de tasa no se oculta.
+   */
+  private async globalRateOrNull(): Promise<string | null> {
+    try {
+      return (await this.exchangeRates.globalRate()).rate;
+    } catch (error) {
+      if (error instanceof ApiProblemException && error.code === "RATE_UNAVAILABLE") {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /** Consulta keyset: pide una fila de más para saber si hay página siguiente. */
@@ -297,7 +322,7 @@ function escapeLike(value: string): string {
   return value.replace(/[!%_]/g, (match) => `!${match}`);
 }
 
-function toProduct(row: ProductRow): CatalogProduct {
+function toProduct(row: ProductRow, rate: string | null): CatalogProduct {
   return {
     id: row.id,
     hotelKey: row.hotel_key,
@@ -308,13 +333,15 @@ function toProduct(row: ProductRow): CatalogProduct {
     destination: toDestination(row),
     attributes: toAttributes(row.attributes),
     basePriceUsd: formatAmount(row.base_price_usd),
+    basePriceVes: vesAmount(row.base_price_usd, rate),
   };
 }
 
-function toOffer(row: OfferRow): CatalogOffer {
+function toOffer(row: OfferRow, rate: string | null): CatalogOffer {
   return {
-    ...toProduct(row),
+    ...toProduct(row, rate),
     totalUsd: row.stay_total === null ? null : formatAmount(row.stay_total),
+    totalVes: row.stay_total === null ? null : vesAmount(row.stay_total, rate),
   };
 }
 

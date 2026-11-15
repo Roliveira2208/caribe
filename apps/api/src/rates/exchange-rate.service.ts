@@ -98,10 +98,11 @@ export class ExchangeRateService {
 
   /**
    * Tasa global vigente para una fecha (catálogo público, T-F1-6). Corre en
-   * el contexto `public`, que solo ve filas globales.
+   * el contexto `public`, que solo ve filas globales, y no dispara al
+   * proveedor: la fila la escriben `refreshGlobalRate()` (job diario) o un
+   * override. Sin fila lanza 503 y el catálogo sigue sirviendo USD.
    */
   async globalRate(date: string = todayInCaracas()): Promise<ExchangeRateView> {
-    await this.refreshGlobalRate().catch(() => undefined);
     return this.tenantService.withPublic((tx) => this.resolveGlobal(tx, date));
   }
 

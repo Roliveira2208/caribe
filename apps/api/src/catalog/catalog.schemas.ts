@@ -125,6 +125,8 @@ export interface CatalogProduct {
   destination: CatalogDestination;
   attributes: CatalogAttributes;
   basePriceUsd: string;
+  /** Equivalente informativo con la tasa global; `null` si no hay tasa. */
+  basePriceVes: string | null;
 }
 
 /**
@@ -133,6 +135,8 @@ export interface CatalogProduct {
  */
 export interface CatalogOffer extends CatalogProduct {
   totalUsd: string | null;
+  /** Equivalente informativo del total; `null` sin fechas o sin tasa. */
+  totalVes: string | null;
 }
 
 export interface CatalogPage {
@@ -144,6 +148,8 @@ export interface AvailabilityNight {
   night: string;
   remaining: number;
   priceUsd: string;
+  /** Equivalente informativo con la tasa global; `null` si no hay tasa. */
+  priceVes: string | null;
 }
 
 export interface CatalogAvailability {
