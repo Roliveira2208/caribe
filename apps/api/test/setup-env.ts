@@ -12,3 +12,4 @@ process.env.DATABASE_URL ??=
 process.env.BETTER_AUTH_SECRET ??= "test-secret-no-usar-en-produccion-0123456789";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3002";
 process.env.TRUSTED_ORIGINS ??= "http://localhost:3000,http://localhost:3001";
+process.env.ALLOWED_IMAGE_HOSTS ??= "images.caribe.test";

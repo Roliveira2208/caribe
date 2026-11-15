@@ -100,6 +100,22 @@ defecto y `en` soportado. No se crea una tabla `user_settings` para un solo camp
   `GET /products/:id/availability` acepta `from`/`to` y devuelve
   `{ productId, from, to, nights: [{ night, remaining, priceUsd }] }`, por defecto 31 noches desde hoy
   en Caracas, nunca `capacity` ni `reserved`. Un producto no público responde 404 en ambas lecturas.
+- **Contrato del panel (T-F1-4).** `GET/POST /admin/products`, `GET/PUT/DELETE /admin/products/:id` y
+  `POST /admin/products/:id/publish|archive`. El listado usa keyset `updated_at DESC, id DESC` con
+  `limit` 20 por defecto (máximo 100), cursor opaco y filtros `status`, `providerId`, `hotelKey`,
+  `destinationId` y `q` (coincidencia literal sobre `title.es`/`title.en`). La respuesta de panel lleva
+  datos internos (`tenantId`, `providerId`, `status`, destino, `hotelKey`, `roomType`, `attributes`,
+  precios y timestamps) y nunca `capacity`/`reserved`; `{ items, nextCursor }` en el listado y la ficha
+  suelta en el resto. `DELETE` es borrado lógico: todas las lecturas posteriores responden 404.
+- **Propiedad y propagación (T-F1-4).** `ProductsGuard` exige la acción `product:*` de la matriz
+  (owner/admin/provider) y deja el resto al servicio: un proveedor solo alcanza los productos de su
+  `providers.user_id` (403 para otro proveedor de la misma agencia) y un producto de otra agencia
+  responde 404. El Super Admin sin agencia activa solo lee (403 en escrituras). En el alta, el admin
+  elige `providerId` y el proveedor solo puede usar el suyo; sin `hotelKey` el servidor genera uno nuevo
+  y con `hotelKey` se valida el máximo de 5 tipos. Al editar, `title`, `stars`, `amenities` e `images`
+  se propagan a todos los tipos no borrados con la misma `hotel_key` en la misma transacción;
+  `description`, `roomType`, `maxGuests`, `basePriceUsd`, destino y política de cancelación son del
+  tipo editado.
 
 ### 2.3 Reservas
 

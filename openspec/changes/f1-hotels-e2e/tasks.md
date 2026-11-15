@@ -82,7 +82,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Prueba: demo manual documentada.
 - [x] T-F1-3 `CatalogModule`: listado con filtros y cursor, detalle y disponibilidad públicos.
   Prueba: catalog › "Búsqueda y filtros" y "Detalle y disponibilidad públicos".
-- [ ] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
+- [x] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
   Prueba: auth-access › "Proveedor edita su producto" y "Propiedad de productos".
 - [ ] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo, circuit breaker, override con auditoría y
   tenencia global/agencia.

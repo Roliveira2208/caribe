@@ -13,16 +13,15 @@ import {
   CATALOG_DEFAULT_LIMIT,
   addDays,
   type AvailabilityQuery,
-  type CatalogAttributes,
   type CatalogAvailability,
   type CatalogDestination,
   type CatalogOffer,
   type CatalogPage,
   type CatalogProduct,
   type CatalogQuery,
-  type LocalizedText,
 } from "./catalog.schemas.js";
 import { catalogOrderKey, decodeCatalogCursor, encodeCatalogCursor } from "./catalog.cursor.js";
+import { toAttributes, toLocalized } from "./catalog.mappers.js";
 
 /** Fila de la ficha pública; la oferta añade el total de la estancia. */
 interface ProductRow {
@@ -326,38 +325,4 @@ function toDestination(row: ProductRow): CatalogDestination {
     country: row.destination_country,
     code: row.destination_code,
   };
-}
-
-/** Texto i18n con respaldo `en` → `es` (spec catalog, "Falta traducción"). */
-function toLocalized(value: unknown): LocalizedText {
-  const record = asRecord(value);
-  const es = typeof record["es"] === "string" ? record["es"] : "";
-  const en = typeof record["en"] === "string" ? record["en"] : "";
-  return { es: es || en, en: en || es };
-}
-
-function toAttributes(value: unknown): CatalogAttributes {
-  const record = asRecord(value);
-  return {
-    stars: integerOr(record["stars"], 0),
-    maxGuests: integerOr(record["maxGuests"], 0),
-    amenities: stringArray(record["amenities"]),
-    images: stringArray(record["images"]),
-  };
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function integerOr(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isInteger(value) ? value : fallback;
-}
-
-function stringArray(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
 }
