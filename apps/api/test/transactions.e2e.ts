@@ -636,6 +636,61 @@ describe("reservas, pagos y documentos (RLS y reglas de base)", () => {
         ),
       ).rejects.toThrow();
     });
+
+    it("el contexto de plataforma lee todo y solo escribe filas globales de tasas", async () => {
+      const guc = { platform: true };
+      expect(await asApp(guc, (c) => ids(c, "exchange_rates"))).toEqual(
+        expect.arrayContaining([rateGlobal, rateA, rateB]),
+      );
+
+      // El contexto de plataforma (Super Admin sin agencia) puede escribir el
+      // override global de la tasa, pero nunca filas de una agencia ni
+      // catálogo. Las filas insertadas se deshacen con el ROLLBACK de asApp.
+      const platformRate = randomUUID();
+      const platformDate = nextRateDate(nextRateDate(valueDate));
+      await asApp(guc, async (c) => {
+        await c.query(
+          `INSERT INTO "exchange_rates"
+             (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
+           VALUES ($1, NULL, 'DOLARAPI', 910.0000, $2::date, now(), false, NULL, NULL)`,
+          [platformRate, platformDate],
+        );
+
+        const updated = await c.query(
+          `UPDATE "exchange_rates" SET "rate" = 915.0000 WHERE "id" = $1`,
+          [platformRate],
+        );
+        expect(updated.rowCount).toBe(1);
+
+        const agencyRow = await c.query(
+          `UPDATE "exchange_rates" SET "rate" = 1.0000 WHERE "id" = $1`,
+          [rateA],
+        );
+        expect(agencyRow.rowCount).toBe(0);
+      });
+
+      await expect(
+        asApp(guc, (c) =>
+          c.query(
+            `INSERT INTO "exchange_rates"
+               (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
+             VALUES ($1, $2, 'MANUAL', 980.0000, $3::date, now(), true, 'Intento', $4)`,
+            [randomUUID(), orgA, nextRateDate(platformDate), userA],
+          ),
+        ),
+      ).rejects.toThrow();
+
+      await expect(
+        asApp(guc, (c) =>
+          c.query(
+            `INSERT INTO "destinations"
+               (id, tenant_id, name, country, code, created_at, updated_at)
+             VALUES ($1, $2, '{"es":"Plataforma","en":"Platform"}'::jsonb, 'VE', $3, now(), now())`,
+            [randomUUID(), orgA, `plat-${suffix}`],
+          ),
+        ),
+      ).rejects.toThrow();
+    });
   });
 
   describe("reglas de base", () => {

@@ -9,5 +9,10 @@ export default defineConfig({
     setupFiles: ["./test/setup-env.ts"],
     testTimeout: 20_000,
     hookTimeout: 30_000,
+    // Los e2e comparten una sola base PostgreSQL y varios fijan estado global
+    // (la tasa del día, el seed de demostración). En paralelo se pisan entre
+    // archivos; en serie el estado de cada archivo queda aislado. Además evita
+    // que varios Nest arranquen a la vez y agoten el hookTimeout.
+    fileParallelism: false,
   },
 });

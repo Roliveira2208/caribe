@@ -511,6 +511,29 @@ describe("reservas, pagos y documentos (T-F1-1c)", () => {
     expect(sql).toContain('CREATE POLICY "notification_logs_tenant"');
   });
 
+  it("permite a la plataforma escribir solo tasas globales, sin borrar", () => {
+    const migration = readMigrations().find(({ name }) =>
+      name.endsWith("_exchange_rates_platform_global_write"),
+    );
+    const sql = stripSqlComments(migration?.sql ?? "");
+
+    // La política anterior (solo SELECT) se sustituye por lectura total y
+    // escritura limitada a las filas globales (`tenant_id` NULL).
+    expect(sql).toContain('DROP POLICY "exchange_rates_platform" ON "exchange_rates"');
+    expect(sql).toContain('CREATE POLICY "exchange_rates_platform_read"');
+    expect(sql).toMatch(
+      /CREATE POLICY "exchange_rates_platform_read"[\s\S]*?FOR SELECT[\s\S]*?app\.platform/,
+    );
+    expect(sql).toMatch(
+      /CREATE POLICY "exchange_rates_platform_insert"[\s\S]*?FOR INSERT[\s\S]*?app\.platform[\s\S]*?"tenant_id" IS NULL/,
+    );
+    expect(sql).toMatch(
+      /CREATE POLICY "exchange_rates_platform_update"[\s\S]*?FOR UPDATE[\s\S]*?app\.platform[\s\S]*?"tenant_id" IS NULL/,
+    );
+    expect(sql).not.toContain("FOR DELETE");
+    expect(sql).not.toContain('CREATE POLICY "exchange_rates_platform_delete"');
+  });
+
   it("congela precios, identidad y reembolsos con triggers", () => {
     const migration = transactionsMigration();
     const sql = stripSqlComments(migration?.sql ?? "");

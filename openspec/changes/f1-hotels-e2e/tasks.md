@@ -84,7 +84,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Prueba: catalog › "Búsqueda y filtros" y "Detalle y disponibilidad públicos".
 - [x] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
   Prueba: auth-access › "Proveedor edita su producto" y "Propiedad de productos".
-- [ ] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo, circuit breaker, override con auditoría y
+- [x] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo, circuit breaker, override con auditoría y
   tenencia global/agencia. Incluye `refreshGlobalRate()` (cuerpo del job) bajo `rates_global`; la
   programación diaria con BullMQ entra en T-F1-8.
   Prueba: exchange-rates › "Fuente disponible", "Ajuste manual" y "Tenencia de las tasas".

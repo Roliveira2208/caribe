@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
-import { AdminController } from "./admin.controller.js";
 import { AdminTwoFactorGuard } from "./admin-two-factor.guard.js";
 import { OrganizationsController } from "./organizations.controller.js";
 
@@ -9,10 +8,11 @@ import { OrganizationsController } from "./organizations.controller.js";
  * app.module registra la lib con disableGlobalAuthGuard: true, asi que
  * AdminTwoFactorGuard (subclase del AuthGuard de la lib) es el unico guard
  * global de la API. T-F0-9 anade POST /admin/organizations (accion de
- * plataforma auditada, delta de audit).
+ * plataforma auditada, delta de audit). Las tasas viven en RatesModule
+ * (T-F1-5).
  */
 @Module({
-  controllers: [AdminController, OrganizationsController],
+  controllers: [OrganizationsController],
   providers: [{ provide: APP_GUARD, useClass: AdminTwoFactorGuard }],
 })
 export class AdminModule {}

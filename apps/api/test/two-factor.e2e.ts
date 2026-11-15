@@ -746,9 +746,17 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     cookie = sessionCookieOf(verify);
     expect(cookie).not.toBe("");
 
-    const after = await callAdminOverride(cookie);
+    const after = await callAdminOverride(cookie, {
+      rate: "950.0000",
+      reason: "TOTP verificado",
+    });
     expect(after.status).toBe(200);
-    await expect(after.json()).resolves.toMatchObject({ overridden: true });
+    await expect(after.json()).resolves.toMatchObject({
+      scope: "agency",
+      rate: "950.0000",
+      source: "MANUAL",
+      isOverride: true,
+    });
   });
 
   /** Owner de agencia con organizacion activa y sin TOTP (cacheado entre tests). */
@@ -805,11 +813,14 @@ describe("auth-access: segundo factor (T-F0-8)", () => {
     return cachedAgentWithoutOrg;
   }
 
-  async function callAdminOverride(cookie: string): Promise<Response> {
+  async function callAdminOverride(
+    cookie: string,
+    body: Record<string, unknown> = {},
+  ): Promise<Response> {
     return fetch(`${baseUrl}/api/v1/admin/exchange-rates/override`, {
       method: "PUT",
       headers: { "content-type": "application/json", cookie, origin: authOrigin },
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     });
   }
 

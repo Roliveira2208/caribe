@@ -119,26 +119,35 @@ describe("audit: rastro inmutable (T-F0-9)", () => {
     await prisma.$disconnect();
   });
 
-  describe("accion sensible de agencia (endpoint de ejemplo)", () => {
+  describe("accion sensible de agencia (override de tasa)", () => {
     it("deja fila con actor, accion, antes, despues, IP y fecha de la sesion", async () => {
       const res = await fetch(`${baseUrl}/api/v1/admin/exchange-rates/override`, {
         method: "PUT",
         headers: { "content-type": "application/json", cookie: adminACookie, origin: authOrigin },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ rate: "950.0000", reason: "Auditoría de tasa" }),
       });
       expect(res.status).toBe(200);
-      await expect(res.json()).resolves.toMatchObject({ overridden: true });
+      await expect(res.json()).resolves.toMatchObject({
+        scope: "agency",
+        rate: "950.0000",
+        source: "MANUAL",
+        isOverride: true,
+      });
 
       const row = await prisma.auditLog.findFirstOrThrow({
-        where: { action: "exchange-rate.override", entityId: orgA },
+        where: { action: "exchange-rate.override", tenantId: orgA },
+        orderBy: { at: "desc" },
       });
       expect(row.tenantId).toBe(orgA);
       expect(row.actorId).toBe(adminAId);
       expect(row.entity).toBe("exchange-rate");
-      // F0 no tiene tabla de tasas: el ejemplo registra "sin override" ->
-      // "con override". F2 (specs/payments) sustituira por el estado real.
       expect(row.before).toBe(null);
-      expect(row.after).toEqual({ overridden: true });
+      expect(row.after).toMatchObject({
+        rate: "950.0000",
+        source: "MANUAL",
+        isOverride: true,
+        reason: "Auditoría de tasa",
+      });
       expect(row.ip).toBeTruthy();
       expect(row.at.getTime()).toBeGreaterThanOrEqual(startedAt);
     });

@@ -240,6 +240,10 @@ describe("seed de demostracion (T-F0-6b)", () => {
   });
 
   it("deja el inventario de demostracion publicado, con disponibilidad, politica, tasa y pago manual", async () => {
+    // Otra suite e2e (tasas) puede haber fijado la tasa global de hoy. El seed
+    // solo crea `SEED` si no hay fila para la fecha y nunca pisa una existente:
+    // se comprueba justo eso, sin depender de una BD limpia.
+    const before = await readInventory();
     await seedDemo(); // auto-suficiente: no depende del orden de los tests.
     const inventory = await readInventory();
 
@@ -271,10 +275,10 @@ describe("seed de demostracion (T-F0-6b)", () => {
     expect(inventory.availability.lastNight).toEqual(caracasNight(demoHotel.nights - 1));
     expect(inventory.availability.wrongRows).toBe(0);
 
-    expect(inventory.globalRate).toEqual({
-      source: "SEED",
-      rate: "900.0000",
-    });
+    expect(inventory.globalRate).not.toBeNull();
+    expect(inventory.globalRate).toEqual(
+      before.globalRate ?? { source: "SEED", rate: "900.0000" },
+    );
     expect(inventory.paymentMode).toBe("MANUAL");
   });
 });

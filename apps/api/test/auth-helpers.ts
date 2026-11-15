@@ -42,7 +42,12 @@ export async function signIn(baseUrl: string, email: string): Promise<string> {
 
 /** Cookie de sesion (better-auth.session_token) de un Response; "" si no viene. */
 export function sessionCookieOf(res: Response): string {
-  const cookies = res.headers.getSetCookie();
+  return sessionCookieOfHeaders(res.headers);
+}
+
+/** Igual que sessionCookieOf pero para las cabeceras que devuelve auth.api. */
+export function sessionCookieOfHeaders(headers: Headers): string {
+  const cookies = headers.getSetCookie();
   const session = cookies.find((cookie) => cookie.startsWith("better-auth.session_token"));
   return session?.split(";")[0] ?? "";
 }
@@ -97,9 +102,15 @@ export async function setActiveOrg(
 }
 
 /**
- * Usuario con TOTP activo por HTTP (enable + verify-totp): la cookie devuelta
- * es la de la sesion ya con el segundo factor verificado. La usan las
- * escrituras administrativas de Better Auth y las rutas /admin de Nest.
+ * Usuario con TOTP activo: la cookie devuelta es la de la sesion ya con el
+ * segundo factor verificado. La usan las escrituras administrativas de Better
+ * Auth y las rutas /admin de Nest.
+ *
+ * El enable y el verify van por la API de servidor (`auth.api.*`) a proposito:
+ * el plugin two-factor limita `/two-factor/*` a 3 peticiones cada 10 s por IP
+ * y un e2e que crea varias agencias agota el cupo. `onRequestRateLimit` solo
+ * corre en el handler HTTP, no en las llamadas de servidor, asi que este camino
+ * no falsea el comportamiento bajo prueba (que es el TOTP, no su limite).
  */
 export async function userWithTotp(
   baseUrl: string,
@@ -107,20 +118,25 @@ export async function userWithTotp(
 ): Promise<{ userId: string; cookie: string }> {
   const userId = await createUser(email);
   const cookie = await signIn(baseUrl, email);
-  const enable = await fetch(`${baseUrl}/api/auth/two-factor/enable`, {
-    method: "POST",
-    headers: { "content-type": "application/json", cookie, origin: authOrigin },
-    body: JSON.stringify({ password: TEST_PASSWORD }),
+  const headers = new Headers({ cookie });
+  const enabled = await auth.api.enableTwoFactor({
+    body: { password: TEST_PASSWORD, method: "totp" },
+    headers,
   });
-  if (!enable.ok) throw new Error(`enable falló: ${await enable.text()}`);
-  const { totpURI } = (await enable.json()) as { totpURI: string };
-  const verify = await fetch(`${baseUrl}/api/auth/two-factor/verify-totp`, {
-    method: "POST",
-    headers: { "content-type": "application/json", cookie, origin: authOrigin },
-    body: JSON.stringify({ code: totpCode(totpSecretFromUri(totpURI)) }),
+  if (!("totpURI" in enabled)) {
+    throw new Error("enable no devolvió el secreto TOTP");
+  }
+  const { totpURI } = enabled;
+  const verified = await auth.api.verifyTOTP({
+    body: { code: totpCode(totpSecretFromUri(totpURI)) },
+    headers,
+    returnHeaders: true,
   });
-  if (!verify.ok) throw new Error(`verify-totp falló: ${await verify.text()}`);
-  return { userId, cookie: sessionCookieOf(verify) };
+  const verifiedCookie = sessionCookieOfHeaders(verified.headers);
+  if (!verifiedCookie) {
+    throw new Error("verify-totp no fijó la cookie de sesión");
+  }
+  return { userId, cookie: verifiedCookie };
 }
 
 /** Secreto base32 del otpauth:// que devuelve /two-factor/enable. */
