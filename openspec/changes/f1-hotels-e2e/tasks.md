@@ -108,10 +108,15 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   auth-access apunta al endpoint real sin duplicar products-admin. Deseables cubiertos: filtro por
   estado y producto despublicado después de reservar. La colisión de código sigue cubierta solo en
   unitarios de `withCodeRetry`: forzarla por HTTP exige mockear el generador y no sale barata.
-- [ ] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión; más la
+- [x] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión; más la
   programación diaria del refresco de la tasa global (`refreshGlobalRate()` de T-F1-5) con BullMQ.
-  Prueba: booking › "Vence sin pago" y "Carrera entre pago y expiración"; exchange-rates › "Fuente
-  disponible" con el job programado.
+  Prueba: booking › "Expiración de la retención" (vence, idempotente, omite `IN_REVIEW`/`APPROVED`,
+  expira con `REJECTED`, no toca no vencidas ni `CONFIRMED`, aislamiento por agencia, un fallo no
+  detiene a las demás); jobs › calendarios, zona horaria, reintentos, despacho y `jobsEnabled`.
+  Nota: el escenario "Carrera entre pago y expiración" y el 410 `HOLD_EXPIRED` quedan en T-F1-9, que
+  es donde existe el endpoint de pago. El planificador no arranca con `NODE_ENV=test` ni sin
+  `REDIS_URL`, así que los e2e no dependen de Redis; `expireDueBookings(now, organizationIds?)` acota
+  una pasada para reprocesos manuales y pruebas.
 - [ ] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, datos por método, monto
   calculado en servidor y revisor distinto.
   Prueba: payments › "Pago en VES por Pago Móvil" y "Modo MANUAL aprobado".

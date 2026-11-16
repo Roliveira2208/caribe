@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Client } from "pg";
 import { todayInCaracas } from "@caribe/shared";
 import { createApp, type ApiApplication } from "../src/bootstrap.js";
-import { BOOKING_CODE_PATTERN } from "../src/bookings/booking-code.js";
+import { BOOKING_CODE_PATTERN, generateBookingCode } from "../src/bookings/booking-code.js";
 import {
   BOOKINGS_CREATE_ENDPOINT,
   createBookingSchema,
@@ -12,6 +12,7 @@ import {
   type Traveler,
 } from "../src/bookings/bookings.schemas.js";
 import { addDays } from "../src/catalog/catalog.schemas.js";
+import { BookingExpirationService } from "../src/jobs/booking-expiration.service.js";
 import { prisma } from "../src/prisma.js";
 import { authOrigin, addMember, createUser, setActiveOrg, signIn } from "./auth-helpers.js";
 
@@ -32,6 +33,7 @@ describe("bookings (creacion de reservas)", () => {
   let app: ApiApplication;
   let baseUrl: string;
   let owner: Client;
+  let expiration: BookingExpirationService;
 
   let clientA = "";
   let clientB = "";
@@ -58,6 +60,7 @@ describe("bookings (creacion de reservas)", () => {
 
   const hotelKeyStd = randomUUID();
   const policyFlex = randomUUID();
+  const rateA = randomUUID();
 
   const pStd = randomUUID();
   const pMissing = randomUUID();
@@ -97,6 +100,7 @@ describe("bookings (creacion de reservas)", () => {
     app = await createApp();
     await app.listen(0);
     baseUrl = (await app.getUrl()).replace(/\/$/, "");
+    expiration = app.get(BookingExpirationService);
 
     owner = new Client({ connectionString: process.env.DATABASE_URL });
     await owner.connect();
@@ -183,6 +187,15 @@ describe("bookings (creacion de reservas)", () => {
       `INSERT INTO "tenant_settings" (tenant_id, hold_minutes, updated_at)
        VALUES ($1, 15, now())`,
       [orgHold],
+    );
+
+    // Tasa de agencia para los pagos de las pruebas de expiración: el pago
+    // exige una tasa global o de la agencia (trigger payments_tenant_coherence).
+    await owner.query(
+      `INSERT INTO "exchange_rates"
+         (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
+       VALUES ($1, $2, 'MANUAL', 900.0000, $3::date, now(), true, 'Prueba de expiración', $4)`,
+      [rateA, orgA, today, staffA],
     );
 
     await product({
@@ -337,6 +350,9 @@ describe("bookings (creacion de reservas)", () => {
   beforeEach(async () => {
     // El trigger de fallo de auditoría no se dispara para orgA/orgHold, pero se
     // recrea por si una corrida anterior se interrumpió.
+    await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [
+      [orgA, orgHold, orgFail],
+    ]);
     await owner.query(`DELETE FROM "bookings" WHERE "tenant_id" = ANY($1::text[])`, [
       [orgA, orgHold, orgFail],
     ]);
@@ -357,6 +373,9 @@ describe("bookings (creacion de reservas)", () => {
       await dropAuditFailureTrigger();
       const userIds = [clientA, clientB].filter((id) => id.length > 0);
       const tenantIds = [orgA, orgHold, orgFail];
+      await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [
+        tenantIds,
+      ]);
       await owner.query(`DELETE FROM "bookings" WHERE "tenant_id" = ANY($1::text[])`, [
         tenantIds,
       ]);
@@ -365,6 +384,9 @@ describe("bookings (creacion de reservas)", () => {
           userIds,
         ]);
       }
+      await owner.query(`DELETE FROM "exchange_rates" WHERE "tenant_id" = ANY($1::text[])`, [
+        tenantIds,
+      ]);
       await owner.query(`DELETE FROM "availability" WHERE "tenant_id" = ANY($1::text[])`, [
         tenantIds,
       ]);
@@ -1231,6 +1253,201 @@ describe("bookings (creacion de reservas)", () => {
           [JSON.stringify(titleA), pStd],
         );
       }
+    });
+  });
+
+  describe("Expiración de la retención", () => {
+    /** Un minuto después del vencimiento por defecto (30 min). */
+    function afterHold(): Date {
+      return new Date(Date.now() + 31 * 60 * 1000);
+    }
+
+    async function createPending(
+      overrides: Partial<CreateBookingBody> = {},
+    ): Promise<BookingBody> {
+      const res = await postBooking(cookieA, keyFor(), bookingBody(overrides));
+      expect(res.status).toBe(201);
+      return jsonOf<BookingBody>(res);
+    }
+
+    async function statusOf(id: string): Promise<string> {
+      const row = await prisma.booking.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      return row?.status ?? "MISSING";
+    }
+
+    async function insertPayment(
+      bookingId: string,
+      status: "IN_REVIEW" | "APPROVED" | "REJECTED",
+    ): Promise<string> {
+      const id = randomUUID();
+      await owner.query(
+        `INSERT INTO "payments"
+           (id, tenant_id, booking_id, method, amount_usd, amount_ves, exchange_rate_id,
+            rate, value_date, reference, status, reported_by, rejection_reason, created_at)
+         VALUES ($1, $2, $3, 'PAGO_MOVIL', 100.00, 90000.00, $4, 900.0000, $5::date,
+                 'ref-prueba', $6, $7, $8, now())`,
+        [
+          id,
+          orgA,
+          bookingId,
+          rateA,
+          today,
+          status,
+          clientA,
+          status === "REJECTED" ? "Comprobante ilegible" : null,
+        ],
+      );
+      return id;
+    }
+
+    /** Agencias de esta suite: acota la pasada y evita recorrer datos heredados. */
+    const organizations = [orgA, orgHold, orgFail];
+
+    it("vence sin pago: marca EXPIRED, libera el cupo y audita con actor NULL", async () => {
+      const created = await createPending({ quantity: 2 });
+      expect(await reservedOf(pStd)).toEqual([5, 5, 5]);
+
+      const summary = await expiration.expireDueBookings(afterHold(), organizations);
+      expect(summary.expired).toBeGreaterThanOrEqual(1);
+
+      expect(await statusOf(created.id)).toBe("EXPIRED");
+      expect(await reservedOf(pStd)).toEqual([3, 3, 3]);
+
+      const audit = await prisma.auditLog.findFirst({
+        where: { entityId: created.id, action: "booking.expire" },
+      });
+      expect(audit).toMatchObject({
+        tenantId: orgA,
+        actorId: null,
+        entity: "booking",
+        before: { code: created.code, status: "PENDING_PAYMENT" },
+        after: { code: created.code, status: "EXPIRED" },
+      });
+    });
+
+    it("es idempotente: una segunda pasada no vuelve a decrementar", async () => {
+      const created = await createPending();
+      await expiration.expireDueBookings(afterHold(), organizations);
+      const afterFirst = await reservedOf(pStd);
+
+      await expiration.expireDueBookings(afterHold(), organizations);
+
+      expect(await reservedOf(pStd)).toEqual(afterFirst);
+      expect(await statusOf(created.id)).toBe("EXPIRED");
+    });
+
+    it("no expira una reserva con un pago en revisión", async () => {
+      const created = await createPending();
+      await insertPayment(created.id, "IN_REVIEW");
+
+      await expiration.expireDueBookings(afterHold(), organizations);
+
+      expect(await statusOf(created.id)).toBe("PENDING_PAYMENT");
+      expect(await reservedOf(pStd)).toEqual([4, 4, 4]);
+    });
+
+    it("no expira una reserva con un pago aprobado", async () => {
+      const created = await createPending();
+      await insertPayment(created.id, "APPROVED");
+
+      await expiration.expireDueBookings(afterHold(), organizations);
+
+      expect(await statusOf(created.id)).toBe("PENDING_PAYMENT");
+      expect(await reservedOf(pStd)).toEqual([4, 4, 4]);
+    });
+
+    it("expira una reserva cuyo pago fue rechazado", async () => {
+      const created = await createPending();
+      await insertPayment(created.id, "REJECTED");
+
+      await expiration.expireDueBookings(afterHold(), organizations);
+
+      expect(await statusOf(created.id)).toBe("EXPIRED");
+      expect(await reservedOf(pStd)).toEqual([3, 3, 3]);
+    });
+
+    it("no toca reservas no vencidas ni confirmadas", async () => {
+      const fresh = await createPending();
+      const confirmed = await createPending();
+      await prisma.booking.update({
+        where: { id: confirmed.id },
+        data: { status: "CONFIRMED" },
+      });
+
+      await expiration.expireDueBookings(new Date(), organizations);
+
+      expect(await statusOf(fresh.id)).toBe("PENDING_PAYMENT");
+      expect(await statusOf(confirmed.id)).toBe("CONFIRMED");
+      expect(await reservedOf(pStd)).toEqual([5, 5, 5]);
+    });
+
+    it("recorre cada agencia en su contexto y no cruza filas", async () => {
+      const ownA = await createPending();
+      const ownHold = await createPending({
+        productId: pHold,
+        checkIn: night1,
+        checkOut: night3,
+      });
+
+      await expiration.expireDueBookings(afterHold(), organizations);
+
+      expect(await statusOf(ownA.id)).toBe("EXPIRED");
+      expect(await statusOf(ownHold.id)).toBe("EXPIRED");
+      expect(await reservedOf(pHold)).toEqual([0, 0]);
+
+      const auditHold = await prisma.auditLog.findFirst({
+        where: { entityId: ownHold.id, action: "booking.expire" },
+      });
+      expect(auditHold?.tenantId).toBe(orgHold);
+    });
+
+    it("un fallo en una agencia no detiene a las demás", async () => {
+      // La reserva de orgFail se inserta directo: el trigger de auditoría
+      // fallida (creado en beforeAll) aborta la transacción de su agencia.
+      const failedBooking = randomUUID();
+      await owner.query(
+        `INSERT INTO "bookings"
+           (id, tenant_id, code, user_id, status, total_usd, travelers, expires_at, created_at)
+         VALUES ($1, $2, $3, $4, 'PENDING_PAYMENT', 200.00, $5::jsonb,
+                 now() + interval '30 minutes', now())`,
+        [failedBooking, orgFail, generateBookingCode(), clientA, JSON.stringify([traveler()])],
+      );
+      await owner.query(
+        `INSERT INTO "booking_items"
+           (id, booking_id, tenant_id, product_id, hotel_key, room_type, check_in, check_out,
+            quantity, nightly_prices, subtotal_usd, product_title, policy_snapshot)
+         VALUES ($1, $2, $3, $4, $5, 'standard', $6::date, $7::date, 1, $8::jsonb, 200.00,
+                 $9::jsonb, $10::jsonb)`,
+        [
+          randomUUID(),
+          failedBooking,
+          orgFail,
+          pFail,
+          randomUUID(),
+          night1,
+          night3,
+          JSON.stringify([
+            { night: night1, price_usd: "100.00" },
+            { night: night2, price_usd: "100.00" },
+          ]),
+          JSON.stringify(titleA),
+          JSON.stringify({ policyId: null, name: null, rules: [] }),
+        ],
+      );
+      await owner.query(`UPDATE "availability" SET "reserved" = 1 WHERE "product_id" = $1`, [
+        pFail,
+      ]);
+
+      const ownA = await createPending();
+      const summary = await expiration.expireDueBookings(afterHold(), organizations);
+
+      expect(summary.failed).toBeGreaterThanOrEqual(1);
+      expect(await statusOf(failedBooking)).toBe("PENDING_PAYMENT");
+      expect(await reservedOf(pFail)).toEqual([1, 1]);
+      expect(await statusOf(ownA.id)).toBe("EXPIRED");
     });
   });
 });

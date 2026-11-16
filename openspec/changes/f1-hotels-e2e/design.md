@@ -249,9 +249,18 @@ cliente puede tener reservas en varias agencias; "Mis reservas" consulta por `us
 
 - Expiración: lista de agencias → por cada una `withTenant` en su propia transacción; un fallo se
   registra y sigue la siguiente. Dentro: `FOR UPDATE SKIP LOCKED` sobre reservas vencidas, omite pagos
-  `IN_REVIEW`/`APPROVED`, marca `EXPIRED` y decrementa.
+  `IN_REVIEW`/`APPROVED`, marca `EXPIRED` y decrementa. El decremento es un único `UPDATE ... FROM
+  booking_items` por reserva y la auditoría (`booking.expire`, actor NULL) se escribe en la misma
+  transacción. `expireDueBookings(now, organizationIds?)` permite acotar una pasada a agencias
+  concretas para un reproceso manual.
+- BullMQ v6 (`bullmq@6.7.6`): una cola `caribe-jobs` con dos planificadores por
+  `upsertJobScheduler`: `bookings.expire` con `* * * * *` y `exchange-rate.refresh` con
+  `0 0 * * *` en `America/Caracas` (medianoche venezolana, la fecha valor de la tasa), 3 intentos con
+  espera exponencial de 60 s para la tasa. Cola y worker usan conexiones propias con
+  `maxRetriesPerRequest: null`; el worker cierra en `onModuleDestroy`. Sin `REDIS_URL` o con
+  `NODE_ENV=test` el planificador no arranca: la API sigue sirviendo y los e2e no dependen de Redis.
 - BCV: `withRatesGlobal`, sin tenant, solo escribe `exchange_rates` globales y no lee ninguna otra
-  tabla. `refreshGlobalRate()` se implementa en T-F1-5; BullMQ lo programa una vez al día en T-F1-8.
+  tabla. `refreshGlobalRate()` se implementa en T-F1-5 y BullMQ lo programa una vez al día en T-F1-8.
 - PDF y correo: `withTenant` de la reserva/pago para leer y escribir el documento o el registro de
   aviso.
 - Ningún job usa `withPlatform` ni un rol con `BYPASSRLS`.
@@ -305,7 +314,7 @@ inventario de tablas de negocio falla si alguna no tiene RLS habilitada y forzad
   del proceso. La caché no sustituye la lectura de respaldo: al expirar se vuelve a resolver.
 - `refreshGlobalRate()`: corre con `rates_global`, obtiene la tasa del proveedor, hace upsert de la fila
   global BCV del día (`tenant_id NULL`, `is_override = false`) y nunca pisa una fila `is_override`. Se
-  implementa y prueba en T-F1-5; la programación diaria con BullMQ se añade en T-F1-8.
+  implementa y prueba en T-F1-5; BullMQ lo programa a las `00:00` de `America/Caracas` en T-F1-8.
 - Override de agencia: `PUT /api/v1/admin/exchange-rates/override`, cuerpo estricto
   `{ rate: string, valueDate?: string, reason: string }` (motivo obligatorio, no vacío; `valueDate` por
   defecto hoy en Caracas; fecha no pasada). Exige organización activa y permiso `exchange-rate:update`;

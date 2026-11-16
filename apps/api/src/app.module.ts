@@ -7,6 +7,7 @@ import { AuditModule } from "./audit/audit.module.js";
 import { BookingsModule } from "./bookings/bookings.module.js";
 import { CatalogModule } from "./catalog/catalog.module.js";
 import { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
+import { JobsModule } from "./jobs/jobs.module.js";
 import { RatesModule } from "./rates/rates.module.js";
 import { TenantModule } from "./tenant/tenant.module.js";
 import { TenantSettingsModule } from "./tenant-settings/tenant-settings.module.js";
@@ -20,6 +21,7 @@ import { TenantSettingsModule } from "./tenant-settings/tenant-settings.module.j
     AuditModule,
     CatalogModule,
     BookingsModule,
+    JobsModule,
     RatesModule,
     TenantModule,
     TenantSettingsModule,

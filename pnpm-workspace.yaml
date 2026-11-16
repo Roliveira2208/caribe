@@ -11,6 +11,9 @@ allowBuilds:
   "@prisma/engines": true
   "@swc/core": true
   esbuild: true
+  # Acelerador nativo opcional de msgpackr (dependencia de BullMQ): sin el
+  # binario, msgpackr usa su implementación JavaScript.
+  msgpackr-extract: false
   prisma: true
 
 minimumReleaseAgeExclude:

@@ -6,11 +6,13 @@ import { sanitizeAuditPayload } from "./audit-sanitize.js";
 /**
  * Entrada de auditoria que escribe el servicio. tenantId y actorId los
  * resuelve el interceptor desde la sesion; el handler solo aporta la parte
- * de negocio (entityId, before, after).
+ * de negocio (entityId, before, after). `actorId` es null cuando la accion la
+ * ejecuta el sistema (trabajo de expiracion, spec audit "Expiracion de una
+ * reserva").
  */
 export interface AuditEntry {
   tenantId: string | null;
-  actorId: string;
+  actorId: string | null;
   action: string;
   entity: string;
   entityId: string;
