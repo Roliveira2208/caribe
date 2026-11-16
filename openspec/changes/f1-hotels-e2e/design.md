@@ -10,7 +10,7 @@ specs delta dejan como contrato; el código las implementa, no las reinventa.
 | --- | --- | --- |
 | Q1 | Catálogo público con contexto `public` y política `PUBLISHED AND deleted_at IS NULL` | Ver §3 |
 | Q2 | Cliente sin membresía: crear por producto, leer por dueño; política combinada por agencia o propietario | Ver §3 y §4 |
-| Q3 | Jobs por agencia con `withTenant`; el job BCV es global y no usa tenant; sin `BYPASSRLS` ni contexto `system` | Ver §3.5 |
+| Q3 | Jobs por agencia con `withTenant`; el refresco de la tasa es global y no usa tenant; sin `BYPASSRLS` ni contexto `system` | Ver §3.5 |
 | Q4 | Auditoría de intentos: escrituras admin + fallos TOTP en `auth_events`; fallos de credenciales en change futura | Ver §8 |
 | Q5 | `auth_events` separada; `audit_logs` conserva acción sensible con antes/después | Ver §8 |
 | Q20/Q24 | Atributos de hotel en JSONB, imágenes dentro como URLs (máx. 10, dominios permitidos) | Ver §2.2 |
@@ -208,7 +208,7 @@ GUC (parámetros de sesión, `set_config(..., true)` dentro de la transacción):
 | `tenant`+`owner` | `app.tenant_id` + `app.user_id` | Cliente pagando su reserva | Filas de esa agencia o del usuario |
 | `public` | `app.public = 'on'` | Catálogo anónimo | `products` `PUBLISHED` sin borrado, su disponibilidad y sus destinos, solo lectura |
 | `platform` | `app.platform = 'on'` | Super Admin | Todas las agencias y filas `tenant_id` NULL; escribe solo overrides globales de `exchange_rates` (`tenant_id` NULL) |
-| `rates_global` | `app.rates_global = 'on'` | Job BCV | Solo escritura de `exchange_rates` con `tenant_id` NULL; ninguna otra tabla |
+| `rates_global` | `app.rates_global = 'on'` | Refresco de la tasa | Solo escritura de `exchange_rates` con `tenant_id` NULL; ninguna otra tabla |
 
 `TenantService` gana `withOwner(userId)`, `withOwnerTenant(userId, tenantId)`, `withPublic()` y
 `withRatesGlobal()` junto a `withTenant` y `withPlatform`. Sin GUC, las políticas no devuelven filas y
@@ -226,7 +226,8 @@ GUC (parámetros de sesión, `set_config(..., true)` dentro de la transacción):
 - Sin dueño (`providers`, `products`, `availability`, `cancellation_policies`, `tenant_settings`):
   lectura por `tenant_id = app.tenant_id` o `app.platform = 'on'`; escritura por
   `tenant_id = app.tenant_id`. `exchange_rates` añade lectura global (`tenant_id IS NULL`) para los
-  contextos `tenant`, `owner` y `public`, y escritura global con `app.rates_global = 'on'` (job BCV) o
+  contextos `tenant`, `owner` y `public`, y escritura global con `app.rates_global = 'on'` (refresco de
+  la tasa) o
   `app.platform = 'on'` (override del Super Admin), siempre con `tenant_id IS NULL`. Ninguno de los dos
   puede leer ni escribir otra tabla ni filas de agencia.
 - `products` y `availability`: política `public` de solo lectura con
@@ -258,14 +259,13 @@ cliente puede tener reservas en varias agencias; "Mis reservas" consulta por `us
   booking_items` por reserva y la auditoría (`booking.expire`, actor NULL) se escribe en la misma
   transacción. `expireDueBookings(now, organizationIds?)` permite acotar una pasada a agencias
   concretas para un reproceso manual.
-- BullMQ v6 (`bullmq@6.7.6`): una cola `caribe-jobs` con dos planificadores por
-  `upsertJobScheduler`: `bookings.expire` con `* * * * *` y `exchange-rate.refresh` con
-  `0 0 * * *` en `America/Caracas` (medianoche venezolana, la fecha valor de la tasa), 3 intentos con
-  espera exponencial de 60 s para la tasa. Cola y worker usan conexiones propias con
+- BullMQ v6 (`bullmq@6.7.6`): una cola `caribe-jobs` con un solo planificador por
+  `upsertJobScheduler`: `bookings.expire` con `* * * * *`. Cola y worker usan conexiones propias con
   `maxRetriesPerRequest: null`; el worker cierra en `onModuleDestroy`. Sin `REDIS_URL` o con
   `NODE_ENV=test` el planificador no arranca: la API sigue sirviendo y los e2e no dependen de Redis.
-- BCV: `withRatesGlobal`, sin tenant, solo escribe `exchange_rates` globales y no lee ninguna otra
-  tabla. `refreshGlobalRate()` se implementa en T-F1-5 y BullMQ lo programa una vez al día en T-F1-8.
+- La tasa no tiene trabajo programado (T-F1-5b): `ensureTodayRate()` se dispara al crear una sesión y
+  antes de crear un pago, como máximo una vez al día por `fetched_at`. `withRatesGlobal`, sin tenant,
+  solo escribe `exchange_rates` globales y no lee ninguna otra tabla.
 - PDF y correo: `withTenant` de la reserva/pago para leer y escribir el documento o el registro de
   aviso.
 - Ningún job usa `withPlatform` ni un rol con `BYPASSRLS`.
@@ -311,17 +311,29 @@ inventario de tablas de negocio falla si alguna no tiene RLS habilitada y forzad
 ## 6. Tasas
 
 - `ExchangeRateProvider` (interfaz en `packages/shared`): `getRate(date: string)`, timeout 5 s, un
-  reintento, circuit breaker 3 fallos consecutivos / 60 s. `DolarApiProvider` la implementa contra
-  `DOLARAPI_URL`; recibe la tasa como texto decimal y la acepta solo si es > 0 y tiene ≤ 4 decimales.
-  Un valor inválido se trata como fallo del proveedor.
+  reintento, circuit breaker 3 fallos consecutivos / 60 s. `CotizaveProvider` la implementa contra
+  `COTIZAVE_API_URL` (`https://api.cotizave.com/v2/fx/VE/rates`) con la cabecera `X-API-Key` leída de
+  `COTIZAVE_API_KEY` (nunca en la URL ni en logs); elige la tasa `id = "ve-bcv"` y lee `mid`. La tasa se
+  recibe como texto decimal y se acepta solo si es > 0 y tiene ≤ 4 decimales; un valor inválido o la
+  ausencia de la clave se tratan como fallo del proveedor. `value_date` sale de `effective_date` si la
+  fuente lo publica; si no, de `updated_at` convertido a `America/Caracas`; si tampoco, de la fecha
+  pedida (un fin de semana conserva la del viernes).
 - `ExchangeRateService`: precedencia por fecha y ámbito: override de agencia > override global > tasa
   BCV global. Respaldo: última `value_date <= hoy` (Caracas) del ámbito. Sin ninguna fila → 503
   `RATE_UNAVAILABLE`.
-- Caché en Redis (`REDIS_URL`) con TTL de 1 h por ámbito y fecha; si Redis no responde, caché en memoria
-  del proceso. La caché no sustituye la lectura de respaldo: al expirar se vuelve a resolver.
-- `refreshGlobalRate()`: corre con `rates_global`, obtiene la tasa del proveedor, hace upsert de la fila
-  global BCV del día (`tenant_id NULL`, `is_override = false`) y nunca pisa una fila `is_override`. Se
-  implementa y prueba en T-F1-5; BullMQ lo programa a las `00:00` de `America/Caracas` en T-F1-8.
+- Caché en Redis (`REDIS_URL`) con TTL de 1 h para el resultado del proveedor global; si Redis no
+  responde, caché en memoria del proceso. La caché no sustituye la lectura de respaldo: al expirar se
+  vuelve a resolver. La instancia que usa el hook de login no abre Redis: su caché es solo en memoria.
+- `ensureTodayRate()` (T-F1-5b): comprueba si hay una fila global con `fetched_at` de hoy en
+  `America/Caracas` (`("fetched_at" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Caracas')::date`). Si la
+  hay, no llama al proveedor; si no, obtiene la tasa (caché de 1 h), hace upsert de la fila global
+  (`tenant_id NULL`, `is_override = false`, `source = 'COTIZAVE'`) con `fetched_at` UTC y nunca pisa una
+  fila `is_override`. Un fallo del proveedor se registra como advertencia y conserva la fila guardada;
+  la resolución posterior decide el 503. Las comprobaciones simultáneas del proceso comparten una sola
+  promesa.
+- Disparo del refresco: `databaseHooks.session.create.after` de Better Auth lo lanza en segundo plano
+  (`void ... .catch(...)`) y `PaymentsService.create` lo espera antes de abrir la transacción del pago.
+  El login no espera al proveedor. No hay trabajo de tasa en BullMQ.
 - Override de agencia: `PUT /api/v1/admin/exchange-rates/override`, cuerpo estricto
   `{ rate: string, valueDate?: string, reason: string }` (motivo obligatorio, no vacío; `valueDate` por
   defecto hoy en Caracas; fecha no pasada). Exige organización activa y permiso `exchange-rate:update`;
@@ -523,7 +535,7 @@ aprobado por el dueño antes de implementarla. Pantallas F1:
 
 ## 15. Desviaciones canónicas respecto del SDD
 
-Ocho decisiones de F1 difieren del SDD §5 y §7. Se aplican en el código y en las specs; al cerrar F1 se
+Nueve decisiones de F1 difieren del SDD §5 y §7. Se aplican en el código y en las specs; al cerrar F1 se
 actualiza el SDD con esta lista (tarea T-F1-17), sin cambiar las decisiones D1–D15.
 
 | # | SDD | F1 | Motivo |
@@ -536,3 +548,4 @@ actualiza el SDD con esta lista (tarea T-F1-17), sin cambiar las decisiones D1�
 | 6 | `idempotency_keys` con `tenant_id` | Sin `tenant_id`; RLS solo por `user_id` | La agencia se resuelve después de consumir la clave |
 | 7 | Producto de hotel con tabla `hotels` separada | `products` es el tipo de habitación, agrupado por `hotel_key`; sin tabla `hotels` en F1 | Una fila vendible por tipo; normalización a `hotels` como deuda de F2 |
 | 8 | Revisión de pagos en `PATCH /payments/:id/approve` y `/payments/:id/reject` | `PATCH /admin/payments/:id/approve` y `/reject`; listado y detalle en `/admin/payments`; pagos del cliente en `GET /bookings/:id/payments` | El panel vive bajo `/admin` y hereda TOTP y permisos `payment:*`; el cliente solo ve sus propios pagos |
+| 9 | Fuente DolarAPI y refresco diario programado (SDD §7.5 y §7.7) | Fuente Cotizave (`ve-bcv`, `X-API-Key`) y refresco perezoso al login y al alta de pago, una vez al día por `fetched_at` | El dueño pidió una fuente con clave y sin cron; el login no se bloquea y el respaldo es la última fila guardada |

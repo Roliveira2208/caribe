@@ -24,15 +24,15 @@ Clasificación de los escenarios de los diez deltas de la fase 0, aprobada por e
 | booking | 48 | 33 | 15 | 0 |
 | catalog | 36 | 19 | 17 | 0 |
 | documents | 23 | 12 | 11 | 0 |
-| exchange-rates | 22 | 16 | 6 | 0 |
+| exchange-rates | 24 | 18 | 6 | 0 |
 | notifications | 13 | 2 | 11 | 0 |
 | payments | 35 | 26 | 9 | 0 |
 | tenant-isolation | 31 | 29 | 2 | 0 |
-| **Total** | **279** | **186** | **93** | **0** |
+| **Total** | **281** | **188** | **93** | **0** |
 
 Los aplazables no son escenarios de estos deltas: se listan al final como capacidades movidas a F2.
 
-**Regla de cierre (aprobada 2026-11-12):** solo los **186 obligatorios** bloquean el cierre de F1. Los
+**Regla de cierre (aprobada 2026-11-12):** solo los **188 obligatorios** bloquean el cierre de F1. Los
 **93 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota en `tasks.md`. Ningún
 obligatorio se recorta para meter un deseable.
 
@@ -113,16 +113,20 @@ obligatorio se recorta para meter un deseable.
   Pago rechazado · Cambiar de proveedor · Voucher sin pago · URL pública · Documento en preparación ·
   Documento agotado · Reintentos automáticos.
 
-## exchange-rates (22)
+## exchange-rates (24)
 
-- **Obligatorio (16)**: Fuente disponible · Fuente caída · Tasa inválida del proveedor · Override sin
+- **Obligatorio (18)**: Fuente disponible · Fuente caída · Tasa inválida del proveedor · Override sin
   motivo o sin permiso · Precedencia del override · El proveedor no pisa el override · Override global
   gana a la tasa BCV · Agencia no ve el override de otra · Catálogo público usa la tasa global · Pago
-  usa el override de la agencia · El trabajo BCV no escribe overrides · La tasa cambia después ·
+  usa el override de la agencia · El refresco de la tasa no escribe overrides · La tasa cambia después ·
   Cálculo del monto en VES · Redondeo half-up · Modificación directa del par congelado · Reembolso con
-  la tasa congelada.
+  la tasa congelada · Segundo login del mismo día no consulta · Alta de pago asegura la tasa del día.
 - **Deseable (6)**: Sin ninguna tasa guardada y fuente caída · Circuit breaker · Sábado · Zona horaria
   de la fecha valor · Override con motivo · Override global.
+
+Nota (T-F1-5b): el dueño cambió la fuente a Cotizave y el refresco diario programado por un refresco
+perezoso al login y al alta de pago. Eso añade los dos escenarios obligatorios marcados arriba; los
+totales pasan de 279/186/93 a 281/188/93.
 
 ## notifications (13)
 

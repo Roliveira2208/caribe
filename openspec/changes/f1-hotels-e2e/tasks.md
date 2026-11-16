@@ -5,7 +5,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 > cambios (inventario por noche, alcance reducido, idempotencia mínima, 422 estricto, `rates_global` y
 > PDFs, `minimumReleaseAge`). El alcance por escenario está en `scope.md`.
 >
-> **Regla de alcance (2026-11-12):** solo los **186 escenarios obligatorios** bloquean el cierre de F1.
+> **Regla de alcance (2026-11-12):** solo los **188 escenarios obligatorios** bloquean el cierre de F1.
 > Los **93 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota aquí. Los
 > aplazables ya están listados en `scope.md` y no cuentan en los deltas.
 
@@ -85,9 +85,11 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [x] T-F1-4 CRUD de hoteles para proveedor y admin (API) con comprobación de propiedad.
   Prueba: auth-access › "Proveedor edita su producto" y "Propiedad de productos".
 - [x] T-F1-5 `ExchangeRateModule`: provider, caché, respaldo, circuit breaker, override con auditoría y
-  tenencia global/agencia. Incluye `refreshGlobalRate()` (cuerpo del job) bajo `rates_global`; la
-  programación diaria con BullMQ entra en T-F1-8.
+  tenencia global/agencia. Incluye el refresco global bajo `rates_global`; la programación diaria con
+  BullMQ entró en T-F1-8.
   Prueba: exchange-rates › "Fuente disponible", "Ajuste manual" y "Tenencia de las tasas".
+  Nota: el proveedor (DolarAPI) y el refresco programado se sustituyen en T-F1-5b por Cotizave y un
+  refresco perezoso al login y al alta de pago.
 - [x] T-F1-6 Precio VES informativo en catálogo con la tasa global.
   Prueba: catalog › "Sin tasa disponible" y "Equivalente en VES".
 - [x] T-F1-7 `BookingModule`: crear reserva con retención multi-noche, viajeros, código e
@@ -109,14 +111,15 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   estado y producto despublicado después de reservar. La colisión de código sigue cubierta solo en
   unitarios de `withCodeRetry`: forzarla por HTTP exige mockear el generador y no sale barata.
 - [x] T-F1-8 Trabajo de expiración de reservas por agencia, con omisión de pagos en revisión; más la
-  programación diaria del refresco de la tasa global (`refreshGlobalRate()` de T-F1-5) con BullMQ.
+  programación diaria del refresco de la tasa global con BullMQ.
   Prueba: booking › "Expiración de la retención" (vence, idempotente, omite `IN_REVIEW`/`APPROVED`,
   expira con `REJECTED`, no toca no vencidas ni `CONFIRMED`, aislamiento por agencia, un fallo no
   detiene a las demás); jobs › calendarios, zona horaria, reintentos, despacho y `jobsEnabled`.
   Nota: el escenario "Carrera entre pago y expiración" y el 410 `HOLD_EXPIRED` quedan en T-F1-9, que
   es donde existe el endpoint de pago. El planificador no arranca con `NODE_ENV=test` ni sin
   `REDIS_URL`, así que los e2e no dependen de Redis; `expireDueBookings(now, organizationIds?)` acota
-  una pasada para reprocesos manuales y pruebas.
+  una pasada para reprocesos manuales y pruebas. T-F1-5b retira el trabajo de tasa: el planificador
+  solo expira reservas y la tasa se refresca al login y al alta de pago.
 - [x] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, datos por método, monto
   calculado en servidor y revisor distinto.
   Prueba: payments › "Pago en VES por Pago Móvil", "Cliente envía un monto o una tasa", "Reserva
@@ -156,6 +159,15 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   duplicado", "Reembolso por encima del pago" y "Reembolso del 0 %"; auth-access › "Admin cancela
   una reserva de su agencia", "Agente intenta cancelar una reserva ajena", "Proveedor intenta
   cancelar" y "Super Admin intenta cancelar".
+- [ ] T-F1-5b Sustituir DolarAPI por Cotizave y el trabajo diario por un refresco perezoso: `ensureTodayRate()`
+  al crear la sesión (en segundo plano, sin bloquear el login) y antes de crear un pago, como máximo una
+  vez al día por `fetched_at` en `America/Caracas`. Quita `exchange-rate.refresh` de BullMQ y deja la
+  última fila guardada como respaldo.
+  Prueba: exchange-rates › "Fuente disponible", "Fuente caída", "Segundo login del mismo día no
+  consulta" y "Alta de pago asegura la tasa del día"; jobs › sin trabajo de tasa. Unitarios del
+  proveedor Cotizave y de `ensureTodayRate`.
+  Nota: reemplaza el proveedor de T-F1-5 y la programación diaria de T-F1-8; `scope.md` suma dos
+  escenarios obligatorios (281/188/93).
 - [ ] T-F1-10b Pausa planificada: verificación independiente y revisión de seguridad en sesión limpia
   con reservas y pagos ya cerrados (T-F1-7 a T-F1-10), antes de documentos (T-F1-11) y del resto del
   panel y la web (T-F1-13/T-F1-14).
@@ -186,7 +198,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Prueba: recorrido buscar → reservar → pagar → descargar, más concurrencia de cupo.
 - [ ] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.
   Prueba: informe de verificación con semáforo y M1/M2 anotados.
-- [ ] T-F1-17 Actualizar `docs/sdd/SDD.md` con las siete desviaciones canónicas de `design.md` §15
+- [ ] T-F1-17 Actualizar `docs/sdd/SDD.md` con las nueve desviaciones canónicas de `design.md` §15
   (`tenant_settings`, `availability` por noche, `PARTIALLY_REFUNDED`,
   `InvoiceProvider.issue(booking, payment?)`, `PENDING` interno, `idempotency_keys` sin `tenant_id` y
   producto = tipo de habitación con `hotel_key`, sin tabla `hotels`).
@@ -201,7 +213,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 ## Notas de F1
 
 - La demo de F1 es local. Una demo pública exige M1 y M2.
-- Las siete desviaciones respecto del SDD están en `design.md` §15 y se aplican al SDD en T-F1-17.
+- Las nueve desviaciones respecto del SDD están en `design.md` §15 y se aplican al SDD en T-F1-17.
 - OpenAPI/Swagger y los proveedores externos quedan diferidos.
-- Cierre de F1: solo bloquean los 186 escenarios obligatorios de `scope.md`. Si un deseable no entra,
+- Cierre de F1: solo bloquean los 188 escenarios obligatorios de `scope.md`. Si un deseable no entra,
   se mueve a F2 con una nota en la tarea correspondiente; no se recorta un obligatorio.

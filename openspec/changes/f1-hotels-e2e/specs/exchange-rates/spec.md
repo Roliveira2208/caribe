@@ -3,23 +3,28 @@
 ## MODIFIED Requirements
 
 ### Requirement: Fuente y respaldo de la tasa
-El sistema SHALL obtener la tasa oficial mediante `ExchangeRateProvider` (primaria: DolarAPI) y, si
-falla, usar la última tasa válida guardada. La tasa se cachea 1 hora y se refresca una vez al día por un
-trabajo programado. La llamada al proveedor SHALL tener un tiempo máximo de 5 segundos, un reintento y
-un circuit breaker que se abre tras 3 fallos consecutivos y se reintenta a los 60 segundos. La tasa
-SHALL recibirse y parsearse como texto decimal, con más de 0 y como máximo 4 decimales; un valor
-inválido SHALL rechazarse. `value_date` SHALL expresarse en la zona `America/Caracas`; `fetched_at`
-SHALL guardarse en UTC.
+El sistema SHALL obtener la tasa oficial del BCV mediante `ExchangeRateProvider` contra Cotizave
+(`GET /v2/fx/VE/rates`, tasa `ve-bcv`, cabecera `X-API-Key` con `COTIZAVE_API_KEY`) y, si falla o no
+está configurado, usar la última tasa válida guardada. La consulta SHALL ser perezosa y como máximo una
+vez al día: se comprueba al crear una sesión (login) y antes de crear un pago, y solo se llama al
+proveedor si no existe una fila global de `exchange_rates` consultada ese día (`fetched_at` en
+`America/Caracas`). No SHALL existir un trabajo programado que consulte la tasa. La consulta del login
+SHALL ejecutarse en segundo plano y SHALL NOT bloquear ni hacer fallar el login. La llamada al proveedor
+SHALL tener un tiempo máximo de 5 segundos, un reintento y un circuit breaker que se abre tras 3 fallos
+consecutivos y se reintenta a los 60 segundos. La tasa SHALL recibirse y parsearse como texto decimal,
+con más de 0 y como máximo 4 decimales; un valor inválido SHALL rechazarse. `value_date` SHALL
+expresarse en la zona `America/Caracas`; `fetched_at` SHALL guardarse en UTC. La fila global escrita por
+el proveedor SHALL llevar `source = 'COTIZAVE'`.
 
 #### Scenario: Fuente disponible
-- GIVEN DolarAPI responde con una tasa válida
-- WHEN se pide la tasa actual
-- THEN se guarda en `exchange_rates` con su `value_date` y se devuelve
+- GIVEN Cotizave responde con una tasa válida para `ve-bcv`
+- WHEN un usuario inicia sesión y no hay una tasa consultada hoy
+- THEN se guarda la fila global con `source = 'COTIZAVE'`, su `value_date` y `fetched_at` de hoy, y el login no espera la respuesta
 
 #### Scenario: Fuente caída
-- GIVEN DolarAPI no responde dentro de 5 s
-- WHEN se pide la tasa actual
-- THEN se devuelve la última tasa guardada y se registra una advertencia
+- GIVEN Cotizave no responde dentro de 5 s o falta `COTIZAVE_API_KEY`
+- WHEN un usuario inicia sesión o se crea un pago
+- THEN el login responde igual, se registra una advertencia y se usa la última tasa guardada
 
 #### Scenario: Sin ninguna tasa guardada y fuente caída
 - GIVEN no existe ninguna tasa
@@ -37,11 +42,13 @@ SHALL guardarse en UTC.
 
 ### Requirement: Fines de semana y feriados
 El BCV publica una tasa por día hábil; fuera de ellos SHALL usarse la última `value_date` publicada.
+La comprobación de "una vez al día" SHALL usar la fecha de consulta (`fetched_at`), no la `value_date`,
+para no repetir la llamada el sábado y el domingo.
 
 #### Scenario: Sábado
-- GIVEN la última tasa publicada es del viernes
-- WHEN un cliente paga el sábado
-- THEN se usa la tasa del viernes y el pago guarda esa `value_date`
+- GIVEN la última tasa publicada es del viernes y no hay una fila consultada hoy
+- WHEN el sábado se consulta la tasa y el domingo un usuario inicia sesión
+- THEN el sábado se guarda la tasa del viernes con `fetched_at` del sábado y el domingo no se llama al proveedor: se sigue usando esa tasa
 
 #### Scenario: Zona horaria de la fecha valor
 - GIVEN un pago a las 21:00 del 10 de noviembre en Caracas
@@ -71,7 +78,7 @@ existir como máximo una fila; para las filas globales la unicidad SHALL aplicar
 
 #### Scenario: El proveedor no pisa el override
 - GIVEN un override guardado para una fecha
-- WHEN el trabajo diario obtiene una tasa nueva del proveedor para esa misma fecha
+- WHEN el refresco perezoso obtiene una tasa nueva del proveedor para esa misma fecha
 - THEN el override se conserva y la tasa del proveedor no lo sobrescribe
 
 #### Scenario: Override global
@@ -85,6 +92,23 @@ existir como máximo una fila; para las filas globales la unicidad SHALL aplicar
 - THEN se usa 920,0000
 
 ## ADDED Requirements
+
+### Requirement: Refresco perezoso de la tasa
+El refresco SHALL comprobarse al crear una sesión y antes de crear un pago. Si la fila global más
+reciente se consultó hoy (`fetched_at` en `America/Caracas`), SHALL NOT llamarse al proveedor. Si se
+llama y falla, la fila guardada SHALL conservarse y el flujo SHALL continuar. El refresco SHALL NOT
+pisar una fila `is_override` de la fecha y SHALL NOT escribir overrides de agencia. Varias
+comprobaciones simultáneas en el mismo proceso SHALL compartir una sola llamada al proveedor.
+
+#### Scenario: Segundo login del mismo día no consulta
+- GIVEN una fila global consultada hoy
+- WHEN otro usuario inicia sesión el mismo día
+- THEN no se llama al proveedor y se usa la fila guardada
+
+#### Scenario: Alta de pago asegura la tasa del día
+- GIVEN una sesión abierta desde ayer y sin una fila global consultada hoy
+- WHEN el cliente crea un pago
+- THEN antes de congelar la tasa se consulta al proveedor y el pago usa la tasa del día
 
 ### Requirement: Tenencia de las tasas
 `exchange_rates` SHALL tener filas globales con `tenant_id` NULL (tasa BCV) y filas de override con el
@@ -109,9 +133,9 @@ NOT leer ni escribir overrides de agencia ni ninguna otra tabla.
 - WHEN se crea el pago
 - THEN el pago usa el override de A
 
-#### Scenario: El trabajo BCV no escribe overrides
+#### Scenario: El refresco de la tasa no escribe overrides
 - GIVEN el contexto `rates_global`
-- WHEN el trabajo diario intenta escribir una fila con `tenant_id` de una agencia
+- WHEN el refresco intenta escribir una fila con `tenant_id` de una agencia
 - THEN la base rechaza la escritura y el override queda intacto
 
 ### Requirement: Congelar al pagar
@@ -153,12 +177,22 @@ después; la base SHALL rechazar cualquier `UPDATE` de esos campos.
 - Sin tasa global no se muestra VES en el catálogo; sin tasa para la agencia no se puede pagar en VES,
   pero sí en USD.
 - Un override de una fecha futura no aplica antes de esa fecha.
+- La consulta del login no bloquea: si el proveedor tarda o falla, el login responde igual.
+- Sin `COTIZAVE_API_KEY` la fuente se considera caída; la clave no se registra en logs ni en la URL.
+- Una fila global consultada hoy (`fetched_at`) evita una segunda consulta aunque su `value_date` sea
+  anterior (fin de semana o feriado).
+- El refresco perezoso nunca pisa una fila `is_override` ni escribe overrides de agencia.
 
 ## Acceptance
 - Tests unitarios del cálculo con casos de redondeo; test del respaldo con el proveedor simulado caído.
+- Unitarios del proveedor Cotizave: cabecera `X-API-Key`, selección de `ve-bcv`, lectura de `mid`, fecha
+  valor desde `effective_date`/`updated_at`, tasa inválida y clave ausente.
+- E2E del refresco perezoso: el primer login del día consulta, el segundo no, el login no bloquea y el
+  alta de pago asegura la tasa antes de congelarla.
 - Prueba de tenencia: la agencia A no lee el override de B y el catálogo público solo usa la global.
 - Prueba de que un `UPDATE` directo del par congelado falla en la base.
+- Prueba de que el planificador no registra un trabajo de tasa.
 
 ## Out of scope
 Tasa paralela o cripto. Histórico gráfico de tasas. Overrides por producto. Sincronización en tiempo
-real con el BCV.
+real con el BCV. Histórico de consultas por login.
