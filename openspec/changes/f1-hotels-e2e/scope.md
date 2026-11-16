@@ -1,8 +1,8 @@
 # Alcance de f1-hotels-e2e
 
-Clasificación de los escenarios de los diez deltas de la fase 0, aprobada por el dueño el
-2026-11-11. Los conteos salen de los propios archivos (`#### Scenario:` por spec) y se verifican con
-`node scripts/check-specs.mjs` y el conteo de `scope.md`.
+Clasificación de los escenarios de los diez deltas de `f1-hotels-e2e`, alineada con el contenido
+actual de `openspec/changes/f1-hotels-e2e/specs/*/spec.md` (conteo real de `#### Scenario:` por spec)
+el 2026-11-16 como parte de la remediación de T-F1-10b.
 
 ## Criterio
 
@@ -14,27 +14,32 @@ Clasificación de los escenarios de los diez deltas de la fase 0, aprobada por e
   puede recortarse si el tiempo aprieta, pero entra en F1 si cabe.
 - **Aplazable**: fuera de F1 por decisión del dueño; no está en los deltas.
 
-## Totales
+## Totales (reales, alineados a deltas)
 
 | Spec | Escenarios | Obligatorio | Deseable | Aplazable |
 | --- | ---: | ---: | ---: | ---: |
 | api-errors | 17 | 10 | 7 | 0 |
 | audit | 24 | 13 | 11 | 0 |
-| auth-access | 30 | 26 | 4 | 0 |
-| booking | 48 | 33 | 15 | 0 |
+| auth-access | 32 | 28 | 4 | 0 |
+| booking | 51 | 34 | 17 | 0 |
 | catalog | 36 | 19 | 17 | 0 |
 | documents | 23 | 12 | 11 | 0 |
 | exchange-rates | 24 | 18 | 6 | 0 |
 | notifications | 13 | 2 | 11 | 0 |
 | payments | 35 | 26 | 9 | 0 |
-| tenant-isolation | 31 | 29 | 2 | 0 |
-| **Total** | **281** | **188** | **93** | **0** |
+| tenant-isolation | 33 | 30 | 3 | 0 |
+| **Total** | **288** | **192** | **96** | **0** |
 
 Los aplazables no son escenarios de estos deltas: se listan al final como capacidades movidas a F2.
 
-**Regla de cierre (aprobada 2026-11-12):** solo los **188 obligatorios** bloquean el cierre de F1. Los
-**93 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota en `tasks.md`. Ningún
+**Regla de cierre:** solo los **192 escenarios obligatorios** bloquean el cierre de F1. Los
+**96 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota en `tasks.md`. Ningún
 obligatorio se recorta para meter un deseable.
+
+> Nota de alineación (2026-11-16): esta tabla y las listas por spec sustituyen los conteos/títulos
+> anteriores (281/188/93) para reflejar los escenarios y títulos reales presentes en los deltas actuales.
+> Algunos escenarios aparecen duplicados en los deltas (p. ej. en `auth-access` y `booking`); se
+> conservan y clasifican tal como existen para mantener trazabilidad 1:1 con los specs.
 
 ## api-errors (17)
 
@@ -55,47 +60,53 @@ obligatorio se recorta para meter un deseable.
   intento · Fallo al escribir el resultado · Inmutabilidad de los intentos · Agencia desconocida ·
   Filtro por resultado · Sin mensaje interno.
 
-## auth-access (30)
+## auth-access (32)
 
-- **Obligatorio (26)**: Proveedor edita su producto · Proveedor edita producto de otro proveedor ·
+- **Obligatorio (28)**: Proveedor edita su producto · Proveedor edita producto de otro proveedor ·
   Cliente ve solo sus reservas · Super Admin intenta editar un producto · Super Admin intenta aprobar un
   pago · Admin de otra agencia · Agente de otra agencia · Prueba con el rol de aplicación · Operación de
   agencia sin agencia activa · Elegir una agencia ajena · Reserva anónima · Cliente reserva en una
   agencia · Cliente con reservas en dos agencias · Cliente en un endpoint de agencia · Cliente intenta
-  fijar la agencia o el usuario · Proveedor edita su producto (propiedad) · Proveedor edita el producto
-  de otro proveedor · Proveedor edita un producto de otra agencia · Admin edita un producto de su
-  agencia · Super Admin intenta publicar · Agente crea su propia reserva · Agente intenta reservar para
-  otra persona · Admin ve las reservas de su agencia · Admin cancela una reserva de su agencia · Super
-  Admin intenta cancelar · Revisor distinto del pagador.
+  fijar la agencia o el usuario · Proveedor edita su producto · Proveedor edita el producto de otro
+  proveedor · Proveedor edita un producto de otra agencia · Admin edita un producto de su agencia · Super
+  Admin intenta publicar · Agente crea su propia reserva · Agente intenta reservar para otra persona ·
+  Admin ve las reservas de su agencia · Admin cancela una reserva de su agencia · Agente intenta cancelar
+  una reserva ajena · Proveedor intenta cancelar · Super Admin intenta cancelar · Revisor distinto del
+  pagador.
 - **Deseable (4)**: Una sola membresía · Varias membresías · Cero membresías · Super Admin sin agencia.
 
-## booking (48)
+## booking (51)
 
-- **Obligatorio (33)**: Hay cupo en todas las noches · Falta una noche · No hay cupo suficiente en una
+- **Obligatorio (34)**: Hay cupo en todas las noches · Falta una noche · No hay cupo suficiente en una
   noche · Reservas concurrentes sobre el último cupo · Sin sesión · Monto, tasa o campo calculado
   enviados por el cliente · Producto no publicado · Vence sin pago · Retención configurada · Retención
   por defecto · Pago aprobado justo antes de vencer · Pago tardío sobre reserva vencida · Expiración
   idempotente · Carrera entre pago y expiración · Reintento del mismo POST · Misma clave con otro cuerpo
   · Clave en vuelo · Respuesta guardada mínima · Cliente cancela reserva confirmada · Cancelar reserva
-  ajena · Cancelar una reserva pendiente sin pago · Cancelar con un pago en revisión · Política
-  congelada · Formato y unicidad · Código enviado por el cliente · Sin datos personales en logs ni
-  auditoría · Dueño consulta su reserva · Personal consulta una reserva de su agencia · Personal de otra
-  agencia · Mis reservas entre agencias · Confirmar una reserva cancelada · Fallo de auditoría ·
-  Transición no listada.
-- **Deseable (15)**: Fechas inválidas · Clave expirada · Datos del viajero en el voucher · Producto
-  despublicado después de reservar · Filtro por estado · Colisión de código · Reserva sin viajeros ·
-  Demasiados viajeros · Viajero sin documento · Cancelación repetida · Cancelar una reserva vencida ·
-  Falta la clave · Reintento sin auditoría duplicada · Crear una reserva deja auditoría · Expirar una
+  ajena · Agente cancela solo las propias · Cancelar una reserva pendiente sin pago · Cancelar con un
+  pago en revisión · Política congelada · Cancelar una reserva vencida · Formato y unicidad · Código
+  enviado por el cliente · Sin datos personales en logs ni auditoría · Dueño consulta su reserva ·
+  Personal consulta una reserva de su agencia · Personal de otra agencia · Mis reservas entre agencias ·
+  Confirmar una reserva pendiente · Confirmar una reserva cancelada · Cancelar una reserva vencida · Fallo
+  de auditoría.
+- **Deseable (17)**: Fechas inválidas · Falta la clave · Clave expirada · Reintento sin auditoría
+  duplicada · Cancelación repetida · Horas antes del check-in · Colisión de código · Reserva sin
+  viajeros · Demasiados viajeros · Viajero sin documento · Datos del viajero en el voucher · Producto
+  despublicado después de reservar · Filtro por estado · Crear una reserva deja auditoría · Expirar una
   reserva deja auditoría.
+
+> Nota: el delta `booking` contiene 51 escenarios con algunos títulos duplicados (p. ej. "Cancelar una
+> reserva vencida"). La clasificación anterior mantiene la intención: escenarios de cupo, dinero, bloqueo,
+> idempotencia, estados, autorización y aislamiento como obligatorios; validaciones/UX/auditoría no crítica
+> como deseables.
 
 ## catalog (36)
 
-- **Obligatorio (19)**: Filtro por destino y fechas · Una noche sin cupo (búsqueda) · Sin tasa
-  disponible · Equivalente en VES · Precio enviado por el cliente · Producto en borrador · Producto
-  archivado · Producto con borrado lógico · Hay cupo en todas las noches · Falta una noche · Una noche
-  sin cupo (disponibilidad) · Noche duplicada · Precio o fechas inválidos · Total por noche y habitación
-  · Precio distinto por noche · Detalle de un producto no público · Catálogo de dos agencias · Sin
-  datos internos · Escritura anónima.
+- **Obligatorio (19)**: Filtro por destino y fechas · Una noche sin cupo · Sin tasa disponible ·
+  Equivalente en VES · Precio enviado por el cliente · Producto en borrador · Producto archivado ·
+  Producto con borrado lógico · Hay cupo en todas las noches · Falta una noche · Una noche sin cupo ·
+  Noche duplicada · Precio o fechas inválidos · Total por noche y habitación · Precio distinto por noche ·
+  Detalle de un producto no público · Catálogo de dos agencias · Sin datos internos · Escritura anónima.
 - **Deseable (17)**: Atributos inválidos · Clave desconocida en los atributos · Sin resultados ·
   Paginación sin duplicados ni huecos · Cursor inválido · Límite fuera de rango · Personas por encima de
   la capacidad · Falta traducción · El proveedor ve su borrador · Hotel válido · Más de diez imágenes ·
@@ -117,16 +128,16 @@ obligatorio se recorta para meter un deseable.
 
 - **Obligatorio (18)**: Fuente disponible · Fuente caída · Tasa inválida del proveedor · Override sin
   motivo o sin permiso · Precedencia del override · El proveedor no pisa el override · Override global
-  gana a la tasa BCV · Agencia no ve el override de otra · Catálogo público usa la tasa global · Pago
-  usa el override de la agencia · El refresco de la tasa no escribe overrides · La tasa cambia después ·
-  Cálculo del monto en VES · Redondeo half-up · Modificación directa del par congelado · Reembolso con
-  la tasa congelada · Segundo login del mismo día no consulta · Alta de pago asegura la tasa del día.
+  gana a la tasa BCV · Segundo login del mismo día no consulta · Alta de pago asegura la tasa del día ·
+  Agencia no ve el override de otra · Catálogo público usa la tasa global · Pago usa el override de la
+  agencia · El refresco de la tasa no escribe overrides · La tasa cambia después · Cálculo del monto en
+  VES · Redondeo half-up · Modificación directa del par congelado · Reembolso con la tasa congelada.
 - **Deseable (6)**: Sin ninguna tasa guardada y fuente caída · Circuit breaker · Sábado · Zona horaria
   de la fecha valor · Override con motivo · Override global.
 
 Nota (T-F1-5b): el dueño cambió la fuente a Cotizave y el refresco diario programado por un refresco
-perezoso al login y al alta de pago. Eso añade los dos escenarios obligatorios marcados arriba; los
-totales pasan de 279/186/93 a 281/188/93.
+perezoso al login y al alta de pago. Se mantienen como obligatorios "Segundo login del mismo día no
+consulta" y "Alta de pago asegura la tasa del día".
 
 ## notifications (13)
 
@@ -136,7 +147,7 @@ totales pasan de 279/186/93 a 281/188/93.
   Evento repetido · Fallo definitivo.
 
 El correo de confirmación es el único aviso de F1; sin él la reserva sigue siendo válida, por eso sus
-escenarios son deseables y no bloquean el cierre.
+escenarios funcionales de entrega son deseables y no bloquean el cierre.
 
 ## payments (35)
 
@@ -151,10 +162,11 @@ escenarios son deseables y no bloquean el cierre.
   pago en revisión · Pago Móvil sin banco · Teléfono inválido · Zelle sin confirmación · Binance sin
   orden · Tarjeta de prueba.
 
-## tenant-isolation (31)
+## tenant-isolation (33)
 
-- **Obligatorio (29)**: Sin contexto no se lee · Sin contexto no se escribe · Contexto de agencia no ve
-  otra agencia · Contexto de agencia no ve filas de plataforma · Catálogo público no ve borradores ·
+- **Obligatorio (30)**: Sin contexto no se lee · Sin contexto no se escribe · Contexto de agencia no ve
+  otra agencia · Contexto de plataforma escribe tasas globales · Contexto de plataforma no escribe filas
+  de agencia · Contexto de agencia no ve filas de plataforma · Catálogo público no ve borradores ·
   Catálogo público no escribe · Cliente A no ve la reserva de cliente B · Agente de A no ve una reserva
   de B · Personal de A ve las reservas de su agencia · Cliente no puede escribir con un `user_id` ajeno
   · Agente no puede insertar en otra agencia · Cliente sin membresía ve su propia reserva · Claves de
@@ -165,7 +177,7 @@ escenarios son deseables y no bloquean el cierre.
   El trabajo de la tasa no toca otras tablas · El trabajo de la tasa no escribe filas de agencia · Sin
   rol que ignore RLS · Rol de aplicación sin contexto no ve nada · Tabla nueva sin RLS · RLS forzada
   también para el dueño · `rates_global` probado como el rol de aplicación.
-- **Deseable (2)**: Un fallo en A no detiene B · Contexto de plataforma ve todas las agencias.
+- **Deseable (3)**: Contexto de plataforma ve todas las agencias · Un fallo en A no detiene B.
 
 ## Aplazados a F2 (no cuentan en los deltas)
 
