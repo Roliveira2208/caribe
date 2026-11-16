@@ -156,11 +156,16 @@ Un reintento idempotente SHALL NOT generar una segunda fila de auditoría.
 ### Requirement: Cancelación
 Cancelar SHALL liberar el cupo una sola vez en cada noche de la reserva y aplicar la política de
 cancelación guardada en `policy_snapshot` de cada línea, no la política actual del producto. Podrá
-cancelar el dueño de la reserva o el personal de la agencia de la reserva. Una reserva `CONFIRMED` con
-pago `APPROVED` SHALL generar un reembolso según la spec de pagos. Una reserva `PENDING_PAYMENT` sin
-pago SHALL poder cancelarse; si tiene un pago `IN_REVIEW`, la cancelación SHALL rechazarse con 409
-`PAYMENT_IN_REVIEW` hasta que el pago se apruebe o rechace. Cancelar una reserva `EXPIRED` o ya
-`CANCELLED` SHALL ser idempotente: 200 sin efecto.
+cancelar el dueño de la reserva; el owner o admin de la agencia de la reserva podrá cancelar cualquier
+reserva de su agencia; el agente SHALL cancelar solo las propias; el proveedor SHALL NOT cancelar y el
+Super Admin sin agencia SHALL recibir 403. Las horas de una regla `hours_before` SHALL contarse desde
+las 15:00 de `America/Caracas` del día de check-in. Una reserva `CONFIRMED` con pago `APPROVED` SHALL
+generar un reembolso según la spec de pagos. Una reserva `PENDING_PAYMENT` sin pago SHALL poder
+cancelarse; si tiene un pago `IN_REVIEW`, la cancelación SHALL rechazarse con 409 `PAYMENT_IN_REVIEW`
+hasta que el pago se apruebe o rechace. Cancelar una reserva `EXPIRED` o ya `CANCELLED` SHALL ser
+idempotente: 200 sin efecto; la repetición sobre una reserva `CANCELLED` SHALL devolver el reembolso ya
+existente sin crear otro. La respuesta SHALL ser `{ id, code, status, refund }`, donde `refund` es
+`null` o `{ id, amountUsd, amountVes, rate, valueDate, paymentStatus }`.
 
 #### Scenario: Cliente cancela reserva confirmada
 - GIVEN una reserva `CONFIRMED` con política "flexible"
@@ -171,6 +176,11 @@ pago SHALL poder cancelarse; si tiene un pago `IN_REVIEW`, la cancelación SHALL
 - GIVEN una reserva de otro cliente
 - WHEN un cliente intenta cancelarla
 - THEN la API responde 404
+
+#### Scenario: Agente cancela solo las propias
+- GIVEN una reserva de otro usuario de la agencia A
+- WHEN el agente de A intenta cancelarla
+- THEN la API responde 404 y la reserva no cambia
 
 #### Scenario: Cancelar una reserva pendiente sin pago
 - GIVEN una reserva `PENDING_PAYMENT` sin pagos
@@ -190,7 +200,17 @@ pago SHALL poder cancelarse; si tiene un pago `IN_REVIEW`, la cancelación SHALL
 #### Scenario: Cancelación repetida
 - GIVEN una reserva ya `CANCELLED`
 - WHEN se vuelve a cancelar
-- THEN 200 sin liberar cupo ni reembolsar otra vez
+- THEN 200 sin liberar cupo ni reembolsar otra vez y con el reembolso ya existente, si lo hay
+
+#### Scenario: Cancelar una reserva vencida
+- GIVEN una reserva `EXPIRED`
+- WHEN se intenta cancelar
+- THEN 200 sin liberar cupo ni reembolsar
+
+#### Scenario: Horas antes del check-in
+- GIVEN una reserva cuyo check-in es a las 15:00 de `America/Caracas`
+- WHEN faltan 30 horas para el check-in
+- THEN se aplica la regla de 24 horas y no la de 72 horas
 
 ## ADDED Requirements
 

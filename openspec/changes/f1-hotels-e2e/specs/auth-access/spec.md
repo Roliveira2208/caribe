@@ -155,10 +155,12 @@ ajeno.
 
 ### Requirement: Permisos sobre reservas y pagos
 Un Cliente o Agente SHALL crear reservas y reportar pagos solo para sí mismo; el `user_id` SHALL salir
-de la sesión y un Agente SHALL NOT reservar en nombre de otra persona en F1. El personal de la agencia
-SHALL ver y cancelar las reservas de su agencia. La aprobación o rechazo de un pago SHALL ser exclusiva
-del Admin de agencia de la agencia del pago y de una persona distinta de quien lo reportó. El Super
-Admin SHALL ser de solo lectura en reservas y pagos. Ningún otro rol SHALL revisar pagos.
+de la sesión y un Agente SHALL NOT reservar en nombre de otra persona en F1. El owner y el admin de la
+agencia SHALL ver y cancelar las reservas de su agencia; el Agente SHALL ver y cancelar solo las
+propias; el Proveedor SHALL NOT cancelar reservas. La aprobación o rechazo de un pago SHALL ser
+exclusiva del Admin de agencia de la agencia del pago y de una persona distinta de quien lo reportó. El
+Super Admin SHALL ser de solo lectura en reservas y pagos y SHALL NOT cancelar. Ningún otro rol SHALL
+revisar pagos.
 
 #### Scenario: Agente crea su propia reserva
 - GIVEN un agente autenticado
@@ -178,6 +180,16 @@ Admin SHALL ser de solo lectura en reservas y pagos. Ningún otro rol SHALL revi
 - GIVEN una reserva `CONFIRMED` de la agencia A
 - WHEN el admin de A la cancela
 - THEN 200 y se aplica la política guardada
+
+#### Scenario: Agente intenta cancelar una reserva ajena
+- GIVEN una reserva de otro usuario de la agencia A
+- WHEN el agente de A intenta cancelarla
+- THEN 404 y la reserva no cambia
+
+#### Scenario: Proveedor intenta cancelar
+- GIVEN una reserva de la agencia A
+- WHEN el proveedor de A intenta cancelarla
+- THEN 403 y la reserva no cambia
 
 #### Scenario: Super Admin intenta cancelar
 - GIVEN una reserva de una agencia

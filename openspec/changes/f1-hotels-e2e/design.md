@@ -305,6 +305,8 @@ inventario de tablas de negocio falla si alguna no tiene RLS habilitada y forzad
   `VALIDATION_ERROR`; el servidor no los ignora.
 - Reembolso: USD primero, VES desde el USD reembolsado con la tasa congelada (no el VES original por
   porcentaje).
+- Las horas de una regla `hours_before` se cuentan desde las 15:00 de `America/Caracas`
+  (`CHECK_IN_HOUR = 15`, `19:00Z` en F1) del día de check-in; con el check-in ya pasado no se reembolsa.
 
 ## 6. Tasas
 
@@ -399,8 +401,32 @@ Serialización y proveedor:
   `createdAt`; montos con 2 decimales, tasa con 4 y fechas ISO 8601 UTC.
 - `SimulatedPaymentProvider` detrás de `PaymentProvider` (token `PAYMENT_PROVIDER`): AUTO devuelve
   `APPROVED` y MANUAL `IN_REVIEW`; no hay cobro real.
-- Reembolsos (`refunds`, `REFUNDED`/`PARTIALLY_REFUNDED`, `REFUND_ALREADY_ISSUED`) pasan a T-F1-10;
-  0 % no reembolsa.
+- Reembolsos (`refunds`, `REFUNDED`/`PARTIALLY_REFUNDED`, `REFUND_ALREADY_ISSUED`) se implementan en
+  T-F1-10; 0 % no reembolsa.
+
+Cancelación y reembolso:
+
+- `POST /api/v1/bookings/:id/cancel` (dueño; owner/admin de la agencia; agente sobre las propias;
+  proveedor y Super Admin sin agencia → 403). Sin `Idempotency-Key`: repetir la cancelación es
+  idempotente. Responde 200 con `{ id, code, status, refund }`; `refund` es `null` o
+  `{ id, amountUsd, amountVes, rate, valueDate, paymentStatus }`.
+- Autorización: una reserva ajena responde 404; el owner/admin solo opera sobre reservas de su agencia
+  activa; el agente solo sobre las de su `user_id` (404 sobre las demás).
+- Orden de bloqueo: `bookings` → revalidar → `availability`; el pago se lee y actualiza en la misma
+  transacción. La cancelación corre en `withOwnerTenant` con el tenant de la reserva porque
+  `availability_tenant` exige el GUC de la agencia.
+- `CANCELLED`/`EXPIRED` → 200 sin liberar cupo ni reembolsar (si ya estaba `CANCELLED`, devuelve el
+  reembolso existente); un pago `IN_REVIEW` → 409 `PAYMENT_IN_REVIEW`; un pago ya reembolsado con la
+  reserva no cancelada → 409 `REFUND_ALREADY_ISSUED`. La base refuerza el tope con
+  `refunds_limit_sum`, que rechaza cualquier suma por encima del pago.
+- Reembolso: se aplica la primera regla del `policy_snapshot` (orden descendente) con
+  `hoursUntilCheckIn >= hours_before`; sin reglas o check-in pasado → 0 % (sin fila y el pago sigue
+  `APPROVED`). `refund_usd = round(amount_usd × pct / 100, 2)` y `refund_ves = round(refund_usd ×
+  rate_congelada, 2)` con `ROUND_HALF_UP`. El pago pasa a `REFUNDED` si cubre el total o
+  `PARTIALLY_REFUNDED` si no. Se llama a `PaymentProvider.refund` antes de insertar; la fila `refunds`
+  es append-only y única por pago.
+- Auditoría `booking.cancel` y `booking.refund` dentro de la transacción; el reembolso registra montos,
+  tasa congelada, fecha valor y `refundId`.
 
 ## 8. Auditoría
 
