@@ -334,6 +334,18 @@ inventario de tablas de negocio falla si alguna no tiene RLS habilitada y forzad
 - Disparo del refresco: `databaseHooks.session.create.after` de Better Auth lo lanza en segundo plano
   (`void ... .catch(...)`) y `PaymentsService.create` lo espera antes de abrir la transacción del pago.
   El login no espera al proveedor. No hay trabajo de tasa en BullMQ.
+- **Confirmación (T-F1-10b, por escrito):** se usa **Cotizave** (`ve-bcv`, tasa BCV vía `X-API-Key`) por
+  decisión del dueño (T-F1-5b, desviación §15.9): reemplaza DolarAPI y el refresco diario programado por
+  una fuente con clave y un refresco perezoso (al login y al alta de pago), acotado a una vez al día por
+  `fetched_at` en `America/Caracas`, sin bloquear el login. **Respaldo si la fuente cae:** el proveedor
+  falla controlado (timeout/reintento/circuit breaker/clave ausente o respuesta inválida), se registra
+  advertencia, no se pisa la tasa existente y la resolución usa la última fila global guardada con
+  `value_date <= hoy` (Caracas) según la precedencia configurada; si no hay ninguna fila utilizable, el
+  consumo responde **503 `RATE_UNAVAILABLE`** (catálogo conserva solo USD cuando no hay tasa global
+  informativa). **No hay ninguna clave real versionada:** `COTIZAVE_API_KEY` se lee solo de variable de
+  entorno y se envía únicamente en la cabecera saliente `X-API-Key` (nunca en URL, logs ni respuestas);
+  `.env.example` y `apps/api/test/setup-env.ts` usan placeholders de prueba (`ctz_live_test_no_usar`) y
+  las verificaciones (`git grep`/historial) no muestran claves reales en el repositorio.
 - Override de agencia: `PUT /api/v1/admin/exchange-rates/override`, cuerpo estricto
   `{ rate: string, valueDate?: string, reason: string }` (motivo obligatorio, no vacío; `valueDate` por
   defecto hoy en Caracas; fecha no pasada). Exige organización activa y permiso `exchange-rate:update`;
