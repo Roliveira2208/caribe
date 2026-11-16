@@ -16,6 +16,10 @@ allowBuilds:
   msgpackr-extract: false
   prisma: true
 
+overrides:
+  # GHSA-g3hv-75wg-m249: ReDoS en minimatch < 11.0.1 (audit prod, T-F1-10b).
+  minimatch: ">=11.0.1"
+
 minimumReleaseAgeExclude:
   - icu-minify@4.14.10
   - next-intl-swc-plugin-extractor@4.14.10
