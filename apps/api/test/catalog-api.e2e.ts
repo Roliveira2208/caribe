@@ -62,8 +62,8 @@ describe("catalog", () => {
   beforeAll(async () => {
     // El catálogo usa la tasa global. En este archivo el proveedor debe fallar
     // para controlar la tasa desde la base: se apunta a un puerto muerto antes
-    // de crear la aplicación (el proveedor lee DOLARAPI_URL al construirse).
-    process.env.DOLARAPI_URL = "http://127.0.0.1:9/dolar";
+    // de crear la aplicación (el proveedor lee COTIZAVE_API_URL al construirse).
+    process.env.COTIZAVE_API_URL = "http://127.0.0.1:9/rates";
 
     app = await createApp();
     await app.listen(0);

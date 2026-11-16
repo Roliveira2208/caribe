@@ -76,13 +76,16 @@ const RATE_SELECT = {
  * Sin ninguna fila la API responde 503 RATE_UNAVAILABLE.
  *
  * La caché de 1 h cubre solo el resultado del proveedor global. Los overrides
- * se leen de la base en cada petición para no servir un ajuste viejo. El job
- * (`refreshGlobalRate`) escribe con el contexto `rates_global`, solo filas
- * globales, y nunca pisa una fila `is_override`.
+ * se leen de la base en cada petición para no servir un ajuste viejo. El
+ * refresco perezoso (`ensureTodayRate`) escribe con el contexto
+ * `rates_global`, solo filas globales, y nunca pisa una fila `is_override`.
  */
 @Injectable()
 export class ExchangeRateService {
   private readonly logger = new Logger(ExchangeRateService.name);
+
+  /** Comprobaciones simultáneas del proceso comparten una sola consulta. */
+  private refreshInFlight: Promise<void> | null = null;
 
   constructor(
     private readonly tenantService: TenantService,
@@ -92,9 +95,9 @@ export class ExchangeRateService {
 
   /** Tasa vigente del ámbito de la sesión (agencia o plataforma). */
   async currentRate(actor: RateActor): Promise<ExchangeRateView> {
-    // La lectura intenta refrescar la tasa global; si el proveedor falla se
+    // La lectura intenta asegurar la tasa del día; si el proveedor falla se
     // usa el respaldo guardado y, si tampoco hay, resolve* lanza 503.
-    await this.refreshGlobalRate().catch(() => undefined);
+    await this.ensureTodayRate().catch(() => undefined);
 
     return actor.tenantId
       ? this.tenantService.withTenant(actor.tenantId, (tx) =>
@@ -106,8 +109,8 @@ export class ExchangeRateService {
   /**
    * Tasa global vigente para una fecha (catálogo público, T-F1-6). Corre en
    * el contexto `public`, que solo ve filas globales, y no dispara al
-   * proveedor: la fila la escriben `refreshGlobalRate()` (job diario) o un
-   * override. Sin fila lanza 503 y el catálogo sigue sirviendo USD.
+   * proveedor: la fila la escriben `ensureTodayRate()` (login y alta de pago)
+   * o un override. Sin fila lanza 503 y el catálogo sigue sirviendo USD.
    */
   async globalRate(date: string = todayInCaracas()): Promise<ExchangeRateView> {
     return this.tenantService.withPublic((tx) => this.resolveGlobal(tx, date));
@@ -142,15 +145,35 @@ export class ExchangeRateService {
   }
 
   /**
-   * Cuerpo del trabajo diario de la tasa BCV. Obtiene la tasa del proveedor
-   * (salvo que la caché de 1 h ya la tenga), guarda la fila global del día y
-   * nunca pisa un override. Si el proveedor falla se usa la última fila
-   * global; sin ninguna, 503 RATE_UNAVAILABLE.
+   * Asegura la tasa global del día sin trabajo programado (T-F1-5b, design
+   * §6). Se dispara al crear una sesión (en segundo plano) y antes de crear un
+   * pago. Si ya hay una fila global consultada hoy en `America/Caracas` no
+   * llama al proveedor; si no, obtiene la tasa (caché de 1 h), guarda la fila
+   * global con `source = 'COTIZAVE'` y nunca pisa un override.
+   *
+   * Un fallo del proveedor se registra como advertencia y no se propaga: la
+   * fila guardada sigue siendo el respaldo y la resolución posterior decide el
+   * 503. Las comprobaciones simultáneas del proceso comparten una promesa.
    */
-  async refreshGlobalRate(): Promise<ExchangeRateView> {
-    const requestedDate = todayInCaracas();
-    const cacheKey = `${RATE_CACHE_PREFIX}${requestedDate}`;
+  async ensureTodayRate(): Promise<void> {
+    if (this.refreshInFlight) return this.refreshInFlight;
 
+    const inFlight = this.refreshTodayRate().finally(() => {
+      if (this.refreshInFlight === inFlight) this.refreshInFlight = null;
+    });
+    this.refreshInFlight = inFlight;
+    return inFlight;
+  }
+
+  private async refreshTodayRate(): Promise<void> {
+    const requestedDate = todayInCaracas();
+
+    const alreadyFetched = await this.tenantService.withRatesGlobal((tx) =>
+      this.hasFetchedToday(tx, requestedDate),
+    );
+    if (alreadyFetched) return;
+
+    const cacheKey = `${RATE_CACHE_PREFIX}${requestedDate}`;
     let fetched = await this.readCached(cacheKey);
     if (!fetched) {
       try {
@@ -166,16 +189,32 @@ export class ExchangeRateService {
             error instanceof Error ? error.message : "error desconocido"
           }`,
         );
-        fetched = null;
+        return;
       }
     }
 
-    return this.tenantService.withRatesGlobal(async (tx) => {
-      if (fetched) {
-        await this.upsertGlobalRate(tx, fetched.valueDate, fetched.rate);
-      }
-      return this.resolveGlobal(tx, requestedDate);
-    });
+    await this.tenantService.withRatesGlobal((tx) =>
+      this.upsertGlobalRate(tx, fetched.valueDate, fetched.rate),
+    );
+  }
+
+  /**
+   * true si hay una fila global consultada hoy. `fetched_at` es un
+   * `timestamp` sin zona que guarda UTC: se interpreta como UTC y se convierte
+   * a la fecha calendario de Caracas, que es la que decide "una vez al día".
+   */
+  private async hasFetchedToday(
+    tx: Prisma.TransactionClient,
+    date: string,
+  ): Promise<boolean> {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT "id"
+      FROM "exchange_rates"
+      WHERE "tenant_id" IS NULL
+        AND ("fetched_at" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Caracas')::date = ${date}::date
+      LIMIT 1
+    `);
+    return rows.length > 0;
   }
 
   /**
@@ -200,7 +239,7 @@ export class ExchangeRateService {
         (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
       VALUES (
         ${randomUUID()}, ${tenantId}, 'MANUAL', ${body.rate}::numeric,
-        ${valueDate}::date, now(), true, ${body.reason}, ${userId}
+        ${valueDate}::date, (now() AT TIME ZONE 'UTC'), true, ${body.reason}, ${userId}
       )
       ON CONFLICT ("tenant_id", "value_date") DO UPDATE SET
         source = EXCLUDED.source,
@@ -236,7 +275,7 @@ export class ExchangeRateService {
         (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
       VALUES (
         ${randomUUID()}, NULL, 'MANUAL', ${body.rate}::numeric,
-        ${valueDate}::date, now(), true, ${body.reason}, ${userId}
+        ${valueDate}::date, (now() AT TIME ZONE 'UTC'), true, ${body.reason}, ${userId}
       )
       ON CONFLICT ("value_date") WHERE "tenant_id" IS NULL DO UPDATE SET
         source = EXCLUDED.source,
@@ -251,7 +290,7 @@ export class ExchangeRateService {
     return this.overrideResult(tx, rows[0]?.id, previous, "platform");
   }
 
-  /** Upsert de la fila global BCV; no toca filas `is_override`. */
+  /** Upsert de la fila global de Cotizave; no toca filas `is_override`. */
   private async upsertGlobalRate(
     tx: Prisma.TransactionClient,
     valueDate: string,
@@ -260,7 +299,7 @@ export class ExchangeRateService {
     await tx.$executeRaw(Prisma.sql`
       INSERT INTO "exchange_rates"
         (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
-      VALUES (${randomUUID()}, NULL, 'DOLARAPI', ${rate}::numeric, ${valueDate}::date, now(), false, NULL, NULL)
+      VALUES (${randomUUID()}, NULL, 'COTIZAVE', ${rate}::numeric, ${valueDate}::date, (now() AT TIME ZONE 'UTC'), false, NULL, NULL)
       ON CONFLICT ("value_date") WHERE "tenant_id" IS NULL DO UPDATE SET
         source = EXCLUDED.source,
         rate = EXCLUDED.rate,

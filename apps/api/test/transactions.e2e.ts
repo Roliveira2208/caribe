@@ -185,7 +185,7 @@ describe("reservas, pagos y documentos (RLS y reglas de base)", () => {
     await owner.query(
       `INSERT INTO "exchange_rates"
          (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
-       VALUES ($1, NULL, 'DOLARAPI', 900.0000, $2::date, now(), false, NULL, NULL),
+       VALUES ($1, NULL, 'COTIZAVE', 900.0000, $2::date, now(), false, NULL, NULL),
               ($3, $4, 'MANUAL', 950.0000, $2::date, now(), true, 'Ajuste de prueba', $5),
               ($6, $7, 'MANUAL', 970.0000, $2::date, now(), true, 'Ajuste de prueba', $8)`,
       [rateGlobal, valueDate, rateA, orgA, userA, rateB, orgB, userB],
@@ -616,7 +616,7 @@ describe("reservas, pagos y documentos (RLS y reglas de base)", () => {
           c.query(
             `INSERT INTO "exchange_rates"
                (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
-             VALUES ($1, NULL, 'DOLARAPI', 910.0000, $2::date, now(), false, NULL, NULL)`,
+             VALUES ($1, NULL, 'COTIZAVE', 910.0000, $2::date, now(), false, NULL, NULL)`,
             [randomUUID(), nextRateDate(valueDate)],
           ),
         ),
@@ -652,7 +652,7 @@ describe("reservas, pagos y documentos (RLS y reglas de base)", () => {
         await c.query(
           `INSERT INTO "exchange_rates"
              (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
-           VALUES ($1, NULL, 'DOLARAPI', 910.0000, $2::date, now(), false, NULL, NULL)`,
+           VALUES ($1, NULL, 'COTIZAVE', 910.0000, $2::date, now(), false, NULL, NULL)`,
           [platformRate, platformDate],
         );
 

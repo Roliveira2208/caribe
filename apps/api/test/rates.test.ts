@@ -5,17 +5,18 @@ import {
   todayInCaracas,
 } from "@caribe/shared";
 import { CircuitBreaker } from "../src/rates/circuit-breaker.js";
-import { DolarApiProvider } from "../src/rates/dolar-api.provider.js";
+import { CotizaveProvider } from "../src/rates/cotizave.provider.js";
 import { ExchangeRateService } from "../src/rates/exchange-rate.service.js";
 import { RateCache } from "../src/rates/rate-cache.js";
 import { ApiProblemException } from "../src/errors/api-problem.exception.js";
 import type { TenantService } from "../src/tenant/tenant.service.js";
 
 /**
- * Unitarios de tasas (T-F1-5): validación del texto de la tasa, circuit
- * breaker, caché, proveedor DolarAPI y precedencia/respaldo del servicio con
- * un proveedor y una transacción falsos. Los escenarios que exigen base de
- * datos y sesiones viven en exchange-rates.e2e.ts.
+ * Unitarios de tasas (T-F1-5 y T-F1-5b): validación del texto de la tasa,
+ * circuit breaker, caché, proveedor Cotizave y precedencia/respaldo/refresco
+ * perezoso del servicio con un proveedor y una transacción falsos. Los
+ * escenarios que exigen base de datos y sesiones viven en
+ * exchange-rates.e2e.ts.
  */
 
 describe("texto de la tasa", () => {
@@ -74,7 +75,7 @@ describe("caché de tasas", () => {
   });
 });
 
-describe("proveedor DolarAPI", () => {
+describe("proveedor Cotizave", () => {
   function response(body: unknown, status = 200): Response {
     return {
       ok: status >= 200 && status < 300,
@@ -83,30 +84,74 @@ describe("proveedor DolarAPI", () => {
     } as Response;
   }
 
-  it("lee promedio, valida el texto y usa la fecha de publicación en Caracas", async () => {
-    const provider = new DolarApiProvider({
-      url: "https://dolar.test/oficial",
-      fetchImpl: async () =>
-        response({
-          promedio: 900.5,
-          fechaActualizacion: "2026-11-14T23:00:00-04:00",
-        }),
+  it("elige ve-bcv, envía la clave en X-API-Key y usa effective_date", async () => {
+    let seenUrl = "";
+    let seenHeaders: Record<string, string> = {};
+    const provider = new CotizaveProvider({
+      url: "https://cotizave.test/v2/fx/VE/rates",
+      apiKey: "ctz_live_secreta",
+      fetchImpl: async (url, init) => {
+        seenUrl = String(url);
+        seenHeaders = init?.headers as Record<string, string>;
+        return response({
+          rates: [
+            { id: "ve-usd", mid: 1.1 },
+            { id: "ve-bcv", mid: 900.5, effective_date: "2026-11-14" },
+          ],
+        });
+      },
     });
 
     await expect(provider.getRate("2026-11-15")).resolves.toEqual({
       rate: "900.5",
       valueDate: "2026-11-14",
     });
+    expect(seenHeaders["x-api-key"]).toBe("ctz_live_secreta");
+    expect(seenUrl).not.toContain("ctz_live_secreta");
+  });
+
+  it("usa updated_at en Caracas si falta effective_date", async () => {
+    const provider = new CotizaveProvider({
+      apiKey: "ctz_live_secreta",
+      fetchImpl: async () =>
+        response({
+          rates: [
+            {
+              id: "ve-bcv",
+              mid: "900.0000",
+              updated_at: "2026-11-14T23:00:00-04:00",
+            },
+          ],
+        }),
+    });
+
+    await expect(provider.getRate("2026-11-15")).resolves.toEqual({
+      rate: "900.0000",
+      valueDate: "2026-11-14",
+    });
+  });
+
+  it("usa la fecha pedida si la fuente no informa fecha valor", async () => {
+    const provider = new CotizaveProvider({
+      apiKey: "ctz_live_secreta",
+      fetchImpl: async () => response({ rates: [{ id: "ve-bcv", mid: 900 }] }),
+    });
+
+    await expect(provider.getRate("2026-11-15")).resolves.toEqual({
+      rate: "900",
+      valueDate: "2026-11-15",
+    });
   });
 
   it("reintenta una vez y acepta el segundo intento", async () => {
     let calls = 0;
-    const provider = new DolarApiProvider({
+    const provider = new CotizaveProvider({
+      apiKey: "ctz_live_secreta",
       retries: 1,
       fetchImpl: async () => {
         calls += 1;
         if (calls === 1) throw new Error("red caída");
-        return response({ rate: "900.0000" });
+        return response({ rates: [{ id: "ve-bcv", mid: "900.0000" }] });
       },
     });
 
@@ -118,18 +163,33 @@ describe("proveedor DolarAPI", () => {
   });
 
   it("trata una tasa inválida como fallo del proveedor", async () => {
-    const provider = new DolarApiProvider({
+    const provider = new CotizaveProvider({
+      apiKey: "ctz_live_secreta",
       retries: 0,
-      fetchImpl: async () => response({ promedio: 0 }),
+      fetchImpl: async () => response({ rates: [{ id: "ve-bcv", mid: 0 }] }),
     });
     await expect(provider.getRate("2026-11-14")).rejects.toThrow(RangeError);
+  });
+
+  it("sin COTIZAVE_API_KEY falla sin llamar al proveedor", async () => {
+    let calls = 0;
+    const provider = new CotizaveProvider({
+      apiKey: "",
+      fetchImpl: async () => {
+        calls += 1;
+        return response({ rates: [] });
+      },
+    });
+    await expect(provider.getRate("2026-11-14")).rejects.toThrow(/COTIZAVE_API_KEY/);
+    expect(calls).toBe(0);
   });
 
   it("corta las llamadas mientras el breaker está abierto", async () => {
     let now = 0;
     let calls = 0;
     const breaker = new CircuitBreaker(3, 60_000, () => now);
-    const provider = new DolarApiProvider({
+    const provider = new CotizaveProvider({
+      apiKey: "ctz_live_secreta",
       retries: 0,
       breaker,
       fetchImpl: async () => {
@@ -150,7 +210,8 @@ describe("proveedor DolarAPI", () => {
   });
 
   it("respeta el timeout de 5 s por intento", async () => {
-    const provider = new DolarApiProvider({
+    const provider = new CotizaveProvider({
+      apiKey: "ctz_live_secreta",
       timeoutMs: 10,
       retries: 0,
       fetchImpl: (_url, init) =>
@@ -172,12 +233,16 @@ interface FakeRow {
   source: string;
   rate: string;
   valueDate: Date;
+  fetchedAt: Date;
   isOverride: boolean;
   reason: string | null;
 }
 
 function fakeTx(rows: FakeRow[]) {
   const executed: unknown[] = [];
+  const fetchedToday = rows.some(
+    (row) => todayInCaracas(row.fetchedAt) === todayInCaracas(),
+  );
   const tx = {
     exchangeRate: {
       findFirst: async (args: {
@@ -205,7 +270,7 @@ function fakeTx(rows: FakeRow[]) {
       executed.push(query);
       return 1;
     },
-    $queryRaw: async () => [{ id: "nueva" }],
+    $queryRaw: async () => (fetchedToday ? [{ id: "consultada-hoy" }] : []),
   };
   return { tx, executed };
 }
@@ -223,9 +288,10 @@ function rowAt(id: string, date: string, rate: string, tenantId: string | null =
   return {
     id,
     tenantId,
-    source: tenantId ? "MANUAL" : "DOLARAPI",
+    source: tenantId ? "MANUAL" : "COTIZAVE",
     rate,
     valueDate: new Date(`${date}T00:00:00.000Z`),
+    fetchedAt: new Date(`${date}T12:00:00.000Z`),
     isOverride: tenantId !== null,
     reason: tenantId ? "Ajuste" : null,
   };
@@ -294,34 +360,76 @@ describe("servicio de tasas", () => {
       new RateCache(undefined),
     );
 
-    const error = await service.refreshGlobalRate().catch((caught: unknown) => caught);
+    // El refresco no propaga el fallo del proveedor: la resolución posterior
+    // es la que decide el 503.
+    await expect(service.ensureTodayRate()).resolves.toBeUndefined();
+    const error = await service.globalRate(todayInCaracas()).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(ApiProblemException);
     expect((error as ApiProblemException).code).toBe("RATE_UNAVAILABLE");
   });
 
-  it("no llama al proveedor mientras la caché de 1 h está vigente", async () => {
+  it("no llama al proveedor si ya hay una fila consultada hoy", async () => {
     const today = todayInCaracas();
     let calls = 0;
     const provider = {
       getRate: async () => {
         calls += 1;
-        return { rate: "900.0000", valueDate: today };
+        return { rate: "910.0000", valueDate: today };
       },
     };
-    const rows = [rowAt("global", today, "900.0000")];
-    const { tx, executed } = fakeTx(rows);
+    const { tx, executed } = fakeTx([rowAt("global", today, "900.0000")]);
     const service = new ExchangeRateService(
       fakeTenantService(tx),
       provider,
       new RateCache(undefined),
     );
 
-    await service.refreshGlobalRate();
-    await service.refreshGlobalRate();
+    await service.ensureTodayRate();
+    await service.ensureTodayRate();
+    expect(calls).toBe(0);
+    expect(executed.length).toBe(0);
+  });
+
+  it("consulta una sola vez y guarda la fila global de Cotizave", async () => {
+    const today = todayInCaracas();
+    let calls = 0;
+    const provider = {
+      getRate: async () => {
+        calls += 1;
+        return { rate: "910.0000", valueDate: today };
+      },
+    };
+    const { tx, executed } = fakeTx([rowAt("global", shiftDate(today, -1), "900.0000")]);
+    const service = new ExchangeRateService(
+      fakeTenantService(tx),
+      provider,
+      new RateCache(undefined),
+    );
+
+    await Promise.all([service.ensureTodayRate(), service.ensureTodayRate()]);
     expect(calls).toBe(1);
-    // La segunda pasada usa la caché y aun así intenta el upsert global, que
-    // la base bloquea si la fila es un override.
-    expect(executed.length).toBe(2);
+    expect(executed.length).toBe(1);
+    const sql = executed[0] as { strings: readonly string[] };
+    expect(sql.strings.join("?")).toContain("'COTIZAVE'");
+    expect(sql.strings.join("?")).toContain("AT TIME ZONE 'UTC'");
+  });
+
+  it("un fallo del proveedor conserva el respaldo y no escribe", async () => {
+    const today = todayInCaracas();
+    const yesterday = shiftDate(today, -1);
+    const { tx, executed } = fakeTx([rowAt("global", yesterday, "890.0000")]);
+    const service = new ExchangeRateService(
+      fakeTenantService(tx),
+      failingProvider,
+      new RateCache(undefined),
+    );
+
+    await expect(service.ensureTodayRate()).resolves.toBeUndefined();
+    expect(executed.length).toBe(0);
+    await expect(service.globalRate(today)).resolves.toMatchObject({
+      valueDate: yesterday,
+      rate: "890.0000",
+    });
   });
 });
 

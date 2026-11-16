@@ -1,20 +1,12 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import { Queue, Worker, type Job } from "bullmq";
-import { ExchangeRateService } from "../rates/exchange-rate.service.js";
 import { BookingExpirationService } from "./booking-expiration.service.js";
 import {
   EXPIRE_BOOKINGS_JOB,
   EXPIRE_BOOKINGS_SCHEDULE,
   JOBS_QUEUE_NAME,
-  RATE_TIMEZONE,
-  REFRESH_RATE_JOB,
-  REFRESH_RATE_SCHEDULE,
   jobsEnabled,
 } from "./jobs.constants.js";
-
-/** Reintentos del refresco de tasa: fallo de red o proveedor caído. */
-const RATE_JOB_ATTEMPTS = 3;
-const RATE_JOB_BACKOFF_MS = 60_000;
 
 /** Lo mínimo que el planificador necesita de la cola (doble en pruebas). */
 export interface SchedulerQueue {
@@ -34,30 +26,17 @@ export interface SchedulerQueue {
 /** Cuerpo de cada trabajo, inyectable para probar el despacho sin Redis. */
 export interface JobHandlers {
   expireBookings(): Promise<unknown>;
-  refreshRate(): Promise<unknown>;
 }
 
 /**
  * Registra los planificadores en la cola. Se separa de la clase para poder
- * comprobar patrones, zona horaria y plantillas con una cola falsa.
+ * comprobar patrones y plantillas con una cola falsa.
  */
 export async function registerSchedules(queue: SchedulerQueue): Promise<void> {
   await queue.upsertJobScheduler(
     EXPIRE_BOOKINGS_JOB,
     { pattern: EXPIRE_BOOKINGS_SCHEDULE },
     { name: EXPIRE_BOOKINGS_JOB },
-  );
-
-  await queue.upsertJobScheduler(
-    REFRESH_RATE_JOB,
-    { pattern: REFRESH_RATE_SCHEDULE, tz: RATE_TIMEZONE },
-    {
-      name: REFRESH_RATE_JOB,
-      opts: {
-        attempts: RATE_JOB_ATTEMPTS,
-        backoff: { type: "exponential", delay: RATE_JOB_BACKOFF_MS },
-      },
-    },
   );
 }
 
@@ -69,8 +48,6 @@ export function createJobProcessor(
     switch (job.name) {
       case EXPIRE_BOOKINGS_JOB:
         return handlers.expireBookings();
-      case REFRESH_RATE_JOB:
-        return handlers.refreshRate();
       default:
         throw new Error(`Trabajo desconocido: ${job.name}`);
     }
@@ -92,10 +69,7 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
   private queue: Queue | null = null;
   private worker: Worker | null = null;
 
-  constructor(
-    private readonly expiration: BookingExpirationService,
-    private readonly rates: ExchangeRateService,
-  ) {}
+  constructor(private readonly expiration: BookingExpirationService) {}
 
   onModuleInit(): void {
     if (!jobsEnabled()) {
@@ -122,7 +96,6 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
       JOBS_QUEUE_NAME,
       createJobProcessor({
         expireBookings: () => this.expiration.expireDueBookings(),
-        refreshRate: () => this.rates.refreshGlobalRate(),
       }),
       { connection },
     );

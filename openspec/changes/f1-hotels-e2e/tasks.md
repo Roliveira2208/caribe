@@ -159,7 +159,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   duplicado", "Reembolso por encima del pago" y "Reembolso del 0 %"; auth-access › "Admin cancela
   una reserva de su agencia", "Agente intenta cancelar una reserva ajena", "Proveedor intenta
   cancelar" y "Super Admin intenta cancelar".
-- [ ] T-F1-5b Sustituir DolarAPI por Cotizave y el trabajo diario por un refresco perezoso: `ensureTodayRate()`
+- [x] T-F1-5b Sustituir DolarAPI por Cotizave y el trabajo diario por un refresco perezoso: `ensureTodayRate()`
   al crear la sesión (en segundo plano, sin bloquear el login) y antes de crear un pago, como máximo una
   vez al día por `fetched_at` en `America/Caracas`. Quita `exchange-rate.refresh` de BullMQ y deja la
   última fila guardada como respaldo.

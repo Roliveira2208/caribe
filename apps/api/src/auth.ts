@@ -7,6 +7,7 @@ import {
   getSessionFromCtx,
 } from "better-auth/api";
 import { admin, organization, twoFactor } from "better-auth/plugins";
+import { Logger } from "@nestjs/common";
 import { TWO_FACTOR_REQUIRED } from "@caribe/shared";
 import { betterAuthAdminRouteOf, targetOrganizationIdOf, tenantOrganizationIdOf, type BetterAuthPreState } from "./admin/admin-route.js";
 import { TWO_FACTOR_REQUIRED_MESSAGE, isAdminLevelSession, type AdminSessionInfo } from "./admin/admin-session.js";
@@ -29,6 +30,9 @@ import {
 } from "./access.js";
 import { requiredEnv } from "./env.js";
 import { prisma } from "./prisma.js";
+import { CotizaveProvider } from "./rates/cotizave.provider.js";
+import { ExchangeRateService } from "./rates/exchange-rate.service.js";
+import { RateCache } from "./rates/rate-cache.js";
 import { TenantService } from "./tenant/tenant.service.js";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -68,6 +72,30 @@ const betterAuthPreStates = new WeakMap<object, BetterAuthPreState>();
 const tenantService = new TenantService();
 const auditService = new AuditService();
 
+/**
+ * Refresco perezoso de la tasa global (T-F1-5b): el hook de creación de sesión
+ * no puede depender del contenedor de Nest, así que el servicio se instancia
+ * la primera vez que se usa. La caché es solo en memoria (el login no abre
+ * Redis) y la comprobación de "hoy" vive en la base.
+ */
+let rateRefreshService: ExchangeRateService | null = null;
+const rateRefreshLogger = new Logger("ExchangeRateRefresh");
+
+function ensureTodayRateInBackground(): void {
+  rateRefreshService ??= new ExchangeRateService(
+    tenantService,
+    new CotizaveProvider(),
+    new RateCache(undefined),
+  );
+  void rateRefreshService.ensureTodayRate().catch((error: unknown) => {
+    rateRefreshLogger.warn(
+      `El refresco de la tasa al iniciar sesión falló: ${
+        error instanceof Error ? error.message : "error desconocido"
+      }`,
+    );
+  });
+}
+
 async function recordBetterAuthAudit(entry: AuditEntry): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tenantService.bindContext(
@@ -87,7 +115,26 @@ export const auth = betterAuth({
     .map((origin) => origin.trim())
     .filter(Boolean),
   database: prismaAdapter(prisma, { provider: "postgresql" }),
-  emailAndPassword: { enabled: true },
+  /**
+   * Refresco perezoso de la tasa global al crear la sesión (T-F1-5b): se
+   * lanza en segundo plano para que el login no espere al proveedor ni falle
+   * si Cotizave está caído. La comprobación de "una vez al día" y el respaldo
+   * viven en `ensureTodayRate()`.
+   */
+  databaseHooks: {
+    session: {
+      create: {
+        after: () => {
+          ensureTodayRateInBackground();
+          return Promise.resolve();
+        },
+      },
+    },
+  },
+  // En pruebas el alta de usuarios es una acción de sistema (auth-helpers y
+  // seed) y no debe crear una sesión: así el refresco perezoso de la tasa se
+  // dispara con el login real y no al sembrar fixtures.
+  emailAndPassword: { enabled: true, autoSignIn: process.env.NODE_ENV !== "test" },
   // Idioma del usuario para avisos y documentos (T-F1-1a, design.md §2.1).
   // Campo adicional de Better Auth, no una tabla propia: la lib lo escribe en
   // user.locale y el CLI oficial lo refleja en schema.prisma. `es` por defecto

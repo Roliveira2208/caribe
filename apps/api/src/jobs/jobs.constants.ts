@@ -4,26 +4,16 @@
  *
  * Los identificadores son estables: `upsertJobScheduler` los usa como clave,
  * así que cambiarlos crearía un planificador nuevo en lugar de actualizar el
- * existente.
+ * existente. La tasa no tiene trabajo propio desde T-F1-5b: se refresca de
+ * forma perezosa al crear una sesión y antes de crear un pago.
  */
 export const JOBS_QUEUE_NAME = "caribe-jobs";
 
 /** Expiración de retenciones vencidas (spec booking "Vencimiento de la retención"). */
 export const EXPIRE_BOOKINGS_JOB = "bookings.expire";
 
-/** Refresco de la tasa BCV global (spec exchange-rates "Fuente disponible"). */
-export const REFRESH_RATE_JOB = "exchange-rate.refresh";
-
 /** Cada minuto: la retención se mide en minutos y la spec pide ese ritmo. */
 export const EXPIRE_BOOKINGS_SCHEDULE = "* * * * *";
-
-/**
- * Una vez al día a medianoche de Caracas. La fecha valor de la tasa es la del
- * día calendario venezolano, así que el corte natural es esa medianoche y no
- * la UTC.
- */
-export const REFRESH_RATE_SCHEDULE = "0 0 * * *";
-export const RATE_TIMEZONE = "America/Caracas";
 
 /**
  * BullMQ solo arranca con `REDIS_URL` configurado y fuera de las pruebas.

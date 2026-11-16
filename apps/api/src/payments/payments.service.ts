@@ -177,6 +177,11 @@ export class PaymentsService {
       if (!booking) throw notFound();
       assertPayable(booking.status, booking.is_expired);
 
+      // T-F1-5b: el alta de pago asegura la tasa del día antes de congelarla.
+      // Un fallo del proveedor no lanza: queda el respaldo guardado y, si no
+      // hay ninguno, `rateForPayment` responde 503 RATE_UNAVAILABLE.
+      await this.exchangeRateService.ensureTodayRate();
+
       return await this.attemptPayment({
         userId: input.userId,
         tenantId: booking.tenant_id,
