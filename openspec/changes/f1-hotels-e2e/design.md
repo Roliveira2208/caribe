@@ -234,6 +234,11 @@ GUC (parámetros de sesión, `set_config(..., true)` dentro de la transacción):
   `destinations` es de lectura pública (solo nombre, país y código).
 - `audit_logs` y `auth_events`: `tenant_id = app.tenant_id` o `app.platform = 'on'`; nunca `public` ni
   `owner`.
+- `bookings`, `booking_items`, `payments`, `refunds` y `documents` añaden una política `*_platform` de
+  **solo lectura** (`current_setting('app.platform', true) = 'on'`). El Super Admin ve las reservas y
+  pagos de todas las agencias desde el panel, pero no puede escribir en ellas: la escritura sigue
+  siendo del personal de la agencia o del dueño. Se añadió en T-F1-9 (migración
+  `20261115090000_business_platform_read`) porque la spec exige que `platform` lea todas las agencias.
 
 ### 3.2 Resolución del cliente
 
@@ -327,17 +332,75 @@ inventario de tablas de negocio falla si alguna no tiene RLS habilitada y forzad
 - Lectura: `GET /api/v1/admin/exchange-rates/current` devuelve `{ scope, valueDate, rate, source,
   isOverride }` con la tasa vigente del ámbito de la sesión (agencia con organización activa; global para
   el Super Admin). Las tasas se serializan como cadena con 4 decimales.
-- El catálogo público usa la tasa global (T-F1-6); el pago usa la tasa de la agencia (T-F1-9).
-- Sin tasa global: catálogo solo USD; sin tasa de agencia: pago en VES deshabilitado, USD disponible.
-- Trigger de pago congelado y copia de `rate`/`value_date` en `payments`.
+- El catálogo público usa la tasa global (T-F1-6) sin disparar al proveedor ni escribir en la base; el
+  alta de un pago resuelve su tasa congelada con la precedencia override de agencia > global (T-F1-9).
+- Sin tasa global: catálogo solo USD (`basePriceVes`, `totalVes` y `priceVes` en `null`). El alta de un
+  pago siempre exige una tasa (agencia o global): sin ninguna fila responde 503 `RATE_UNAVAILABLE` y no
+  crea el pago. La UI deshabilita el pago en VES cuando no hay tasa y conserva USD.
+- `ExchangeRateService.rateForPayment(tx, tenantId, date)` corre dentro de la transacción del pago y
+  devuelve `{ id, rate, valueDate }`; el pago guarda `exchange_rate_id`, `rate` y `value_date`, y el
+  trigger `payments_frozen` impide recalcularlos después.
 
 ## 7. Pagos
 
-- `SimulatedPaymentProvider` detrás de `PaymentProvider`; no hay cobro real.
-- Esquemas Zod estrictos por método; tarjeta solo `last4` + marca; `cardNumber`/`pan`/`cvv` → 422.
-- `PENDING` es interno; AUTO sale `APPROVED`, MANUAL sale `IN_REVIEW`.
-- Revisor = owner/admin de la agencia, distinto de `reported_by`; Super Admin 403.
-- Reembolso en `refunds`, pago `REFUNDED` o `PARTIALLY_REFUNDED`; 0 % no reembolsa.
+Rutas (desviación del SDD, §15):
+
+- `POST /api/v1/bookings/:id/payments` (cliente dueño, `Idempotency-Key` obligatoria): reporta el pago de
+  una reserva propia y responde 201 con el pago serializado.
+- `GET /api/v1/bookings/:id/payments` (cliente dueño): `{ items }` con los pagos de su reserva; 404 si la
+  reserva es ajena. El personal consulta desde el panel.
+- `GET /api/v1/admin/payments` y `GET /api/v1/admin/payments/:id` (owner/admin/agente con `payment:read`;
+  Super Admin sin agencia como plataforma): keyset `createdAt DESC, id DESC`, `limit` 20 (máx. 50),
+  filtros `status`, `method` y `bookingId`, cursor opaco; fuera de alcance 404.
+- `PATCH /api/v1/admin/payments/:id/approve` y `.../reject` (owner/admin con `payment:review`; Super
+  Admin 403): 200 con el pago; el rechazo exige `{ reason }` no vacío de hasta 500 caracteres.
+
+Alta:
+
+- El cuerpo es la unión discriminada estricta de `packages/shared` (`paymentBodySchema`): solo método y
+  sus datos. `PAGO_MOVIL { bank, phone, reference }`, `ZELLE { senderName?, senderEmail?,
+  confirmationNumber }` (exige nombre o correo), `BINANCE_PAY { orderId }` y `CARD { last4, brand }`.
+  En base, `reference` guarda la referencia, confirmación u orden; con tarjeta queda `null`.
+  `cardNumber`, `pan` y `cvv` no se declaran: responden 422 y no se registran.
+- `amount_usd` = `bookings.total_usd`; `amount_ves = round(amount_usd × rate, 2)` con `ROUND_HALF_UP` y
+  la tasa congelada de `rateForPayment`. Montos, tasas, `tenant_id`, `user_id`, estados y fechas
+  enviados por el cliente → 422 `VALIDATION_ERROR`.
+- La reserva debe ser del usuario (404 si no) y estar `PENDING_PAYMENT` y vigente: `EXPIRED` o
+  `expires_at <= now` → 410 `HOLD_EXPIRED`; `CANCELLED` → 409 `BOOKING_CANCELLED`; `CONFIRMED` → 409
+  `BOOKING_ALREADY_PAID`.
+- Idempotencia: la clave se reclama en una transacción propia antes de tocar la reserva y se libera si el
+  alta falla; la respuesta guardada es exactamente `{ id, status }`. El reintento con el mismo cuerpo
+  devuelve la misma respuesta (201); la misma clave con otro cuerpo → 409 `IDEMPOTENCY_KEY_REUSED`.
+- `PENDING` es interno: el pago nace y sale de la transacción en `APPROVED` (AUTO, confirma la reserva) o
+  `IN_REVIEW` (MANUAL). `tenant_settings.payment_mode` decide; sin fila, AUTO.
+- Referencia duplicada en la misma agencia (`(tenant_id, method, reference)` parcial) → 409
+  `DUPLICATE_PAYMENT_REFERENCE`; la misma referencia en otra agencia se acepta.
+- Auditoría `payment.create` con el antes/después en la misma transacción (`AuditService.record` dentro
+  de `withOwnerTenant`: el cliente puede no tener agencia activa).
+
+Revisión:
+
+- Solo owner/admin de la agencia con `payment:review`, distintos de `reported_by`: el pagador que intenta
+  revisar su propio pago recibe 403. Agente, proveedor, cliente y Super Admin → 403.
+- Un estado terminal observado en la lectura inicial → 409 `INVALID_STATE_TRANSITION`; el cambio entre la
+  lectura inicial y el bloqueo (dos revisiones concurrentes) → 409 `PAYMENT_ALREADY_REVIEWED`.
+- Aprobar bloquea la reserva: `EXPIRED` o `expires_at <= now` → 410 `HOLD_EXPIRED` (el pago sigue
+  `IN_REVIEW`); `CANCELLED` → 409; ya pagada → 409; si procede, la reserva pasa a `CONFIRMED`. El
+  rechazo guarda `rejection_reason` y deja la reserva pendiente.
+- Aprobar y rechazar van con `@Auditable` (`payment.approve`/`payment.reject`) en la misma transacción que
+  el pago y la reserva; si la auditoría falla, no se confirma nada.
+- Un pago `IN_REVIEW` impide la expiración de su reserva (T-F1-8); la carrera pago/expiración la gana una
+  sola transacción.
+
+Serialización y proveedor:
+
+- El pago expone `id`, `tenantId`, `bookingId`, `method`, `status`, `amountUsd`, `amountVes`, `rate`,
+  `valueDate`, `reference`, `reportedBy`, `reviewedBy`, `reviewedAt`, `rejectionReason`, `paidAt` y
+  `createdAt`; montos con 2 decimales, tasa con 4 y fechas ISO 8601 UTC.
+- `SimulatedPaymentProvider` detrás de `PaymentProvider` (token `PAYMENT_PROVIDER`): AUTO devuelve
+  `APPROVED` y MANUAL `IN_REVIEW`; no hay cobro real.
+- Reembolsos (`refunds`, `REFUNDED`/`PARTIALLY_REFUNDED`, `REFUND_ALREADY_ISSUED`) pasan a T-F1-10;
+  0 % no reembolsa.
 
 ## 8. Auditoría
 
@@ -434,7 +497,7 @@ aprobado por el dueño antes de implementarla. Pantallas F1:
 
 ## 15. Desviaciones canónicas respecto del SDD
 
-Siete decisiones de F1 difieren del SDD §5 y §7. Se aplican en el código y en las specs; al cerrar F1 se
+Ocho decisiones de F1 difieren del SDD §5 y §7. Se aplican en el código y en las specs; al cerrar F1 se
 actualiza el SDD con esta lista (tarea T-F1-17), sin cambiar las decisiones D1–D15.
 
 | # | SDD | F1 | Motivo |
@@ -446,3 +509,4 @@ actualiza el SDD con esta lista (tarea T-F1-17), sin cambiar las decisiones D1�
 | 5 | Pago creado `PENDING` visible | `PENDING` interno; sale `IN_REVIEW` o `APPROVED` | Evitar un estado intermedio observable |
 | 6 | `idempotency_keys` con `tenant_id` | Sin `tenant_id`; RLS solo por `user_id` | La agencia se resuelve después de consumir la clave |
 | 7 | Producto de hotel con tabla `hotels` separada | `products` es el tipo de habitación, agrupado por `hotel_key`; sin tabla `hotels` en F1 | Una fila vendible por tipo; normalización a `hotels` como deuda de F2 |
+| 8 | Revisión de pagos en `PATCH /payments/:id/approve` y `/payments/:id/reject` | `PATCH /admin/payments/:id/approve` y `/reject`; listado y detalle en `/admin/payments`; pagos del cliente en `GET /bookings/:id/payments` | El panel vive bajo `/admin` y hereda TOTP y permisos `payment:*`; el cliente solo ve sus propios pagos |

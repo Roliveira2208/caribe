@@ -1,5 +1,6 @@
 export * from "./catalog";
 export * from "./locale";
+export * from "./payments";
 export * from "./ports";
 export * from "./rates";
 export * from "./auth-api";

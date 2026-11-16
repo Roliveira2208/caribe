@@ -43,6 +43,13 @@ export interface OverrideResult {
   before: AuditRateState | null;
 }
 
+/** Tasa congelada de un pago: la fila de `exchange_rates` y sus valores. */
+export interface FrozenRate {
+  id: string;
+  rate: string;
+  valueDate: string;
+}
+
 export interface AuditRateState {
   id: string;
   valueDate: string;
@@ -114,6 +121,24 @@ export class ExchangeRateService {
     return this.tenantService.withTenant(tenantId, (tx) =>
       this.resolveAgency(tx, tenantId, date),
     );
+  }
+
+  /**
+   * Fila de tasa que se congela en un pago (T-F1-9, spec payments "Creación
+   * de pago"). Corre dentro de la transacción del pago, en el contexto
+   * `tenant`+`owner`: la agencia ve su override y la fila global. La
+   * precedencia es override de agencia > global y sin ninguna fila responde
+   * 503 `RATE_UNAVAILABLE`. El pago guarda `exchange_rate_id`, `rate` y
+   * `value_date`; después no se recalculan.
+   */
+  async rateForPayment(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    date: string = todayInCaracas(),
+  ): Promise<FrozenRate> {
+    const row = await this.agencyRow(tx, tenantId, date);
+    if (!row) throw rateUnavailable();
+    return { id: row.id, rate: formatRate(row.rate), valueDate: formatValueDate(row.valueDate) };
   }
 
   /**
@@ -264,20 +289,29 @@ export class ExchangeRateService {
     tenantId: string,
     date: string = todayInCaracas(),
   ): Promise<ExchangeRateView> {
+    const row = await this.agencyRow(tx, tenantId, date);
+    if (!row) throw rateUnavailable();
+    return toView(row, "agency");
+  }
+
+  /** Fila de la agencia (override o respaldo) o la global; `null` si no hay. */
+  private async agencyRow(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    date: string,
+  ): Promise<RateRow | null> {
     const own = await tx.exchangeRate.findFirst({
       where: { tenantId, valueDate: { lte: dateOf(date) } },
       orderBy: { valueDate: "desc" },
       select: RATE_SELECT,
     });
-    if (own) return toView(own, "agency");
+    if (own) return own;
 
-    const global = await tx.exchangeRate.findFirst({
+    return tx.exchangeRate.findFirst({
       where: { tenantId: null, valueDate: { lte: dateOf(date) } },
       orderBy: { valueDate: "desc" },
       select: RATE_SELECT,
     });
-    if (!global) throw rateUnavailable();
-    return toView(global, "agency");
   }
 
   /** Lee la caché y valida el contenido; una entrada corrupta se descarta. */

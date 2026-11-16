@@ -8,6 +8,7 @@ import { BookingsModule } from "./bookings/bookings.module.js";
 import { CatalogModule } from "./catalog/catalog.module.js";
 import { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
 import { JobsModule } from "./jobs/jobs.module.js";
+import { PaymentsModule } from "./payments/payments.module.js";
 import { RatesModule } from "./rates/rates.module.js";
 import { TenantModule } from "./tenant/tenant.module.js";
 import { TenantSettingsModule } from "./tenant-settings/tenant-settings.module.js";
@@ -22,6 +23,7 @@ import { TenantSettingsModule } from "./tenant-settings/tenant-settings.module.j
     CatalogModule,
     BookingsModule,
     JobsModule,
+    PaymentsModule,
     RatesModule,
     TenantModule,
     TenantSettingsModule,

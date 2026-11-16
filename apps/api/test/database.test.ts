@@ -534,6 +534,25 @@ describe("reservas, pagos y documentos (T-F1-1c)", () => {
     expect(sql).not.toContain('CREATE POLICY "exchange_rates_platform_delete"');
   });
 
+  it("permite a la plataforma leer las tablas de negocio, sin escribir", () => {
+    const migration = readMigrations().find(({ name }) =>
+      name.endsWith("_business_platform_read"),
+    );
+    expect(migration).toBeDefined();
+    const sql = stripSqlComments(migration?.sql ?? "");
+
+    for (const table of ["bookings", "booking_items", "payments", "refunds", "documents"]) {
+      expect(sql).toMatch(
+        new RegExp(
+          `CREATE POLICY "${table}_platform" ON "${table}"[\\s\\S]*?FOR SELECT[\\s\\S]*?app\\.platform`,
+        ),
+      );
+    }
+    // Solo lectura: ni INSERT, ni UPDATE, ni DELETE para el contexto de
+    // plataforma sobre las tablas de negocio.
+    expect(sql).not.toMatch(/FOR (INSERT|UPDATE|DELETE)/);
+  });
+
   it("congela precios, identidad y reembolsos con triggers", () => {
     const migration = transactionsMigration();
     const sql = stripSqlComments(migration?.sql ?? "");

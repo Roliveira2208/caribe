@@ -117,9 +117,24 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   es donde existe el endpoint de pago. El planificador no arranca con `NODE_ENV=test` ni sin
   `REDIS_URL`, así que los e2e no dependen de Redis; `expireDueBookings(now, organizationIds?)` acota
   una pasada para reprocesos manuales y pruebas.
-- [ ] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, datos por método, monto
+- [x] T-F1-9 `PaymentModule`: pago simulado, estados y modos AUTO/MANUAL, datos por método, monto
   calculado en servidor y revisor distinto.
-  Prueba: payments › "Pago en VES por Pago Móvil" y "Modo MANUAL aprobado".
+  Prueba: payments › "Pago en VES por Pago Móvil", "Cliente envía un monto o una tasa", "Reserva
+  vencida", "Reserva cancelada", "Reserva ya confirmada", "Pago de una reserva ajena", "Sin sesión",
+  "Modo AUTO", "Modo MANUAL aprobado", "Modo MANUAL rechazado", "Rechazo sin motivo", "Aprobar sin
+  permiso", "Revisor distinto del pagador", "Agencia de una sola persona", "Dos revisiones
+  concurrentes", "Aprobar sobre una reserva vencida", "Transición no listada", todos los de "Datos por
+  método de pago" y "Serialización de montos", y "Carrera entre pago y expiración" (heredado de
+  T-F1-8). Unitarios: cursor del listado, query, rechazo, métodos y respuesta guardada.
+  Nota: incluye la migración `20261115090000_business_platform_read` (políticas `*_platform` de solo
+  lectura para `bookings`, `booking_items`, `payments`, `refunds` y `documents`, que faltaban desde
+  T-F1-1c y que el panel del Super Admin necesita). El 410 `HOLD_EXPIRED` y la carrera pago/expiración
+  heredados de T-F1-8 se cubren aquí. El alta exige `Idempotency-Key`, congela la tasa de la agencia
+  (override > global; sin ninguna, 503 `RATE_UNAVAILABLE`) y audita `payment.create` en su transacción;
+  la revisión vive en `/admin/payments` (desviación §15-8), audita `payment.approve`/`payment.reject` y
+  responde 403 al revisor que es el propio pagador. Los reembolsos (`refunds`, estados
+  `REFUNDED`/`PARTIALLY_REFUNDED`, `REFUND_ALREADY_ISSUED` y los escenarios de "Reembolso") pasan a
+  T-F1-10.
 - [ ] T-F1-9b Admin: organización activa (una membresía auto, varias selector, cero sin panel, Super
   Admin plataforma). Wireframe del selector aprobado antes de construir.
   Prueba: auth-access › "Organización activa en el panel".

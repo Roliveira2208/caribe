@@ -928,6 +928,20 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
     reason:
       "Reserva propia: la agencia se resuelve desde el producto y el dueño se fija desde la sesión (spec booking).",
   },
+  {
+    method: "GET",
+    path: "bookings/:id/payments",
+    justification: "self-service",
+    reason:
+      "Pagos de una reserva propia; el personal de la agencia consulta desde /admin/payments (spec payments).",
+  },
+  {
+    method: "POST",
+    path: "bookings/:id/payments",
+    justification: "self-service",
+    reason:
+      "El dueño reporta el pago de su reserva; el servidor calcula montos y congela la tasa (spec payments, 'Creación de pago').",
+  },
 ];
 
 /**

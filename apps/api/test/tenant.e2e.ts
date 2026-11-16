@@ -39,6 +39,8 @@ describe("aislamiento entre tenants (RLS)", () => {
   let rowA2: string;
   let rowB: string;
   let rowPlatform: string;
+  let bookingA: string;
+  let bookingB: string;
 
   beforeAll(async () => {
     // Dos agencias como accion de sistema (misma via que el seed y el e2e de
@@ -70,6 +72,31 @@ describe("aislamiento entre tenants (RLS)", () => {
           action: "test.platform",
           entity: "test",
           entityId: `platform-${suffix}`,
+        },
+      ],
+    });
+
+    bookingA = randomUUID();
+    bookingB = randomUUID();
+    await prisma.booking.createMany({
+      data: [
+        {
+          id: bookingA,
+          tenantId: orgA,
+          code: `CRB-${suffix.toUpperCase()}`,
+          userId: ownerA,
+          totalUsd: "100.00",
+          travelers: [{ fullName: "Viajero RLS A" }],
+          expiresAt: new Date(Date.now() + 60 * 60 * 1_000),
+        },
+        {
+          id: bookingB,
+          tenantId: orgB,
+          code: `CRB-${randomUUID().slice(0, 8).toUpperCase()}`,
+          userId: ownerB,
+          totalUsd: "100.00",
+          travelers: [{ fullName: "Viajero RLS B" }],
+          expiresAt: new Date(Date.now() + 60 * 60 * 1_000),
         },
       ],
     });
@@ -182,6 +209,46 @@ describe("aislamiento entre tenants (RLS)", () => {
     it("sin contexto no se ve nada: fallo cerrado", async () => {
       const rows = await asCaribeApp(undefined, runRows);
       expect(rows).toEqual([]);
+    });
+  });
+
+  describe("contexto de plataforma sobre las tablas de negocio", () => {
+    it("lee las reservas de todas las agencias", async () => {
+      const rows = await asCaribeApp({ platform: true }, async (c) => {
+        const result = await c.query<{ id: string }>(
+          "SELECT id FROM bookings WHERE id = ANY($1::text[]) ORDER BY id",
+          [[bookingA, bookingB]],
+        );
+        return result.rows.map((row) => row.id);
+      });
+      expect(rows.sort()).toEqual([bookingA, bookingB].sort());
+    });
+
+    it("no escribe reservas: el UPDATE no alcanza filas y el INSERT se rechaza", async () => {
+      // La política de plataforma es solo SELECT: sin política de UPDATE el
+      // UPDATE no ve ninguna fila y sin política de INSERT la base rechaza.
+      const updated = await asCaribeApp({ platform: true }, async (c) => {
+        const result = await c.query("UPDATE bookings SET status = 'CONFIRMED' WHERE id = $1", [
+          bookingA,
+        ]);
+        return result.rowCount;
+      });
+      expect(updated).toBe(0);
+      const booking = await prisma.booking.findUniqueOrThrow({
+        where: { id: bookingA },
+        select: { status: true },
+      });
+      expect(booking.status).toBe("PENDING_PAYMENT");
+
+      await expect(
+        asCaribeApp({ platform: true }, (c) =>
+          c.query(
+            `INSERT INTO bookings (id, tenant_id, code, user_id, total_usd, travelers, expires_at)
+             VALUES ($1, $2, $3, $4, 100.00, '[{"fullName":"X"}]'::jsonb, now() + interval '1 hour')`,
+            [randomUUID(), orgA, `CRB-${randomUUID().slice(0, 8).toUpperCase()}`, ownerA],
+          ),
+        ),
+      ).rejects.toThrow();
     });
   });
 

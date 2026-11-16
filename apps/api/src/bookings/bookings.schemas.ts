@@ -13,17 +13,8 @@ import { stayRangeSchema, todayInCaracas, z } from "@caribe/shared";
  * con un maximo de 30 noches.
  */
 
-/** Encabezado obligatorio de idempotencia. */
-export const IDEMPOTENCY_HEADER = "Idempotency-Key";
-
 /** Endpoint que se guarda en `idempotency_keys.endpoint`. */
 export const BOOKINGS_CREATE_ENDPOINT = "POST /bookings";
-
-export const IDEMPOTENCY_KEY_MIN_LENGTH = 8;
-export const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
-
-/** Vigencia de una clave de idempotencia (24 h, design §2.3). */
-export const IDEMPOTENCY_KEY_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Viajero con campos planos. El documento va como tipo + numero; telefono y

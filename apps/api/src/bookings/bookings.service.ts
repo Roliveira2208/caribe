@@ -10,6 +10,13 @@ import { AuditService } from "../audit/audit.service.js";
 import { toLocalized } from "../catalog/catalog.mappers.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { Prisma } from "../generated/prisma/client.js";
+import {
+  claimIdempotencyKey,
+  idempotencyKeyWhere,
+  isUniqueViolation,
+  releaseIdempotencyKey,
+  requireIdempotencyKey,
+} from "../idempotency/idempotency.js";
 import { TENANT_SETTINGS_DEFAULTS } from "../tenant-settings/tenant-settings.schemas.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import {
@@ -20,9 +27,6 @@ import { decodeBookingsCursor, encodeBookingsCursor } from "./bookings.cursor.js
 import {
   BOOKINGS_CREATE_ENDPOINT,
   BOOKINGS_DEFAULT_LIMIT,
-  IDEMPOTENCY_KEY_MAX_LENGTH,
-  IDEMPOTENCY_KEY_MIN_LENGTH,
-  IDEMPOTENCY_KEY_TTL_MS,
   hashBookingRequest,
   parseStoredBookingResponse,
   type BookingDetailResponse,
@@ -49,13 +53,6 @@ interface LockedNightRow {
   reserved: number;
   price_usd: DecimalValue;
 }
-
-/** Resultado de reclamar una `Idempotency-Key`. */
-type ClaimOutcome =
-  | { kind: "claimed" }
-  | { kind: "replay"; bookingId: string }
-  | { kind: "reused" }
-  | { kind: "in-progress" };
 
 /** Datos que necesita una transaccion de reserva. */
 interface ReserveParams {
@@ -99,7 +96,14 @@ export class BookingsService {
   }): Promise<BookingDetailResponse> {
     const key = requireIdempotencyKey(input.idempotencyKey);
     const requestHash = hashBookingRequest(input.body);
-    const claim = await this.claimKey(input.userId, key, requestHash);
+    const claim = await claimIdempotencyKey({
+      tenantService: this.tenantService,
+      userId: input.userId,
+      endpoint: BOOKINGS_CREATE_ENDPOINT,
+      key,
+      requestHash,
+      parseResponse: parseStoredBookingResponse,
+    });
 
     if (claim.kind === "reused") {
       throw new ApiProblemException(
@@ -117,7 +121,7 @@ export class BookingsService {
       // Reintento identico: se reconstruye el detalle ya creado. La respuesta
       // guardada es minima ({ id, code }); no se duplica la reserva ni la
       // auditoria.
-      return this.detailForUser(input.userId, claim.bookingId);
+      return this.detailForUser(input.userId, claim.response.id);
     }
 
     try {
@@ -136,7 +140,12 @@ export class BookingsService {
     } catch (error) {
       // Una solicitud fallida no deja la clave atrapada en vuelo: el cliente
       // puede reintentar con la misma clave.
-      await this.releaseKey(input.userId, key).catch(() => undefined);
+      await releaseIdempotencyKey(
+        this.tenantService,
+        input.userId,
+        BOOKINGS_CREATE_ENDPOINT,
+        key,
+      ).catch(() => undefined);
       throw error;
     }
   }
@@ -298,13 +307,7 @@ export class BookingsService {
     // La respuesta guardada es minima: solo id y codigo, nunca viajeros ni
     // datos de pago (spec booking, "Respuesta guardada minima").
     await tx.idempotencyKey.update({
-      where: {
-        userId_endpoint_key: {
-          userId: params.userId,
-          endpoint: BOOKINGS_CREATE_ENDPOINT,
-          key: params.key,
-        },
-      },
+      where: idempotencyKeyWhere(params.userId, BOOKINGS_CREATE_ENDPOINT, params.key),
       data: { responseStatus: 201, responseBody: { id: bookingId, code: params.code } },
     });
 
@@ -353,97 +356,6 @@ export class BookingsService {
       );
     }
     return product;
-  }
-
-  /**
-   * Reclama la clave en una transaccion propia (commit antes de procesar). Una
-   * clave vencida se descarta y se reutiliza; una clave viva con otro cuerpo es
-   * 409 `IDEMPOTENCY_KEY_REUSED`; con el mismo cuerpo y sin respuesta es 409
-   * `IDEMPOTENCY_KEY_IN_PROGRESS`; con respuesta guardada es un reintento.
-   *
-   * El `create` que choca con el unico no se captura dentro de su transaccion:
-   * PostgreSQL la deja abortada. Se captura fuera y se consulta la fila en otra
-   * transaccion.
-   */
-  private async claimKey(
-    userId: string,
-    key: string,
-    requestHash: string,
-    attempt = 0,
-  ): Promise<ClaimOutcome> {
-    const now = new Date();
-    try {
-      await this.tenantService.withOwner(userId, async (tx) => {
-        await tx.idempotencyKey.deleteMany({
-          where: { userId, endpoint: BOOKINGS_CREATE_ENDPOINT, key, expiresAt: { lte: now } },
-        });
-        await tx.idempotencyKey.create({
-          data: {
-            id: randomUUID(),
-            userId,
-            endpoint: BOOKINGS_CREATE_ENDPOINT,
-            key,
-            requestHash,
-            expiresAt: new Date(now.getTime() + IDEMPOTENCY_KEY_TTL_MS),
-          },
-        });
-      });
-      return { kind: "claimed" };
-    } catch (error) {
-      if (!isUniqueViolation(error)) throw error;
-    }
-
-    const existing = await this.tenantService.withOwner(userId, (tx) =>
-      tx.idempotencyKey.findUnique({
-        where: {
-          userId_endpoint_key: {
-            userId,
-            endpoint: BOOKINGS_CREATE_ENDPOINT,
-            key,
-          },
-        },
-      }),
-    );
-
-    // La fila que provoco el conflicto desaparecio (purga concurrente): un
-    // reintento acotado vuelve a reclamar.
-    if (!existing) {
-      if (attempt < 1) return this.claimKey(userId, key, requestHash, attempt + 1);
-      return { kind: "in-progress" };
-    }
-
-    // Una clave vencida se puede reutilizar como solicitud nueva.
-    if (existing.expiresAt.getTime() <= now.getTime()) {
-      if (attempt < 1) {
-        await this.tenantService.withOwner(userId, (tx) =>
-          tx.idempotencyKey.deleteMany({
-            where: {
-              userId,
-              endpoint: BOOKINGS_CREATE_ENDPOINT,
-              key,
-              expiresAt: { lte: new Date() },
-            },
-          }),
-        );
-        return this.claimKey(userId, key, requestHash, attempt + 1);
-      }
-      return { kind: "in-progress" };
-    }
-
-    if (existing.requestHash !== requestHash) return { kind: "reused" };
-
-    const stored = parseStoredBookingResponse(existing.responseBody);
-    if (!stored) return { kind: "in-progress" };
-    return { kind: "replay", bookingId: stored.id };
-  }
-
-  /** Libera una clave reclamada cuya reserva no llego a confirmarse. */
-  private async releaseKey(userId: string, key: string): Promise<void> {
-    await this.tenantService.withOwner(userId, (tx) =>
-      tx.idempotencyKey.deleteMany({
-        where: { userId, endpoint: BOOKINGS_CREATE_ENDPOINT, key },
-      }),
-    );
   }
 
   /** Detalle de una reserva propia (reintento idempotente). */
@@ -540,39 +452,6 @@ export class BookingsService {
           : null,
     };
   }
-}
-
-/** Valida y normaliza el encabezado `Idempotency-Key`. */
-function requireIdempotencyKey(raw: string | undefined): string {
-  const key = raw?.trim() ?? "";
-  if (key.length === 0) {
-    throw new ApiProblemException(
-      "IDEMPOTENCY_KEY_REQUIRED",
-      "Falta el encabezado Idempotency-Key.",
-    );
-  }
-  if (key.length < IDEMPOTENCY_KEY_MIN_LENGTH || key.length > IDEMPOTENCY_KEY_MAX_LENGTH) {
-    throw new ApiProblemException(
-      "VALIDATION_ERROR",
-      "La clave de idempotencia no es válida.",
-      [
-        {
-          path: "Idempotency-Key",
-          message: `La clave debe tener entre ${IDEMPOTENCY_KEY_MIN_LENGTH} y ${IDEMPOTENCY_KEY_MAX_LENGTH} caracteres`,
-        },
-      ],
-    );
-  }
-  return key;
-}
-
-/** P2002: choque con un indice unico. */
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { code?: unknown }).code === "P2002"
-  );
 }
 
 /** Noches de `[checkIn, checkOut)` como fechas calendario. */
