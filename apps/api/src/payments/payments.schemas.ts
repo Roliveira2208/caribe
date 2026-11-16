@@ -81,6 +81,19 @@ export interface BookingPaymentsResponse {
 }
 
 /**
+ * Reembolso serializado que devuelve la cancelación (T-F1-10, specs/payments
+ * "Reembolso"). Montos con 2 decimales, tasa con 4 y fecha valor calendario.
+ */
+export interface RefundResponse {
+  id: string;
+  amountUsd: string;
+  amountVes: string;
+  rate: string;
+  valueDate: string;
+  paymentStatus: PaymentStatusValue;
+}
+
+/**
  * Hash estable del alta de pago: reserva + cuerpo ya validado. Dos solicitudes
  * equivalentes producen el mismo hash; la misma clave con otra reserva u otro
  * cuerpo se detecta como reutilización.

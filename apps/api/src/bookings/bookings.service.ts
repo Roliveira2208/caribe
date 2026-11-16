@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import {
   formatAmount,
+  formatRate,
   formatTimestamp,
   formatValueDate,
   type DecimalValue,
@@ -17,12 +18,15 @@ import {
   releaseIdempotencyKey,
   requireIdempotencyKey,
 } from "../idempotency/idempotency.js";
+import { PaymentsService } from "../payments/payments.service.js";
+import type { RefundResponse } from "../payments/payments.schemas.js";
 import { TENANT_SETTINGS_DEFAULTS } from "../tenant-settings/tenant-settings.schemas.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import {
   generateBookingCode,
   withCodeRetry,
 } from "./booking-code.js";
+import type { BookingActor } from "./bookings.guard.js";
 import { decodeBookingsCursor, encodeBookingsCursor } from "./bookings.cursor.js";
 import {
   BOOKINGS_CREATE_ENDPOINT,
@@ -35,6 +39,7 @@ import {
   type BookingPage,
   type BookingStatusValue,
   type BookingSummaryResponse,
+  type CancelBookingResponse,
   type CreateBookingBody,
   type ListBookingsQuery,
 } from "./bookings.schemas.js";
@@ -86,6 +91,7 @@ export class BookingsService {
   constructor(
     private readonly tenantService: TenantService,
     private readonly auditService: AuditService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async create(input: {
@@ -397,6 +403,208 @@ export class BookingsService {
       throw new ApiProblemException("NOT_FOUND", "La reserva no existe.");
     }
     return toBookingDetail(booking);
+  }
+
+  /**
+   * Cancelación y reembolso (T-F1-10, specs/booking "Cancelación" y
+   * specs/payments "Reembolso").
+   *
+   * La autorización se resuelve primero con una lectura (owner/admin sobre su
+   * agencia; cualquier otro rol solo sobre sus reservas) y la escritura corre
+   * en una transacción con el tenant de la reserva, porque `availability_tenant`
+   * exige el GUC de la agencia para liberar el cupo. El orden de bloqueo es
+   * `bookings` → revalidar → `availability`.
+   */
+  async cancel(input: {
+    actor: BookingActor;
+    bookingId: string;
+    ip: string | null;
+  }): Promise<CancelBookingResponse> {
+    const booking = await this.authorizedBooking(input.actor, input.bookingId);
+    if (!booking) {
+      throw new ApiProblemException("NOT_FOUND", "La reserva no existe.");
+    }
+    return this.tenantService.withOwnerTenant(
+      input.actor.userId,
+      booking.tenantId,
+      (tx) => this.cancelInTx(tx, input.actor, booking.id, booking.tenantId, input.ip),
+    );
+  }
+
+  /** Reserva visible para el actor: agencia completa o solo las propias. */
+  private async authorizedBooking(
+    actor: BookingActor,
+    bookingId: string,
+  ): Promise<{ id: string; tenantId: string } | null> {
+    const agencyId = actor.canCancelAgency ? actor.tenantId : null;
+    if (agencyId) {
+      return this.tenantService.withTenant(agencyId, (tx) =>
+        tx.booking.findFirst({
+          where: { id: bookingId, tenantId: agencyId },
+          select: { id: true, tenantId: true },
+        }),
+      );
+    }
+    return this.tenantService.withOwner(actor.userId, (tx) =>
+      tx.booking.findFirst({
+        where: { id: bookingId, userId: actor.userId },
+        select: { id: true, tenantId: true },
+      }),
+    );
+  }
+
+  /** Una transacción completa de cancelación. */
+  private async cancelInTx(
+    tx: Prisma.TransactionClient,
+    actor: BookingActor,
+    bookingId: string,
+    tenantId: string,
+    ip: string | null,
+  ): Promise<CancelBookingResponse> {
+    const rows = await tx.$queryRaw<
+      Array<{ id: string; code: string; status: BookingStatusValue }>
+    >(Prisma.sql`
+      SELECT "id" AS id,
+             "code" AS code,
+             "status"::text AS status
+        FROM "bookings"
+       WHERE "id" = ${bookingId}
+       FOR UPDATE
+    `);
+    const booking = rows[0];
+    if (!booking) {
+      throw new ApiProblemException("NOT_FOUND", "La reserva no existe.");
+    }
+
+    // Idempotencia: una reserva ya cancelada o vencida no libera cupo ni
+    // reembolsa otra vez; si estaba cancelada, se devuelve el reembolso ya
+    // emitido (spec booking, "Cancelación repetida").
+    if (booking.status === "CANCELLED" || booking.status === "EXPIRED") {
+      return {
+        id: booking.id,
+        code: booking.code,
+        status: booking.status,
+        refund:
+          booking.status === "CANCELLED"
+            ? await this.existingRefund(tx, booking.id)
+            : null,
+      };
+    }
+
+    // Un pago en revisión impide cancelar; un reembolso previo sin la reserva
+    // cancelada es un conflicto de estado.
+    const inReview = await tx.payment.findFirst({
+      where: { bookingId, status: "IN_REVIEW" },
+      select: { id: true },
+    });
+    if (inReview) {
+      throw new ApiProblemException(
+        "PAYMENT_IN_REVIEW",
+        "La reserva tiene un pago en revisión; no se puede cancelar todavía.",
+      );
+    }
+    const priorRefund = await tx.refund.findFirst({
+      where: { bookingId },
+      select: { id: true },
+    });
+    if (priorRefund) {
+      throw new ApiProblemException(
+        "REFUND_ALREADY_ISSUED",
+        "El pago de la reserva ya tiene un reembolso.",
+      );
+    }
+
+    const refund = await this.paymentsService.refundForCancellation(tx, {
+      tenantId,
+      bookingId,
+      actorId: actor.userId,
+    });
+
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: { status: "CANCELLED" },
+    });
+
+    // Libera el cupo una sola vez en cada noche, con el mismo UPDATE de la
+    // expiración (T-F1-8).
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE "availability" AS a
+         SET "reserved" = a."reserved" - bi."quantity",
+             "updated_at" = now()
+        FROM "booking_items" AS bi
+       WHERE bi."booking_id" = ${bookingId}
+         AND bi."tenant_id" = ${tenantId}
+         AND a."tenant_id" = ${tenantId}
+         AND a."product_id" = bi."product_id"
+         AND a."night" >= bi."check_in"
+         AND a."night" < bi."check_out"
+    `);
+
+    await this.auditService.record(tx, {
+      tenantId,
+      actorId: actor.userId,
+      action: "booking.cancel",
+      entity: "booking",
+      entityId: bookingId,
+      before: { code: booking.code, status: booking.status },
+      after: {
+        code: booking.code,
+        status: "CANCELLED",
+        refundId: refund?.id ?? null,
+      },
+      ip,
+    });
+
+    if (refund) {
+      await this.auditService.record(tx, {
+        tenantId,
+        actorId: actor.userId,
+        action: "booking.refund",
+        entity: "refund",
+        entityId: refund.id,
+        before: null,
+        after: {
+          bookingId,
+          amountUsd: refund.amountUsd,
+          amountVes: refund.amountVes,
+          rate: refund.rate,
+          valueDate: refund.valueDate,
+          paymentStatus: refund.paymentStatus,
+        },
+        ip,
+      });
+    }
+
+    return {
+      id: booking.id,
+      code: booking.code,
+      status: "CANCELLED",
+      refund,
+    };
+  }
+
+  /** Reembolso ya emitido para una reserva cancelada (respuesta idempotente). */
+  private async existingRefund(
+    tx: Prisma.TransactionClient,
+    bookingId: string,
+  ): Promise<RefundResponse | null> {
+    const refund = await tx.refund.findFirst({
+      where: { bookingId },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!refund) return null;
+    const payment = await tx.payment.findUnique({
+      where: { id: refund.paymentId },
+      select: { status: true },
+    });
+    return {
+      id: refund.id,
+      amountUsd: formatAmount(refund.amountUsd),
+      amountVes: formatAmount(refund.amountVes),
+      rate: formatRate(refund.rate),
+      valueDate: formatValueDate(refund.valueDate),
+      paymentStatus: payment?.status ?? "APPROVED",
+    };
   }
 
   /**

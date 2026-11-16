@@ -929,6 +929,13 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
       "Reserva propia: la agencia se resuelve desde el producto y el dueño se fija desde la sesión (spec booking).",
   },
   {
+    method: "POST",
+    path: "bookings/:id/cancel",
+    justification: "self-service",
+    reason:
+      "El dueño, el owner/admin de la agencia o el agente sobre las propias cancela una reserva (spec booking, 'Cancelación').",
+  },
+  {
     method: "GET",
     path: "bookings/:id/payments",
     justification: "self-service",

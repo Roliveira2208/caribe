@@ -141,9 +141,21 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [ ] T-F1-9c Admin: pantalla mínima de aprobación de pagos (`IN_REVIEW`, aprobar/rechazar con motivo).
   Wireframe aprobado antes de construir.
   Prueba: payments › "Modo MANUAL aprobado" y "Modo MANUAL rechazado".
-- [ ] T-F1-10 Cancelación y reembolso con `policy_snapshot` y tasa congelada (sin nota de reembolso,
-  diferida a F2).
-  Prueba: booking › "Cliente cancela reserva confirmada"; payments › "Reembolso parcial".
+- [x] T-F1-10 Cancelación y reembolso con `policy_snapshot` y tasa congelada (sin nota de reembolso,
+  diferida a F2). `POST /bookings/:id/cancel` responde `{ id, code, status, refund }`; las horas de
+  cada regla se cuentan desde las 15:00 de `America/Caracas`; owner/admin cancelan cualquier reserva
+  de su agencia, el agente solo las propias, y proveedor y Super Admin sin agencia reciben 403. Un
+  pago `IN_REVIEW` responde 409 `PAYMENT_IN_REVIEW`; la repetición devuelve el reembolso existente y
+  una reserva vencida no toca cupo. Los montos salen del USD del pago y su tasa congelada; 0 % no
+  crea fila y deja el pago `APPROVED`. "Reembolsar un pago en revisión" (deseable) pasa a F2: choca
+  con el 409 `PAYMENT_IN_REVIEW` que exige la spec.
+  Prueba: booking › "Cliente cancela reserva confirmada", "Cancelar reserva ajena", "Cancelar una
+  reserva pendiente sin pago", "Cancelar con un pago en revisión", "Política congelada",
+  "Cancelación repetida", "Cancelar una reserva vencida" y "Horas antes del check-in"; payments ›
+  "Política flexible con 100 %", "Reembolso parcial", "La tasa cambia después del pago", "Reembolso
+  duplicado", "Reembolso por encima del pago" y "Reembolso del 0 %"; auth-access › "Admin cancela
+  una reserva de su agencia", "Agente intenta cancelar una reserva ajena", "Proveedor intenta
+  cancelar" y "Super Admin intenta cancelar".
 - [ ] T-F1-10b Pausa planificada: verificación independiente y revisión de seguridad en sesión limpia
   con reservas y pagos ya cerrados (T-F1-7 a T-F1-10), antes de documentos (T-F1-11) y del resto del
   panel y la web (T-F1-13/T-F1-14).

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { stayRangeSchema, todayInCaracas, z } from "@caribe/shared";
+import type { RefundResponse } from "../payments/payments.schemas.js";
 
 /**
  * Contrato de creacion de reservas (T-F1-7, specs/booking "Datos del viajero",
@@ -116,6 +117,17 @@ export interface BookingDetailResponse {
   expiresAt: string;
   totalUsd: string;
   items: BookingItemResponse[];
+}
+
+/**
+ * Respuesta de `POST /bookings/:id/cancel` (T-F1-10, spec booking
+ * "Cancelación"): estado final y reembolso emitido, si lo hubo.
+ */
+export interface CancelBookingResponse {
+  id: string;
+  code: string;
+  status: BookingStatusValue;
+  refund: RefundResponse | null;
 }
 
 /** Fila del listado "Mis reservas" (sin líneas para no inflar la página). */

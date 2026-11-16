@@ -12,8 +12,14 @@ import {
   type PaymentMethodValue,
   type PaymentProvider,
   type PaymentStatusValue,
+  type RefundIntent,
 } from "@caribe/shared";
 import { AuditService } from "../audit/audit.service.js";
+import {
+  parsePolicySnapshot,
+  refundAmounts,
+  refundPercentage,
+} from "../bookings/cancellation-policy.js";
 import type { BookingStatusValue } from "../bookings/bookings.schemas.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { Prisma } from "../generated/prisma/client.js";
@@ -38,6 +44,7 @@ import {
   type ListPaymentsQuery,
   type PaymentPage,
   type PaymentResponse,
+  type RefundResponse,
 } from "./payments.schemas.js";
 
 /** Token de inyección de la pasarela (la interfaz se borra en runtime). */
@@ -86,6 +93,13 @@ export interface ReviewResult {
   payment: PaymentResponse;
   before: PaymentReviewState;
   after: PaymentReviewState;
+}
+
+/** Datos del reembolso que emite la cancelación de una reserva (T-F1-10). */
+export interface CancellationRefundParams {
+  tenantId: string;
+  bookingId: string;
+  actorId: string;
 }
 
 /** Datos de una transacción de alta de pago. */
@@ -383,6 +397,116 @@ export class PaymentsService {
         rejectionReason: updated.rejectionReason,
         bookingStatus: input.action === "approve" ? "CONFIRMED" : booking.status,
       },
+    };
+  }
+
+  /**
+   * Reembolso de la cancelación (T-F1-10, specs/payments "Reembolso").
+   *
+   * Corre DENTRO de la transacción de la reserva: el cupo, el estado de la
+   * reserva, el reembolso y la auditoría se confirman juntos o ninguno. El
+   * porcentaje sale del `policy_snapshot` congelado en la línea; los montos se
+   * calculan desde el USD del pago y su tasa congelada. Un 0 % no escribe fila
+   * y deja el pago `APPROVED`.
+   *
+   * Un pago `IN_REVIEW` impide cancelar (`PAYMENT_IN_REVIEW`); un pago ya
+   * reembolsado sin la reserva cancelada responde `REFUND_ALREADY_ISSUED`.
+   */
+  async refundForCancellation(
+    tx: Prisma.TransactionClient,
+    params: CancellationRefundParams,
+  ): Promise<RefundResponse | null> {
+    const payments = await tx.payment.findMany({
+      where: { bookingId: params.bookingId, tenantId: params.tenantId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+
+    if (payments.some((payment) => payment.status === "IN_REVIEW")) {
+      throw new ApiProblemException(
+        "PAYMENT_IN_REVIEW",
+        "La reserva tiene un pago en revisión; no se puede cancelar todavía.",
+      );
+    }
+    if (
+      payments.some(
+        (payment) =>
+          payment.status === "REFUNDED" || payment.status === "PARTIALLY_REFUNDED",
+      )
+    ) {
+      throw new ApiProblemException(
+        "REFUND_ALREADY_ISSUED",
+        "El pago de la reserva ya tiene un reembolso.",
+      );
+    }
+
+    const payment = payments.find((candidate) => candidate.status === "APPROVED");
+    if (!payment) return null;
+
+    const item = await tx.bookingItem.findFirst({
+      where: { bookingId: params.bookingId, tenantId: params.tenantId },
+      orderBy: { checkIn: "asc" },
+      select: { checkIn: true, policySnapshot: true },
+    });
+    if (!item) return null;
+
+    const snapshot = parsePolicySnapshot(item.policySnapshot);
+    const percentage = refundPercentage(
+      snapshot.rules,
+      formatValueDate(item.checkIn),
+      new Date(),
+    );
+    if (percentage <= 0) return null;
+
+    const amounts = refundAmounts(payment.amountUsd, percentage, payment.rate);
+    const reason = `Cancelación de la reserva (${percentage}%)`;
+    const intent: RefundIntent = {
+      paymentId: payment.id,
+      amountUsd: amounts.amountUsd,
+      amountVes: amounts.amountVes,
+      rate: formatRate(payment.rate),
+      reason,
+    };
+    // La pasarela confirma el reembolso antes de persistirlo; si falla, la
+    // transacción entera se revierte.
+    await this.provider.refund(intent);
+
+    const refundId = randomUUID();
+    const createdAt = new Date();
+    await tx.refund.create({
+      data: {
+        id: refundId,
+        tenantId: params.tenantId,
+        paymentId: payment.id,
+        bookingId: params.bookingId,
+        amountUsd: new Prisma.Decimal(amounts.amountUsd),
+        amountVes: new Prisma.Decimal(amounts.amountVes),
+        exchangeRateId: payment.exchangeRateId,
+        rate: payment.rate,
+        valueDate: payment.valueDate,
+        reason,
+        createdBy: params.actorId,
+        createdAt,
+      },
+    });
+
+    const paymentStatus =
+      new Prisma.Decimal(amounts.amountUsd).equals(
+        new Prisma.Decimal(payment.amountUsd.toString()),
+      )
+        ? "REFUNDED"
+        : "PARTIALLY_REFUNDED";
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: { status: paymentStatus },
+    });
+
+    return {
+      id: refundId,
+      amountUsd: amounts.amountUsd,
+      amountVes: amounts.amountVes,
+      rate: formatRate(payment.rate),
+      valueDate: formatValueDate(payment.valueDate),
+      paymentStatus,
     };
   }
 

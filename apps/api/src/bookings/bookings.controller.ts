@@ -8,15 +8,23 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import {
+  BookingPermission,
+  BookingsGuard,
+  bookingActorOf,
+  type BookingsRequest,
+} from "./bookings.guard.js";
 import { BookingsService } from "./bookings.service.js";
 import {
   createBookingSchema,
   listBookingsQuerySchema,
   type BookingDetailResponse,
   type BookingPage,
+  type CancelBookingResponse,
   type CreateBookingBody,
   type ListBookingsQuery,
 } from "./bookings.schemas.js";
@@ -75,6 +83,26 @@ export class BookingsController {
   ): Promise<BookingDetailResponse> {
     const { userId, activeOrganizationId } = requireSession(request);
     return this.bookingsService.detail({ userId, activeOrganizationId, bookingId });
+  }
+
+  /**
+   * Cancelación (T-F1-10). `BookingsGuard` decide si el actor opera sobre toda
+   * su agencia (owner/admin) o solo sobre sus reservas (cliente, agente o
+   * miembro); una reserva ajena responde 404.
+   */
+  @Post(":id/cancel")
+  @UseGuards(BookingsGuard)
+  @BookingPermission("cancel")
+  @HttpCode(200)
+  cancel(
+    @Req() request: BookingsRequest,
+    @Param("id") bookingId: string,
+  ): Promise<CancelBookingResponse> {
+    return this.bookingsService.cancel({
+      actor: bookingActorOf(request),
+      bookingId,
+      ip: request.ip ?? null,
+    });
   }
 }
 

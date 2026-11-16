@@ -21,5 +21,8 @@ import { SimulatedPaymentProvider } from "./simulated-payment.provider.js";
     PaymentsGuard,
     { provide: PAYMENT_PROVIDER, useClass: SimulatedPaymentProvider },
   ],
+  // La cancelación de una reserva emite su reembolso dentro de la misma
+  // transacción (T-F1-10, design §7).
+  exports: [PaymentsService],
 })
 export class PaymentsModule {}
