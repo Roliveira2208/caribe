@@ -218,6 +218,14 @@ El servidor SHALL NOT usar números de punto flotante para dinero ni aceptar mon
 - WHEN el cuerpo incluye `amount_usd`, `amount_ves` o una tasa
 - THEN 422 con código `VALIDATION_ERROR` y no se usa el valor
 
+### Requirement: Respuesta sin datos internos de la agencia
+La representación de un pago SHALL NOT incluir `tenantId` ni `tenant_id`; la agencia se deriva de la
+sesión o de la reserva.
+
+#### Scenario: Cliente consulta sus pagos
+- WHEN el cliente consulta el pago recién creado o los pagos de su reserva
+- THEN la respuesta no incluye `tenantId` ni `tenant_id`
+
 ## Casos límite
 - Doble reporte del mismo método y referencia → 409 `DUPLICATE_PAYMENT_REFERENCE`.
 - Pago sobre reserva `EXPIRED`, `CANCELLED` o ya `CONFIRMED` → 410 `HOLD_EXPIRED` o 409

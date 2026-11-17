@@ -287,6 +287,11 @@ producto guardado en la línea al reservar, no el estado ni el título actual de
 - WHEN un admin de B la consulta
 - THEN 404
 
+#### Scenario: Agencia activa sin membresía
+- GIVEN una sesión con `activeOrganizationId` de una agencia a la que el usuario ya no pertenece
+- WHEN consulta o lista reservas
+- THEN el detalle responde 404 y la lista solo muestra sus propias reservas
+
 #### Scenario: Mis reservas entre agencias
 - GIVEN un cliente con reservas en A y B
 - WHEN lista sus reservas
