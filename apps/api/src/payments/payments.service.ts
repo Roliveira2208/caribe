@@ -708,7 +708,6 @@ function notFound(): ApiProblemException {
 function toPaymentResponse(row: PaymentRow): PaymentResponse {
   return {
     id: row.id,
-    tenantId: row.tenantId,
     bookingId: row.bookingId,
     method: row.method,
     status: row.status,

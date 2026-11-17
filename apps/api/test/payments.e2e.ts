@@ -379,7 +379,6 @@ describe("payments (alta y revisión)", () => {
 
   interface PaymentBodyResponse {
     id: string;
-    tenantId: string;
     bookingId: string;
     method: string;
     status: string;
@@ -710,7 +709,6 @@ describe("payments (alta y revisión)", () => {
 
       const payment = await jsonOf<PaymentBodyResponse>(res);
       expect(payment).toMatchObject({
-        tenantId: orgA,
         bookingId,
         method: "PAGO_MOVIL",
         status: "APPROVED",
@@ -1389,6 +1387,29 @@ describe("payments (alta y revisión)", () => {
       await expectProblem(other, 404, "NOT_FOUND");
     });
 
+    it("el cliente no recibe el tenant ni campos internos de la agencia", async () => {
+      const bookingId = await createBooking({
+        tenantId: orgA,
+        userId: clientA,
+        productId: pA,
+        hotelKey: hotelA,
+        roomType: "standard",
+      });
+      const created = await postPayment(cookieA, bookingId, keyFor(), pagoMovilBody());
+      const payment = await jsonOf<Record<string, unknown>>(created);
+
+      const own = await fetch(url(`/bookings/${bookingId}/payments`), {
+        headers: { cookie: cookieA, origin: authOrigin },
+      });
+      expect(own.status).toBe(200);
+      const body = await jsonOf<{ items: Array<Record<string, unknown>> }>(own);
+
+      for (const item of [payment, ...body.items]) {
+        expect(item).not.toHaveProperty("tenantId");
+        expect(item).not.toHaveProperty("tenant_id");
+      }
+    });
+
     it("el panel lista solo la agencia activa, pagina y filtra", async () => {
       const bookingA1 = await createBooking({
         tenantId: orgA,
@@ -1441,7 +1462,11 @@ describe("payments (alta y revisión)", () => {
       expect(all.status).toBe(200);
       const page = await jsonOf<PaymentPageBody>(all);
       expect(page.items).toHaveLength(3);
-      expect(page.items.every((item) => item.tenantId === orgA)).toBe(true);
+      expect(page.items.map((item) => item.reference).sort()).toEqual([
+        "1111",
+        "2222",
+        "3333",
+      ]);
       expect(page.nextCursor).toBeNull();
 
       const firstPage = await jsonOf<PaymentPageBody>(
@@ -1511,7 +1536,7 @@ describe("payments (alta y revisión)", () => {
       });
       expect(platform.status).toBe(200);
       const detail = await jsonOf<PaymentBodyResponse>(platform);
-      expect(detail).toMatchObject({ id: paymentB, tenantId: orgB, status: "IN_REVIEW" });
+      expect(detail).toMatchObject({ id: paymentB, status: "IN_REVIEW" });
     });
   });
 

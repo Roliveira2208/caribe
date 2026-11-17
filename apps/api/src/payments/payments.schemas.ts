@@ -52,7 +52,6 @@ export type RejectPaymentBody = z.infer<typeof rejectPaymentSchema>;
  */
 export interface PaymentResponse {
   id: string;
-  tenantId: string;
   bookingId: string;
   method: PaymentMethodValue;
   status: PaymentStatusValue;
