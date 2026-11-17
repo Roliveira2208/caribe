@@ -168,11 +168,13 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   proveedor Cotizave y de `ensureTodayRate`.
   Nota: reemplaza el proveedor de T-F1-5 y la programación diaria de T-F1-8; `scope.md` suma dos
   escenarios obligatorios (281/188/93).
-- [ ] T-F1-10b Pausa planificada: verificación independiente y revisión de seguridad en sesión limpia
+- [x] T-F1-10b Pausa planificada: verificación independiente y revisión de seguridad en sesión limpia
   con reservas y pagos ya cerrados (T-F1-7 a T-F1-10), antes de documentos (T-F1-11) y del resto del
   panel y la web (T-F1-13/T-F1-14).
   Prueba: informe de verificación con semáforo y hallazgos de seguridad; los bloqueantes se corrigen
   antes de T-F1-11.
+  Resultado: `docs/plans/security-f1-core.md` en verde, sin fallos intermitentes (22/22 archivos
+  completos en paralelo y 20/20 aislados); F1-S2 corregido y F1-S3 sin `tenantId`.
 - [ ] T-F1-11 `DocumentModule`: voucher y comprobante PDF en español, QR, numeración correlativa,
   almacenamiento local (`DOCUMENTS_DIR` en `.env.example`), nombre UUID, descarga autenticada con
   propiedad y protección de ruta, y reintentos.
