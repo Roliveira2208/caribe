@@ -907,6 +907,62 @@ describe("payments (alta y revisión)", () => {
       expect(audit).toBe(1);
     });
 
+    it("la misma clave de otro usuario no reutiliza la respuesta", async () => {
+      const bookingA = await createBooking({
+        tenantId: orgA,
+        userId: clientA,
+        productId: pA,
+        hotelKey: hotelA,
+        roomType: "standard",
+      });
+      const bookingB = await createBooking({
+        tenantId: orgA,
+        userId: clientB,
+        productId: pA,
+        hotelKey: hotelA,
+        roomType: "standard",
+      });
+      const key = keyFor();
+
+      const first = await postPayment(cookieA, bookingA, key, pagoMovilBody());
+      expect(first.status).toBe(201);
+      const own = await jsonOf<PaymentBodyResponse>(first);
+
+      const other = await postPayment(
+        cookieB,
+        bookingB,
+        key,
+        pagoMovilBody({ reference: "8888" }),
+      );
+      expect(other.status).toBe(201);
+      const otherPayment = await jsonOf<PaymentBodyResponse>(other);
+
+      expect(otherPayment.id).not.toBe(own.id);
+      expect(otherPayment.bookingId).toBe(bookingB);
+      await expect(countPayments(orgA)).resolves.toBe(2);
+    });
+
+    it("rechaza montos y tasas extremos enviados por el cliente", async () => {
+      const bookingId = await createBooking({
+        tenantId: orgA,
+        userId: clientA,
+        productId: pA,
+        hotelKey: hotelA,
+        roomType: "standard",
+      });
+      const res = await postPayment(cookieA, bookingId, keyFor(), {
+        ...pagoMovilBody(),
+        amount_usd: "999999999999.99",
+        amount_ves: "99999999999999999999.99",
+        rate: "99999999999999.9999",
+      });
+      const problem = await expectProblem(res, 422, "VALIDATION_ERROR");
+      expect(problem.errors?.map((issue) => issue.path)).toEqual(
+        expect.arrayContaining(["amount_usd", "amount_ves", "rate"]),
+      );
+      await expect(countPayments(orgA)).resolves.toBe(0);
+    });
+
     it("responde 503 RATE_UNAVAILABLE y no crea el pago si no hay tasa", async () => {
       const bookingId = await createBooking({
         tenantId: orgNoRate,
@@ -1491,6 +1547,42 @@ describe("payments (alta y revisión)", () => {
         await listPayments(cookieOwnerA, "?status=APPROVED&method=PAGO_MOVIL"),
       );
       expect(approved.items).toHaveLength(3);
+    });
+
+    it("rechaza filtros fuera del contrato y no cruza reservas de otra agencia", async () => {
+      // El `tenant_id` sale de la sesión; una query con otra agencia o fuera de
+      // contrato responde 422, no una lista filtrada por el cliente.
+      for (const query of [
+        `?tenantId=${orgB}`,
+        `?tenant_id=${orgB}`,
+        "?limit=51",
+        "?bookingId=no-es-un-uuid",
+      ]) {
+        const res = await listPayments(cookieOwnerA, query);
+        await expectProblem(res, 422, "VALIDATION_ERROR");
+      }
+
+      // Un bookingId válido pero de otra agencia devuelve una página vacía: el
+      // filtro de la agencia activa se combina con el del cliente.
+      const bookingB = await createBooking({
+        tenantId: orgB,
+        userId: clientB,
+        productId: pB,
+        hotelKey: hotelB,
+        roomType: "standard",
+      });
+      await createPaymentFixture({
+        tenantId: orgB,
+        bookingId: bookingB,
+        reportedBy: clientB,
+        rateId: rateB,
+        rate: "800.0000",
+        status: "IN_REVIEW",
+        reference: "4545",
+      });
+      const foreign = await listPayments(cookieOwnerA, `?bookingId=${bookingB}`);
+      expect(foreign.status).toBe(200);
+      expect((await jsonOf<PaymentPageBody>(foreign)).items).toHaveLength(0);
     });
 
     it("el detalle respeta la agencia y el Super Admin ve todas", async () => {

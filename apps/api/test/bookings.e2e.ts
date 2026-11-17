@@ -713,6 +713,27 @@ describe("bookings (creacion de reservas)", () => {
       await expect(countBookings(orgA)).resolves.toBe(0);
     });
 
+    it("rechaza una quantity que desborda el cupo sin tocar las noches", async () => {
+      const res = await postBooking(cookieA, keyFor(), bookingBody({ quantity: 2_147_483_648 }));
+      await expectProblem(res, 409, "AVAILABILITY_EXHAUSTED");
+      expect(await reservedOf(pStd)).toEqual([3, 3, 3]);
+      await expect(countBookings(orgA)).resolves.toBe(0);
+    });
+
+    it("rechaza precios y montos extremos enviados por el cliente", async () => {
+      const res = await postBooking(cookieA, keyFor(), {
+        ...bookingBody(),
+        total_usd: "999999999999.99",
+        price_usd: "99999999999999999999.99",
+        exchange_rate: "99999999999999.9999",
+      });
+      const problem = await expectProblem(res, 422, "VALIDATION_ERROR");
+      expect(problem.errors?.map((issue) => issue.path)).toEqual(
+        expect.arrayContaining(["total_usd", "price_usd", "exchange_rate"]),
+      );
+      await expect(countBookings(orgA)).resolves.toBe(0);
+    });
+
     it("rechaza un producto DRAFT, ARCHIVED, borrado lógico o inexistente con 409", async () => {
       for (const productId of [pDraft, pArchived, pDeleted, randomUUID()]) {
         const res = await postBooking(cookieA, keyFor(), bookingBody({ productId }));
@@ -805,6 +826,21 @@ describe("bookings (creacion de reservas)", () => {
       const second = await postBooking(cookieA, key, bookingBody({ quantity: 2 }));
       await expectProblem(second, 409, "IDEMPOTENCY_KEY_REUSED");
       await expect(countBookings(orgA)).resolves.toBe(1);
+    });
+
+    it("la misma clave de otro usuario no reutiliza la respuesta ni la reserva", async () => {
+      const key = keyFor();
+      const first = await postBooking(cookieA, key, bookingBody());
+      expect(first.status).toBe(201);
+      const own = await jsonOf<BookingBody>(first);
+
+      const other = await postBooking(cookieB, key, bookingBody());
+      expect(other.status).toBe(201);
+      const otherBooking = await jsonOf<BookingBody>(other);
+
+      expect(otherBooking.id).not.toBe(own.id);
+      expect(otherBooking.code).not.toBe(own.code);
+      await expect(countBookings(orgA)).resolves.toBe(2);
     });
 
     it("rechaza una clave que sigue en vuelo", async () => {
@@ -1109,6 +1145,22 @@ describe("bookings (creacion de reservas)", () => {
       expect(body).toEqual(created);
       expect(body.items[0]?.title).toEqual(titleA);
       expect(body.expiresAt).toMatch(/Z$/);
+    });
+
+    it("rechaza filtros fuera del contrato de la lista", async () => {
+      // La agencia y los montos salen de la sesión y de la base: un `tenant_id`
+      // en la query no se ignora, responde 422 como cualquier clave extraña.
+      for (const query of [
+        `?tenantId=${orgHold}`,
+        `?tenant_id=${orgHold}`,
+        "?limit=51",
+        "?status=UNKNOWN",
+      ]) {
+        const res = await fetch(url(`/bookings${query}`), {
+          headers: { cookie: cookieA, origin: authOrigin },
+        });
+        await expectProblem(res, 422, "VALIDATION_ERROR");
+      }
     });
 
     it("el personal de la agencia consulta una reserva de su agencia", async () => {
