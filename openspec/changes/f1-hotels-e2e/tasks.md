@@ -214,6 +214,11 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 
 ## Notas de F1
 
+- **Flake a vigilar (2026-11-17):** `apps/api/test/api-errors.e2e.ts` falló una vez con
+  `Hook timed out in 30000ms` durante el `app.listen(0)` del arranque (`beforeAll`). El mismo archivo
+  pasó 13/13 aislado y en la repetición completa de la suite. No hay un fallo funcional asociado;
+  si reaparece, repetir primero el archivo aislado y vigilar el tiempo de arranque de `createApp()`
+  cuando la suite corre en paralelo.
 - La demo de F1 es local. Una demo pública exige M1 y M2.
 - Las nueve desviaciones respecto del SDD están en `design.md` §15 y se aplican al SDD en T-F1-17.
 - OpenAPI/Swagger y los proveedores externos quedan diferidos.
