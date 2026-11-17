@@ -3,7 +3,11 @@ import { Reflector } from "@nestjs/core";
 import type { Role } from "better-auth/plugins/access";
 import { adminRole, agentRole, ownerRole } from "../access.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
-import { prisma } from "../prisma.js";
+import {
+  activeMembershipOf,
+  activeOrganizationRequired,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 
 /**
@@ -44,7 +48,7 @@ export interface PaymentActor {
 }
 
 /** Lo mínimo que el guard y los controllers necesitan de la petición. */
-export interface PaymentsRequest {
+export interface PaymentsRequest extends ActiveMembershipRequest {
   ip?: string;
   session?: {
     session: { activeOrganizationId?: string | null };
@@ -76,6 +80,9 @@ export class PaymentsGuard implements CanActivate {
       throw forbidden("La ruta no declara un acceso de pago.");
     }
 
+    // Incluso en `self` se valida la agencia activa: una sesión con una
+    // membresía revocada no es una sesión de cliente válida.
+    const membership = await activeMembershipOf(request);
     if (access === "self") {
       // El servicio comprueba que la reserva es del usuario; aquí solo se
       // exige la sesión que ya verificó el guard global.
@@ -88,15 +95,9 @@ export class PaymentsGuard implements CanActivate {
       return true;
     }
 
-    const organizationId = session.session.activeOrganizationId;
-    if (organizationId) {
-      const member = await prisma.member.findFirst({
-        where: { userId: session.user.id, organizationId },
-        select: { role: true },
-      });
-      if (!member) throw activeOrganizationRequired();
-
-      const role = AGENCY_PAYMENT_ROLES[member.role];
+    if (membership) {
+      const organizationId = membership.organizationId;
+      const role = AGENCY_PAYMENT_ROLES[membership.role];
       const action = access === "review" ? "review" : "read";
       if (!role || !role.authorize({ payment: [action] }).success) {
         throw forbidden(
@@ -109,7 +110,7 @@ export class PaymentsGuard implements CanActivate {
       request.paymentActor = {
         tenantId: organizationId,
         userId: session.user.id,
-        membershipRole: member.role as PaymentActor["membershipRole"],
+        membershipRole: membership.role as PaymentActor["membershipRole"],
         isPlatform: false,
       };
       return true;
@@ -142,11 +143,4 @@ export function paymentActorOf(request: PaymentsRequest): PaymentActor {
 
 function forbidden(detail: string): ApiProblemException {
   return new ApiProblemException("FORBIDDEN", detail);
-}
-
-function activeOrganizationRequired(): ApiProblemException {
-  return new ApiProblemException(
-    "ACTIVE_ORGANIZATION_REQUIRED",
-    "La operación requiere una agencia activa de la que el usuario sea miembro.",
-  );
 }

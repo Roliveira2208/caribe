@@ -3,6 +3,11 @@ import { Auditable } from "../audit/auditable.js";
 import { attachAuditData, currentAuditTx } from "../audit/audit-storage.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import {
+  activeMembershipOf,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
+import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import { TenantSettingsGuard } from "./tenant-settings.guard.js";
 import {
@@ -18,7 +23,7 @@ interface SessionInfo {
   user: { id: string };
 }
 
-interface AuthenticatedRequest {
+interface AuthenticatedRequest extends ActiveMembershipRequest {
   session?: SessionInfo;
 }
 
@@ -33,13 +38,13 @@ interface AuthenticatedRequest {
  * agencia").
  */
 @Controller("admin/tenant-settings")
-@UseGuards(TenantSettingsGuard)
+@UseGuards(ActiveMembershipGuard, TenantSettingsGuard)
 export class TenantSettingsController {
   constructor(private readonly tenantService: TenantService) {}
 
   @Get()
   async get(@Req() request: AuthenticatedRequest): Promise<TenantSettingsResponse> {
-    const tenantId = activeOrganizationOf(request);
+    const tenantId = await activeOrganizationOf(request);
     return this.tenantService.withTenant(tenantId, async (tx) => {
       const row = await tx.tenantSettings.findUnique({ where: { tenantId } });
       return toTenantSettingsResponse(row, tenantId);
@@ -52,7 +57,7 @@ export class TenantSettingsController {
     @Req() request: AuthenticatedRequest,
     @Body(new ZodValidationPipe(updateTenantSettingsSchema)) body: UpdateTenantSettingsBody,
   ): Promise<TenantSettingsResponse> {
-    const tenantId = activeOrganizationOf(request);
+    const tenantId = await activeOrganizationOf(request);
     // La transaccion la abre el interceptor de auditoria con el GUC de la
     // agencia: operacion y fila de audit_logs se confirman juntas o ninguna.
     const tx = currentAuditTx();
@@ -74,15 +79,15 @@ export class TenantSettingsController {
   }
 }
 
-/** Agencia activa garantizada por TenantSettingsGuard. */
-function activeOrganizationOf(request: AuthenticatedRequest): string {
-  const organizationId = request.session?.session.activeOrganizationId;
-  if (!organizationId) {
+/** Agencia activa ya validada por ActiveMembershipGuard (sin consulta extra). */
+async function activeOrganizationOf(request: AuthenticatedRequest): Promise<string> {
+  const membership = await activeMembershipOf(request);
+  if (!membership) {
     // Red de seguridad: el guard ya respondio antes.
     throw new ApiProblemException(
       "ACTIVE_ORGANIZATION_REQUIRED",
       "La operación requiere una agencia activa de la que el usuario sea miembro.",
     );
   }
-  return organizationId;
+  return membership.organizationId;
 }

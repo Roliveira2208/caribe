@@ -1,9 +1,14 @@
-import { Controller, ForbiddenException, Get, Query, Req } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Query, Req, UseGuards } from "@nestjs/common";
 import { z } from "@caribe/shared";
 import type { AuthEvent, Prisma } from "../generated/prisma/client.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
-import { prisma } from "../prisma.js";
+import {
+  activeMembershipOf,
+  activeOrganizationRequired,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
+import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import { AGENCY_AUDIT_READER_ROLES } from "./audit-access.js";
@@ -14,7 +19,7 @@ interface SessionInfo {
   user: { id: string; role?: string | string[] | null };
 }
 
-interface AuthenticatedRequest {
+interface AuthenticatedRequest extends ActiveMembershipRequest {
   session?: SessionInfo;
 }
 
@@ -88,6 +93,7 @@ type AuthEventQuery = z.infer<typeof querySchema>;
  * mensaje interno de la lib ni el cuerpo de la peticion.
  */
 @Controller("admin/auth-events")
+@UseGuards(ActiveMembershipGuard)
 export class AuthEventsController {
   constructor(private readonly tenantService: TenantService) {}
 
@@ -99,7 +105,7 @@ export class AuthEventsController {
     const session = request.session;
     if (!session) {
       // El guard global ya exigio sesion; red de seguridad.
-      throw new ForbiddenException("Los eventos requieren una sesión");
+      throw new ApiProblemException("UNAUTHENTICATED", "Los eventos requieren una sesión.");
     }
     const filters = toFilters(query);
 
@@ -111,20 +117,15 @@ export class AuthEventsController {
       );
     }
 
-    const organizationId = session.session.activeOrganizationId;
-    if (!organizationId) {
-      throw new ForbiddenException(
-        "Los eventos requieren una agencia activa o el rol de plataforma",
-      );
+    const membership = await activeMembershipOf(request);
+    if (!membership) {
+      throw activeOrganizationRequired();
     }
-    const member = await prisma.member.findFirst({
-      where: { userId: session.user.id, organizationId },
-      select: { role: true },
-    });
-    if (!member || !AGENCY_AUDIT_READER_ROLES.includes(member.role)) {
+    if (!AGENCY_AUDIT_READER_ROLES.includes(membership.role)) {
       // Escenario "Agente no lee eventos" -> 403.
       throw new ForbiddenException("Solo los administradores de la agencia consultan los eventos");
     }
+    const organizationId = membership.organizationId;
 
     // RLS (app.tenant_id) garantiza el alcance con el rol de aplicacion y el
     // WHERE lo fija tambien en la consulta: defensa en profundidad, y el

@@ -1,7 +1,11 @@
 import { type CanActivate, type ExecutionContext, Injectable } from "@nestjs/common";
 import { AGENCY_ADMIN_ROLES } from "../admin/admin-route.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
-import { prisma } from "../prisma.js";
+import {
+  activeMembershipOf,
+  activeOrganizationRequired,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
 
 /** Lo minimo que el guard necesita de la sesion (estructural). */
 interface SessionInfo {
@@ -9,7 +13,7 @@ interface SessionInfo {
   user: { id: string };
 }
 
-interface AuthenticatedRequest {
+interface AuthenticatedRequest extends ActiveMembershipRequest {
   session?: SessionInfo;
 }
 
@@ -38,20 +42,12 @@ export class TenantSettingsGuard implements CanActivate {
       throw new ApiProblemException("UNAUTHENTICATED", "La solicitud requiere una sesión.");
     }
 
-    const organizationId = session.session.activeOrganizationId;
-    if (!organizationId) {
+    const membership = await activeMembershipOf(request);
+    if (!membership) {
       throw activeOrganizationRequired();
     }
 
-    const member = await prisma.member.findFirst({
-      where: { userId: session.user.id, organizationId },
-      select: { role: true },
-    });
-    if (!member) {
-      throw activeOrganizationRequired();
-    }
-
-    if (!AGENCY_ADMIN_ROLES.includes(member.role)) {
+    if (!AGENCY_ADMIN_ROLES.includes(membership.role)) {
       throw new ApiProblemException(
         "FORBIDDEN",
         "Solo el dueño o un administrador de la agencia puede gestionar los ajustes.",
@@ -62,9 +58,4 @@ export class TenantSettingsGuard implements CanActivate {
   }
 }
 
-function activeOrganizationRequired(): ApiProblemException {
-  return new ApiProblemException(
-    "ACTIVE_ORGANIZATION_REQUIRED",
-    "La operación requiere una agencia activa de la que el usuario sea miembro.",
-  );
-}
+

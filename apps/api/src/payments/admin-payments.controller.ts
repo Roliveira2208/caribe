@@ -12,6 +12,7 @@ import {
 import { attachAuditData, currentAuditTx } from "../audit/audit-storage.js";
 import { Auditable } from "../audit/auditable.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { PaymentPermission, PaymentsGuard, paymentActorOf, type PaymentsRequest } from "./payments.guard.js";
 import {
   listPaymentsQuerySchema,
@@ -40,7 +41,7 @@ import { PaymentsService } from "./payments.service.js";
  * confirman juntos o ninguno.
  */
 @Controller("admin/payments")
-@UseGuards(PaymentsGuard)
+@UseGuards(ActiveMembershipGuard, PaymentsGuard)
 export class AdminPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 

@@ -1,6 +1,12 @@
-import { Controller, ForbiddenException, Get, Req } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Req, UseGuards } from "@nestjs/common";
+import { ApiProblemException } from "../errors/api-problem.exception.js";
 import type { Prisma } from "../generated/prisma/client.js";
-import { prisma } from "../prisma.js";
+import {
+  activeMembershipOf,
+  activeOrganizationRequired,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
+import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import { AGENCY_AUDIT_READER_ROLES } from "./audit-access.js";
@@ -11,7 +17,7 @@ interface SessionInfo {
   user: { id: string; role?: string | string[] | null };
 }
 
-interface AuthenticatedRequest {
+interface AuthenticatedRequest extends ActiveMembershipRequest {
   session?: SessionInfo;
 }
 
@@ -28,6 +34,7 @@ interface AuthenticatedRequest {
  * respeta con AGENCY_AUDIT_READER_ROLES (owner/admin, audit:read).
  */
 @Controller("admin/audit-logs")
+@UseGuards(ActiveMembershipGuard)
 export class AuditController {
   constructor(private readonly tenantService: TenantService) {}
 
@@ -36,27 +43,22 @@ export class AuditController {
     const session = request.session;
     if (!session) {
       // El guard global ya exigio sesion; red de seguridad.
-      throw new ForbiddenException("La auditoría requiere una sesión");
+      throw new ApiProblemException("UNAUTHENTICATED", "La auditoría requiere una sesión.");
     }
 
     if (isPlatformRole(session.user.role)) {
       // Super Admin: filas de plataforma y de todas las agencias.
       return { items: await this.tenantService.withPlatform((tx) => this.query(tx)) };
     }
-    const organizationId = session.session.activeOrganizationId;
-    if (!organizationId) {
-      throw new ForbiddenException(
-        "La auditoría requiere una agencia activa o el rol de plataforma",
-      );
+    const membership = await activeMembershipOf(request);
+    if (!membership) {
+      throw activeOrganizationRequired();
     }
-    const member = await prisma.member.findFirst({
-      where: { userId: session.user.id, organizationId },
-      select: { role: true },
-    });
-    if (!member || !AGENCY_AUDIT_READER_ROLES.includes(member.role)) {
+    if (!AGENCY_AUDIT_READER_ROLES.includes(membership.role)) {
       // Escenario "Agente consulta auditoría" -> 403.
       throw new ForbiddenException("Solo los administradores de la agencia consultan la auditoría");
     }
+    const organizationId = membership.organizationId;
 
     // RLS (app.tenant_id) garantiza el alcance con el rol de aplicacion y el
     // WHERE lo fija tambien en la consulta: defensa en profundidad, y el

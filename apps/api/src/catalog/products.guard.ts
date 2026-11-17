@@ -3,7 +3,11 @@ import { Reflector } from "@nestjs/core";
 import type { Role } from "better-auth/plugins/access";
 import { adminRole, ownerRole, providerRole } from "../access.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
-import { prisma } from "../prisma.js";
+import {
+  activeMembershipOf,
+  activeOrganizationRequired,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 
 /**
@@ -41,7 +45,7 @@ export interface ProductActor {
 }
 
 /** Lo mínimo que el guard y el controller necesitan de la petición. */
-export interface ProductsRequest {
+export interface ProductsRequest extends ActiveMembershipRequest {
   session?: {
     session: { activeOrganizationId?: string | null };
     user: { id: string; role?: string | string[] | null };
@@ -75,15 +79,10 @@ export class ProductsGuard implements CanActivate {
       throw forbidden("La ruta no declara una acción de producto.");
     }
 
-    const organizationId = session.session.activeOrganizationId;
-    if (organizationId) {
-      const member = await prisma.member.findFirst({
-        where: { userId: session.user.id, organizationId },
-        select: { role: true },
-      });
-      if (!member) throw activeOrganizationRequired();
-
-      const role = AGENCY_PRODUCT_ROLES[member.role];
+    const membership = await activeMembershipOf(request);
+    if (membership) {
+      const organizationId = membership.organizationId;
+      const role = AGENCY_PRODUCT_ROLES[membership.role];
       if (!role || !role.authorize({ product: [action] }).success) {
         throw forbidden("Tu rol no puede realizar esta acción sobre productos.");
       }
@@ -91,7 +90,7 @@ export class ProductsGuard implements CanActivate {
       request.productActor = {
         tenantId: organizationId,
         userId: session.user.id,
-        membershipRole: member.role as ProductActor["membershipRole"],
+        membershipRole: membership.role as ProductActor["membershipRole"],
         isPlatform: false,
       };
       return true;
@@ -116,11 +115,4 @@ export class ProductsGuard implements CanActivate {
 
 function forbidden(detail: string): ApiProblemException {
   return new ApiProblemException("FORBIDDEN", detail);
-}
-
-function activeOrganizationRequired(): ApiProblemException {
-  return new ApiProblemException(
-    "ACTIVE_ORGANIZATION_REQUIRED",
-    "La operación requiere una agencia activa de la que el usuario sea miembro.",
-  );
 }

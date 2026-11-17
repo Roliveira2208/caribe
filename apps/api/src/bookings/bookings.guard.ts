@@ -3,7 +3,10 @@ import { Reflector } from "@nestjs/core";
 import type { Role } from "better-auth/plugins/access";
 import { adminRole, ownerRole } from "../access.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
-import { prisma } from "../prisma.js";
+import {
+  activeMembershipOf,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 
 /**
@@ -47,7 +50,7 @@ export interface BookingActor {
 }
 
 /** Lo mínimo que el guard y el controller necesitan de la petición. */
-export interface BookingsRequest {
+export interface BookingsRequest extends ActiveMembershipRequest {
   ip?: string;
   session?: {
     session: { activeOrganizationId?: string | null };
@@ -78,30 +81,26 @@ export class BookingsGuard implements CanActivate {
       throw forbidden("La ruta no declara un acceso de reserva.");
     }
 
-    const organizationId = session.session.activeOrganizationId;
-    if (organizationId) {
-      const member = await prisma.member.findFirst({
-        where: { userId: session.user.id, organizationId },
-        select: { role: true },
-      });
-      if (!member) throw activeOrganizationRequired();
+    const membership = await activeMembershipOf(request);
+    if (membership) {
+      const organizationId = membership.organizationId;
 
-      if (member.role === "owner" || member.role === "admin") {
-        const role = AGENCY_BOOKING_ROLES[member.role];
+      if (membership.role === "owner" || membership.role === "admin") {
+        const role = AGENCY_BOOKING_ROLES[membership.role];
         if (!role || !role.authorize({ booking: ["cancel"] }).success) {
           throw forbidden("Tu rol no puede cancelar reservas.");
         }
         request.bookingActor = {
           tenantId: organizationId,
           userId: session.user.id,
-          membershipRole: member.role,
+          membershipRole: membership.role,
           canCancelAgency: true,
           isPlatform: false,
         };
         return true;
       }
 
-      if (member.role === "provider") {
+      if (membership.role === "provider") {
         throw forbidden("El proveedor no cancela reservas.");
       }
 
@@ -109,7 +108,7 @@ export class BookingsGuard implements CanActivate {
       request.bookingActor = {
         tenantId: organizationId,
         userId: session.user.id,
-        membershipRole: member.role as MembershipRole,
+        membershipRole: membership.role as MembershipRole,
         canCancelAgency: false,
         isPlatform: false,
       };
@@ -141,11 +140,4 @@ export function bookingActorOf(request: BookingsRequest): BookingActor {
 
 function forbidden(detail: string): ApiProblemException {
   return new ApiProblemException("FORBIDDEN", detail);
-}
-
-function activeOrganizationRequired(): ApiProblemException {
-  return new ApiProblemException(
-    "ACTIVE_ORGANIZATION_REQUIRED",
-    "La operación requiere una agencia activa de la que el usuario sea miembro.",
-  );
 }

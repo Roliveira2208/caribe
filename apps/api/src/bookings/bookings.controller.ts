@@ -13,6 +13,11 @@ import {
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
 import {
+  activeMembershipOf,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
+import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
+import {
   BookingPermission,
   BookingsGuard,
   bookingActorOf,
@@ -32,10 +37,10 @@ import {
 /** Lo minimo que el controller necesita de la sesion (estructural). */
 interface SessionInfo {
   user: { id: string };
-  session?: { activeOrganizationId?: string | null };
+  session: { activeOrganizationId?: string | null };
 }
 
-interface AuthenticatedRequest {
+interface AuthenticatedRequest extends ActiveMembershipRequest {
   ip?: string;
   session?: SessionInfo;
 }
@@ -48,6 +53,7 @@ interface AuthenticatedRequest {
  * activa; una reserva ajena responde 404.
  */
 @Controller("bookings")
+@UseGuards(ActiveMembershipGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
@@ -68,21 +74,31 @@ export class BookingsController {
   }
 
   @Get()
-  list(
+  async list(
     @Req() request: AuthenticatedRequest,
     @Query(new ZodValidationPipe(listBookingsQuerySchema)) query: ListBookingsQuery,
   ): Promise<BookingPage> {
-    const { userId, activeOrganizationId } = requireSession(request);
-    return this.bookingsService.list({ userId, activeOrganizationId, query });
+    const { userId } = requireSession(request);
+    const membership = await activeMembershipOf(request);
+    return this.bookingsService.list({
+      userId,
+      activeOrganizationId: membership?.organizationId ?? null,
+      query,
+    });
   }
 
   @Get(":id")
-  detail(
+  async detail(
     @Req() request: AuthenticatedRequest,
     @Param("id") bookingId: string,
   ): Promise<BookingDetailResponse> {
-    const { userId, activeOrganizationId } = requireSession(request);
-    return this.bookingsService.detail({ userId, activeOrganizationId, bookingId });
+    const { userId } = requireSession(request);
+    const membership = await activeMembershipOf(request);
+    return this.bookingsService.detail({
+      userId,
+      activeOrganizationId: membership?.organizationId ?? null,
+      bookingId,
+    });
   }
 
   /**
@@ -110,16 +126,10 @@ export class BookingsController {
  * Sesion resuelta. El guard global ya responde 401 sin sesion; esta red de
  * seguridad evita que una ruta nueva quede sin `user_id`.
  */
-function requireSession(request: AuthenticatedRequest): {
-  userId: string;
-  activeOrganizationId: string | null;
-} {
+function requireSession(request: AuthenticatedRequest): { userId: string } {
   const userId = request.session?.user.id;
   if (!userId) {
     throw new ApiProblemException("UNAUTHENTICATED", "La reserva requiere una sesión.");
   }
-  return {
-    userId,
-    activeOrganizationId: request.session?.session?.activeOrganizationId ?? null,
-  };
+  return { userId };
 }

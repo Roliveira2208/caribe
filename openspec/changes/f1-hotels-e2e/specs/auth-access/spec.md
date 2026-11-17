@@ -60,7 +60,9 @@ selector y SHALL NOT fijar ninguna hasta que el usuario elija. Con cero membres�
 panel y SHALL mostrar un mensaje con enlace a la web. El Super Admin SHALL entrar en modo plataforma sin
 agencia activa. La selección SHALL ser por sesión; cada inicio de sesión vuelve a resolverla. La API
 SHALL seguir fallando cerrada: una operación de agencia sin organización activa SHALL responder 403 con
-código `ACTIVE_ORGANIZATION_REQUIRED`. Elegir una agencia de la que no se es miembro SHALL ser rechazado.
+código `ACTIVE_ORGANIZATION_REQUIRED`. Toda ruta que resuelva la agencia desde `activeOrganizationId` SHALL
+revalidar la membresía en cada petición: con la membresía revocada SHALL responder 403 con ese mismo código,
+aunque la sesión conserve la agencia activa. Elegir una agencia de la que no se es miembro SHALL ser rechazado.
 
 #### Scenario: Una sola membresía
 - GIVEN un usuario con una sola membresía
@@ -86,6 +88,12 @@ código `ACTIVE_ORGANIZATION_REQUIRED`. Elegir una agencia de la que no se es mi
 - GIVEN un usuario autenticado sin organización activa
 - WHEN llama a una operación de agencia
 - THEN 403 con código `ACTIVE_ORGANIZATION_REQUIRED`
+
+#### Scenario: Membresía revocada en rutas de agencia
+- GIVEN una sesión que conserva `activeOrganizationId` de una agencia cuya membresía fue revocada
+- WHEN llama a ajustes de agencia, panel de pagos, override o consulta de tasas, panel de productos,
+  consulta o cancelación de reservas, pagos propios, auditoría o eventos de autenticación
+- THEN cada ruta responde 403 con código `ACTIVE_ORGANIZATION_REQUIRED`
 
 #### Scenario: Elegir una agencia ajena
 - GIVEN un usuario que no es miembro de la agencia B

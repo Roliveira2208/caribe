@@ -1189,7 +1189,7 @@ describe("bookings (creacion de reservas)", () => {
       await expectProblem(res, 404, "NOT_FOUND");
     });
 
-    it("una agencia activa sin membresía no da acceso a sus reservas", async () => {
+    it("una agencia activa sin membresía recibe 403 en listado y detalle", async () => {
       // Reserva de clientB en orgHold (clientA no es miembro de orgHold).
       const foreign = await createBooking(cookieB, {
         productId: pHold,
@@ -1198,8 +1198,8 @@ describe("bookings (creacion de reservas)", () => {
       });
 
       // Una membresía revocada no limpia activeOrganizationId de la sesión.
-      // RLS sola abriría las filas de orgHold; la comprobación explícita de
-      // membresía/propiedad debe degradar a "solo mis reservas" y 404.
+      // La validación común de la agencia activa debe fallar cerrado con 403
+      // antes de abrir RLS sobre las filas de orgHold.
       await owner.query(
         `UPDATE "session" SET "activeOrganizationId" = $1 WHERE "userId" = $2`,
         [orgHold, clientA],
@@ -1208,11 +1208,12 @@ describe("bookings (creacion de reservas)", () => {
         const detail = await fetch(url(`/bookings/${foreign.id}`), {
           headers: { cookie: cookieA, origin: authOrigin },
         });
-        await expectProblem(detail, 404, "NOT_FOUND");
+        await expectProblem(detail, 403, "ACTIVE_ORGANIZATION_REQUIRED");
 
-        const list = await getJson<BookingPageBody>("/bookings", cookieA);
-        expect(list.status).toBe(200);
-        expect(list.body.items.map((item) => item.id)).not.toContain(foreign.id);
+        const list = await fetch(url("/bookings"), {
+          headers: { cookie: cookieA, origin: authOrigin },
+        });
+        await expectProblem(list, 403, "ACTIVE_ORGANIZATION_REQUIRED");
       } finally {
         await owner.query(
           `UPDATE "session" SET "activeOrganizationId" = NULL WHERE "userId" = $1`,

@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { ProductsAdminService } from "./products-admin.service.js";
 import {
   createProductSchema,
@@ -48,7 +49,7 @@ import {
  * - POST   /admin/products/:id/archive
  */
 @Controller("admin/products")
-@UseGuards(ProductsGuard)
+@UseGuards(ActiveMembershipGuard, ProductsGuard)
 export class ProductsAdminController {
   constructor(private readonly productsAdminService: ProductsAdminService) {}
 

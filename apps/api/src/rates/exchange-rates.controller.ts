@@ -3,6 +3,7 @@ import { attachAuditData, currentAuditTx } from "../audit/audit-storage.js";
 import { Auditable } from "../audit/auditable.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import {
   overrideRateSchema,
   type ExchangeRateView,
@@ -29,7 +30,7 @@ import {
  * aplica después la matriz de permisos y la regla de plataforma.
  */
 @Controller("admin/exchange-rates")
-@UseGuards(ExchangeRatesGuard)
+@UseGuards(ActiveMembershipGuard, ExchangeRatesGuard)
 export class ExchangeRatesController {
   constructor(private readonly exchangeRateService: ExchangeRateService) {}
 

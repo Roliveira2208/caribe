@@ -20,7 +20,6 @@ import {
 } from "../idempotency/idempotency.js";
 import { PaymentsService } from "../payments/payments.service.js";
 import type { RefundResponse } from "../payments/payments.schemas.js";
-import { prisma } from "../prisma.js";
 import { TENANT_SETTINGS_DEFAULTS } from "../tenant-settings/tenant-settings.schemas.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import {
@@ -378,18 +377,18 @@ export class BookingsService {
    * (la política RLS combinada deja ver la fila por dueño o por agencia) y en
    * `owner` cuando no la hay. Una reserva ajena responde 404, nunca 403.
    *
-   * La agencia activa de la sesión solo se usa si el usuario sigue siendo
-   * miembro: una membresía revocada no limpia `activeOrganizationId`, y confiar
-   * solo en RLS abriría las reservas de una agencia a la que ya no pertenece.
-   * Además del `where`, la fila leída se vuelve a comprobar contra el dueño y
-   * la agencia (defensa en profundidad si cambia la consulta o la política).
+   * La agencia activa llega validada por `ActiveMembershipGuard` (la membresía
+   * se revalida en cada petición), así que el servicio no la vuelve a comprobar
+   * ni degrada a otro contexto. Además del `where`, la fila leída se comprueba
+   * contra el dueño y la agencia (defensa en profundidad si cambia la consulta
+   * o la política).
    */
   async detail(input: {
     userId: string;
     activeOrganizationId: string | null;
     bookingId: string;
   }): Promise<BookingDetailResponse> {
-    const agencyId = await this.activeAgencyId(input.userId, input.activeOrganizationId);
+    const agencyId = input.activeOrganizationId;
     const booking = agencyId
       ? await this.tenantService.withOwnerTenant(input.userId, agencyId, (tx) =>
           tx.booking.findFirst({
@@ -414,23 +413,6 @@ export class BookingsService {
       throw new ApiProblemException("NOT_FOUND", "La reserva no existe.");
     }
     return toBookingDetail(booking);
-  }
-
-  /**
-   * Agencia activa efectiva: `null` si la sesión no tiene agencia o si el
-   * usuario ya no es miembro de ella. El guard de pagos hace la misma
-   * comprobación de membresía; en reservas la lectura no tiene guard de rol.
-   */
-  private async activeAgencyId(
-    userId: string,
-    activeOrganizationId: string | null,
-  ): Promise<string | null> {
-    if (!activeOrganizationId) return null;
-    const member = await prisma.member.findFirst({
-      where: { userId, organizationId: activeOrganizationId },
-      select: { id: true },
-    });
-    return member ? activeOrganizationId : null;
   }
 
   /**
@@ -647,9 +629,9 @@ export class BookingsService {
   }): Promise<BookingPage> {
     const limit = input.query.limit ?? BOOKINGS_DEFAULT_LIMIT;
     const cursor = input.query.cursor ? decodeBookingsCursor(input.query.cursor) : null;
-    // Igual que en el detalle: la agencia activa solo cuenta si sigue habiendo
-    // membresía; si no, la lista degrada a "solo mis reservas".
-    const agencyId = await this.activeAgencyId(input.userId, input.activeOrganizationId);
+    // La agencia activa llega validada por ActiveMembershipGuard; sin ella el
+    // listado es el del cliente en todas las agencias.
+    const agencyId = input.activeOrganizationId;
     const where: Prisma.BookingWhereInput = {
       ...(input.query.status ? { status: input.query.status } : {}),
       ...(cursor

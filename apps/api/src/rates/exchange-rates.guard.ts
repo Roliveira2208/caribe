@@ -2,7 +2,11 @@ import { type CanActivate, type ExecutionContext, Injectable, SetMetadata } from
 import { Reflector } from "@nestjs/core";
 import { adminRole, ownerRole } from "../access.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
-import { prisma } from "../prisma.js";
+import {
+  activeMembershipOf,
+  activeOrganizationRequired,
+  type ActiveMembershipRequest,
+} from "../tenant/active-membership.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 
 /**
@@ -33,7 +37,7 @@ export interface RateActor {
 }
 
 /** Lo mínimo que el guard y el controller necesitan de la petición. */
-export interface RatesRequest {
+export interface RatesRequest extends ActiveMembershipRequest {
   session?: {
     session: { activeOrganizationId?: string | null };
     user: { id: string; role?: string | string[] | null };
@@ -60,10 +64,10 @@ export class ExchangeRatesGuard implements CanActivate {
       throw forbidden("La ruta no declara un acceso de tasas.");
     }
 
-    const organizationId = session.session.activeOrganizationId;
+    const membership = await activeMembershipOf(request);
 
     if (access === "platform-update") {
-      if (organizationId) {
+      if (membership) {
         throw forbidden("El override global se fija sin una agencia activa.");
       }
       if (!isPlatformRole(session.user.role)) {
@@ -77,14 +81,9 @@ export class ExchangeRatesGuard implements CanActivate {
       return true;
     }
 
-    if (organizationId) {
-      const member = await prisma.member.findFirst({
-        where: { userId: session.user.id, organizationId },
-        select: { role: true },
-      });
-      if (!member) throw activeOrganizationRequired();
-
-      const role = AGENCY_ROLES[member.role as keyof typeof AGENCY_ROLES];
+    if (membership) {
+      const organizationId = membership.organizationId;
+      const role = AGENCY_ROLES[membership.role as keyof typeof AGENCY_ROLES];
       const action = access === "tenant-update" ? "update" : "read";
       if (!role || !role.authorize({ "exchange-rate": [action] }).success) {
         throw forbidden("Tu rol no puede consultar o ajustar las tasas de la agencia.");
@@ -116,11 +115,4 @@ export class ExchangeRatesGuard implements CanActivate {
 
 function forbidden(detail: string): ApiProblemException {
   return new ApiProblemException("FORBIDDEN", detail);
-}
-
-function activeOrganizationRequired(): ApiProblemException {
-  return new ApiProblemException(
-    "ACTIVE_ORGANIZATION_REQUIRED",
-    "La operación requiere una agencia activa de la que el usuario sea miembro.",
-  );
 }
