@@ -1137,6 +1137,38 @@ describe("bookings (creacion de reservas)", () => {
       await expectProblem(res, 404, "NOT_FOUND");
     });
 
+    it("una agencia activa sin membresía no da acceso a sus reservas", async () => {
+      // Reserva de clientB en orgHold (clientA no es miembro de orgHold).
+      const foreign = await createBooking(cookieB, {
+        productId: pHold,
+        checkIn: night1,
+        checkOut: night3,
+      });
+
+      // Una membresía revocada no limpia activeOrganizationId de la sesión.
+      // RLS sola abriría las filas de orgHold; la comprobación explícita de
+      // membresía/propiedad debe degradar a "solo mis reservas" y 404.
+      await owner.query(
+        `UPDATE "session" SET "activeOrganizationId" = $1 WHERE "userId" = $2`,
+        [orgHold, clientA],
+      );
+      try {
+        const detail = await fetch(url(`/bookings/${foreign.id}`), {
+          headers: { cookie: cookieA, origin: authOrigin },
+        });
+        await expectProblem(detail, 404, "NOT_FOUND");
+
+        const list = await getJson<BookingPageBody>("/bookings", cookieA);
+        expect(list.status).toBe(200);
+        expect(list.body.items.map((item) => item.id)).not.toContain(foreign.id);
+      } finally {
+        await owner.query(
+          `UPDATE "session" SET "activeOrganizationId" = NULL WHERE "userId" = $1`,
+          [clientA],
+        );
+      }
+    });
+
     it("un visitante anónimo recibe 401 en la lista y en el detalle", async () => {
       const list = await fetch(url("/bookings"));
       await expectProblem(list, 401, "UNAUTHENTICATED");
