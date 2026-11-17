@@ -9,4 +9,5 @@ coverage/
 .turbo/
 *.log
 *.tsbuildinfo
+artifacts-*.txt
 .claude/settings.local.json
