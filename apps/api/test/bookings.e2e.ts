@@ -14,6 +14,10 @@ import {
 import { addDays } from "../src/catalog/catalog.schemas.js";
 import { BookingExpirationService } from "../src/jobs/booking-expiration.service.js";
 import { prisma } from "../src/prisma.js";
+import {
+  createAuditFailureTrigger,
+  type AuditFailureTrigger,
+} from "./audit-failure-trigger.js";
 import { authOrigin, addMember, createUser, setActiveOrg, signIn } from "./auth-helpers.js";
 
 /**
@@ -43,6 +47,8 @@ describe("bookings (creacion de reservas)", () => {
   let staffHold = "";
   let staffACookie = "";
   let staffHoldCookie = "";
+
+  let auditFailure: AuditFailureTrigger | undefined;
 
   const suffix = randomUUID().slice(0, 8);
 
@@ -344,7 +350,7 @@ describe("bookings (creacion de reservas)", () => {
     await availability(pFail, orgFail, night1, 5, 0, "100.00");
     await availability(pFail, orgFail, night2, 5, 0, "100.00");
 
-    await createAuditFailureTrigger();
+    auditFailure = await createAuditFailureTrigger(owner, orgFail);
   });
 
   beforeEach(async () => {
@@ -370,7 +376,7 @@ describe("bookings (creacion de reservas)", () => {
 
   afterAll(async () => {
     if (owner) {
-      await dropAuditFailureTrigger();
+      await auditFailure?.drop();
       const userIds = [clientA, clientB].filter((id) => id.length > 0);
       const tenantIds = [orgA, orgHold, orgFail];
       await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [
@@ -509,29 +515,6 @@ describe("bookings (creacion de reservas)", () => {
       [randomUUID(), tenantId, productId, night, capacity, reserved, price],
     );
     availabilityBaseline.push({ productId, night, reserved });
-  }
-
-  async function createAuditFailureTrigger(): Promise<void> {
-    await dropAuditFailureTrigger();
-    await owner.query(
-      `CREATE FUNCTION "audit_logs_fail_test_fn"() RETURNS trigger AS $$
-       BEGIN
-         RAISE EXCEPTION 'fallo de auditoria simulado';
-       END;
-       $$ LANGUAGE plpgsql`,
-    );
-    await owner.query(
-      `CREATE TRIGGER "audit_logs_fail_test"
-         BEFORE INSERT ON "audit_logs"
-         FOR EACH ROW
-         WHEN (NEW."tenant_id" = '${orgFail}')
-         EXECUTE FUNCTION "audit_logs_fail_test_fn"()`,
-    );
-  }
-
-  async function dropAuditFailureTrigger(): Promise<void> {
-    await owner.query(`DROP TRIGGER IF EXISTS "audit_logs_fail_test" ON "audit_logs"`);
-    await owner.query(`DROP FUNCTION IF EXISTS "audit_logs_fail_test_fn"()`);
   }
 
   function url(path: string): string {
@@ -1402,6 +1385,31 @@ describe("bookings (creacion de reservas)", () => {
         where: { entityId: ownHold.id, action: "booking.expire" },
       });
       expect(auditHold?.tenantId).toBe(orgHold);
+    });
+
+    it("dos inyecciones de auditoría simultáneas no se pisan entre sí", async () => {
+      // Regresión del arnés: si los triggers usaran un nombre fijo, la segunda
+      // inyección reemplazaría a la primera y el fallo simulado dejaría de
+      // dispararse. Con nombres únicos, ambas agencias fallan por separado.
+      const otherTenant = randomUUID();
+      const other = await createAuditFailureTrigger(owner, otherTenant);
+      const insert = (tenantId: string) =>
+        owner.query(
+          `INSERT INTO "audit_logs" (id, tenant_id, action, entity, entity_id, at)
+           VALUES ($1, $2, 'test.audit', 'test', $3, now())`,
+          [randomUUID(), tenantId, randomUUID()],
+        );
+
+      try {
+        await expect(insert(orgFail)).rejects.toThrow("fallo de auditoria simulado");
+        await expect(insert(otherTenant)).rejects.toThrow("fallo de auditoria simulado");
+      } finally {
+        await other.drop();
+      }
+
+      // Quitar una inyección no desactiva la de la suite.
+      await expect(insert(otherTenant)).resolves.toBeDefined();
+      await expect(insert(orgFail)).rejects.toThrow("fallo de auditoria simulado");
     });
 
     it("un fallo en una agencia no detiene a las demás", async () => {

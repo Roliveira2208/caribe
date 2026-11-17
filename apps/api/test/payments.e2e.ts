@@ -9,6 +9,10 @@ import { ApiProblemException } from "../src/errors/api-problem.exception.js";
 import { BookingExpirationService } from "../src/jobs/booking-expiration.service.js";
 import { prisma } from "../src/prisma.js";
 import { ExchangeRateService } from "../src/rates/exchange-rate.service.js";
+import {
+  createAuditFailureTrigger,
+  type AuditFailureTrigger,
+} from "./audit-failure-trigger.js";
 import { authOrigin, addMember, createUser, setActiveOrg, signIn, userWithTotp } from "./auth-helpers.js";
 
 /**
@@ -51,6 +55,8 @@ describe("payments (alta y revisión)", () => {
   let cookieAdminB = "";
   let cookieOwnerFail = "";
   let cookieSuper = "";
+
+  let auditFailure: AuditFailureTrigger | undefined;
 
   const suffix = randomUUID().slice(0, 8);
 
@@ -292,7 +298,7 @@ describe("payments (alta y revisión)", () => {
     await availability(pExpire, orgB, night1, 5, 0, "100.00");
     await availability(pExpire, orgB, night2, 5, 0, "100.00");
 
-    await createAuditFailureTrigger();
+    auditFailure = await createAuditFailureTrigger(owner, orgFail);
   });
 
   beforeEach(async () => {
@@ -329,7 +335,7 @@ describe("payments (alta y revisión)", () => {
 
   afterAll(async () => {
     if (owner) {
-      await dropAuditFailureTrigger();
+      await auditFailure?.drop();
       await dropSlowPaymentUpdate();
       const tenantIds = [orgA, orgB, orgFail, orgNoRate];
       const userIds = [clientA, clientB].filter((id) => id.length > 0);
@@ -553,29 +559,6 @@ describe("payments (alta y revisión)", () => {
       ],
     );
     return id;
-  }
-
-  async function createAuditFailureTrigger(): Promise<void> {
-    await dropAuditFailureTrigger();
-    await owner.query(
-      `CREATE FUNCTION "audit_logs_fail_test_fn"() RETURNS trigger AS $$
-       BEGIN
-         RAISE EXCEPTION 'fallo de auditoria simulado';
-       END;
-       $$ LANGUAGE plpgsql`,
-    );
-    await owner.query(
-      `CREATE TRIGGER "audit_logs_fail_test"
-         BEFORE INSERT ON "audit_logs"
-         FOR EACH ROW
-         WHEN (NEW."tenant_id" = '${orgFail}')
-         EXECUTE FUNCTION "audit_logs_fail_test_fn"()`,
-    );
-  }
-
-  async function dropAuditFailureTrigger(): Promise<void> {
-    await owner.query(`DROP TRIGGER IF EXISTS "audit_logs_fail_test" ON "audit_logs"`);
-    await owner.query(`DROP FUNCTION IF EXISTS "audit_logs_fail_test_fn"()`);
   }
 
   /**
