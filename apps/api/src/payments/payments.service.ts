@@ -30,6 +30,10 @@ import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { JobsScheduler } from "../jobs/jobs.scheduler.js";
 import {
+  NotificationService,
+  type ReservedNotification,
+} from "../notifications/notification.service.js";
+import {
   claimIdempotencyKey,
   idempotencyKeyWhere,
   isUniqueViolation,
@@ -118,10 +122,11 @@ interface PayParams {
   ip: string | null;
 }
 
-/** Resultado interno del alta: pago serializado y documentos a encolar. */
+/** Resultado interno del alta: pago serializado, documentos y aviso a encolar. */
 interface PayResult {
   payment: PaymentResponse;
   documents: ReservedDocument[];
+  notification: ReservedNotification | null;
 }
 
 /**
@@ -148,6 +153,7 @@ export class PaymentsService {
     private readonly exchangeRateService: ExchangeRateService,
     private readonly documents: DocumentIssuanceService,
     private readonly jobs: JobsScheduler,
+    private readonly notifications: NotificationService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
   ) {}
 
@@ -192,6 +198,32 @@ export class PaymentsService {
       } catch (error) {
         this.logger.error(`No se pudo encolar el documento ${document.id}: ${String(error)}`);
       }
+    }
+  }
+
+  /**
+   * Reserva el único aviso de F1 DENTRO de la transacción que confirma la
+   * reserva (T-F1-12, spec notifications "Idempotencia de los avisos"). Si la
+   * transacción se revierte, la fila `PENDING` desaparece con ella.
+   */
+  private async reserveNotification(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    bookingId: string,
+    userId: string,
+  ): Promise<ReservedNotification> {
+    return this.notifications.reserve(tx, { tenantId, bookingId, userId });
+  }
+
+  /** Encola el aviso tras el commit; un fallo de Redis no deshace la reserva. */
+  private async enqueueNotification(notification: ReservedNotification): Promise<void> {
+    try {
+      await this.jobs.enqueueNotification({
+        notificationId: notification.id,
+        tenantId: notification.tenantId,
+      });
+    } catch (error) {
+      this.logger.error(`No se pudo encolar el aviso ${notification.id}: ${String(error)}`);
     }
   }
 
@@ -445,9 +477,16 @@ export class PaymentsService {
         payment.bookingId,
         paymentId,
       );
-      // El render se encola solo después de que el interceptor confirme pago,
-      // reserva, documentos y auditoría en la misma transacción.
+      const notification = await this.reserveNotification(
+        tx,
+        tenantId,
+        payment.bookingId,
+        payment.reportedBy,
+      );
+      // El render y el correo se encolan solo después de que el interceptor
+      // confirme pago, reserva, documentos, aviso y auditoría en la transacción.
       runAfterCommit(() => this.enqueueDocumentRenders(documents));
+      runAfterCommit(() => this.enqueueNotification(notification));
     } else {
       await tx.payment.update({
         where: { id: paymentId },
@@ -596,8 +635,9 @@ export class PaymentsService {
       );
       // En modo AUTO no hay interceptor de auditoría: la transacción de
       // `withOwnerTenant` ya se confirmó al resolver, así que aquí es seguro
-      // encolar los dos documentos reservados dentro de ella.
+      // encolar los documentos y el aviso reservados dentro de ella.
       await this.enqueueDocumentRenders(result.documents);
+      if (result.notification) await this.enqueueNotification(result.notification);
       return result.payment;
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -688,6 +728,7 @@ export class PaymentsService {
     });
 
     let documents: ReservedDocument[] = [];
+    let notification: ReservedNotification | null = null;
     if (providerPayment.status === "APPROVED") {
       await tx.booking.update({
         where: { id: params.bookingId },
@@ -698,6 +739,12 @@ export class PaymentsService {
         params.tenantId,
         params.bookingId,
         paymentId,
+      );
+      notification = await this.reserveNotification(
+        tx,
+        params.tenantId,
+        params.bookingId,
+        params.userId,
       );
     }
 
@@ -731,7 +778,7 @@ export class PaymentsService {
     });
 
     const created = await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
-    return { payment: toPaymentResponse(created), documents };
+    return { payment: toPaymentResponse(created), documents, notification };
   }
 
   /** Reserva propia con su estado de vencimiento, leída en el contexto `owner`. */

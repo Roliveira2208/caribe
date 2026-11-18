@@ -1,6 +1,7 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import { Queue, Worker } from "bullmq";
 import { DocumentRenderingService } from "../documents/document-rendering.service.js";
+import { NotificationService } from "../notifications/notification.service.js";
 import { BookingExpirationService } from "./booking-expiration.service.js";
 import {
   DOCUMENT_JOB_ATTEMPTS,
@@ -9,8 +10,11 @@ import {
   EXPIRE_BOOKINGS_SCHEDULE,
   JOBS_QUEUE_NAME,
   RENDER_DOCUMENT_JOB,
+  SEND_NOTIFICATION_JOB,
   jobsEnabled,
+  notificationPayloadSchema,
   renderDocumentPayloadSchema,
+  type NotificationPayload,
   type RenderDocumentPayload,
 } from "./jobs.constants.js";
 
@@ -27,6 +31,11 @@ export interface SchedulerQueue {
       };
     },
   ): Promise<unknown>;
+}
+
+/** Cola mínima para encolar el correo de confirmación. */
+export interface NotificationQueue {
+  add(name: string, data: unknown): Promise<unknown>;
 }
 
 /** Cola mínima para encolar el render con sus opciones de reintento. */
@@ -59,6 +68,15 @@ export async function enqueueDocumentRender(
 export interface JobHandlers {
   expireBookings(): Promise<unknown>;
   renderDocument(payload: RenderDocumentPayload): Promise<unknown>;
+  sendNotification(payload: NotificationPayload): Promise<unknown>;
+}
+
+/** Encola el correo. El servicio hará los 3 intentos con espera creciente. */
+export async function enqueueNotification(
+  queue: NotificationQueue,
+  payload: NotificationPayload,
+): Promise<void> {
+  await queue.add(SEND_NOTIFICATION_JOB, payload);
 }
 
 /** Trabajo despachable: BullMQ entrega `data`, las pruebas lo simulan. */
@@ -89,6 +107,8 @@ export function createJobProcessor(
         return handlers.expireBookings();
       case RENDER_DOCUMENT_JOB:
         return handlers.renderDocument(renderDocumentPayloadSchema.parse(job.data));
+      case SEND_NOTIFICATION_JOB:
+        return handlers.sendNotification(notificationPayloadSchema.parse(job.data));
       default:
         throw new Error(`Trabajo desconocido: ${job.name}`);
     }
@@ -113,6 +133,7 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly expiration: BookingExpirationService,
     private readonly rendering: DocumentRenderingService,
+    private readonly notifications: NotificationService,
   ) {}
 
   onModuleInit(): void {
@@ -138,6 +159,20 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
     await enqueueDocumentRender(this.queue, payload);
   }
 
+  /**
+   * Encola el aviso tras el commit de la reserva. Sin Redis la fila queda
+   * `PENDING` y el correo no se envía; F1 no tiene reintento manual (F2).
+   */
+  async enqueueNotification(payload: NotificationPayload): Promise<void> {
+    if (!this.queue) {
+      this.logger.warn(
+        `BullMQ deshabilitado: el aviso ${payload.notificationId} queda PENDING hasta configurar REDIS_URL.`,
+      );
+      return;
+    }
+    await enqueueNotification(this.queue, payload);
+  }
+
   async onModuleDestroy(): Promise<void> {
     const worker = this.worker;
     const queue = this.queue;
@@ -157,6 +192,8 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
         expireBookings: () => this.expiration.expireDueBookings(),
         renderDocument: (payload) =>
           this.rendering.renderWithRetries(payload.documentId, payload.tenantId),
+        sendNotification: (payload) =>
+          this.notifications.sendWithRetries(payload.notificationId, payload.tenantId),
       }),
       { connection },
     );

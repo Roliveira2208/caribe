@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module.js";
 import { DocumentsModule } from "../documents/documents.module.js";
 import { JobsModule } from "../jobs/jobs.module.js";
+import { NotificationsModule } from "../notifications/notifications.module.js";
 import { RatesModule } from "../rates/rates.module.js";
 import { TenantModule } from "../tenant/tenant.module.js";
 import { AdminPaymentsController } from "./admin-payments.controller.js";
@@ -16,7 +17,14 @@ import { SimulatedPaymentProvider } from "./simulated-payment.provider.js";
  * dependa de `PaymentProvider` (D9) y una pasarela real no toque el dominio.
  */
 @Module({
-  imports: [TenantModule, AuditModule, RatesModule, DocumentsModule, JobsModule],
+  imports: [
+    TenantModule,
+    AuditModule,
+    RatesModule,
+    DocumentsModule,
+    JobsModule,
+    NotificationsModule,
+  ],
   controllers: [PaymentsController, AdminPaymentsController],
   providers: [
     PaymentsService,

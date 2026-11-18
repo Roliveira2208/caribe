@@ -4,12 +4,16 @@ import {
   DOCUMENT_JOB_BACKOFF,
   EXPIRE_BOOKINGS_JOB,
   EXPIRE_BOOKINGS_SCHEDULE,
+  NOTIFICATION_JOB_ATTEMPTS,
+  NOTIFICATION_JOB_DELAYS,
   RENDER_DOCUMENT_JOB,
+  SEND_NOTIFICATION_JOB,
   jobsEnabled,
 } from "../src/jobs/jobs.constants.js";
 import {
   createJobProcessor,
   enqueueDocumentRender,
+  enqueueNotification,
   registerSchedules,
   type JobQueue,
   type SchedulerQueue,
@@ -68,10 +72,31 @@ describe("jobs", () => {
     ]);
   });
 
+  it("el correo es por evento, con 3 intentos y espera creciente en el servicio", async () => {
+    expect(SEND_NOTIFICATION_JOB).toBe("notifications.send");
+    expect(NOTIFICATION_JOB_ATTEMPTS).toBe(3);
+    expect(NOTIFICATION_JOB_DELAYS).toEqual([1000, 2000]);
+
+    const calls: Array<Parameters<JobQueue["add"]>> = [];
+    const queue: JobQueue = {
+      async add(name, data, opts) {
+        calls.push([name, data, opts]);
+        return undefined;
+      },
+    };
+    const payload = {
+      notificationId: "4f3c1a52-8b7d-4c10-9f2e-6a5b4d3c2e1f",
+      tenantId: "tenant-1",
+    };
+    await enqueueNotification(queue, payload);
+    expect(calls).toEqual([[SEND_NOTIFICATION_JOB, payload, undefined]]);
+  });
+
   it("despacha el trabajo por nombre y falla cerrado con uno desconocido", async () => {
     const expireBookings = vi.fn(async () => ({ expired: 2 }));
     const renderDocument = vi.fn(async () => ({ status: "READY" }));
-    const process = createJobProcessor({ expireBookings, renderDocument });
+    const sendNotification = vi.fn(async () => ({ status: "SENT" }));
+    const process = createJobProcessor({ expireBookings, renderDocument, sendNotification });
 
     await expect(process({ name: EXPIRE_BOOKINGS_JOB, data: {} })).resolves.toEqual({
       expired: 2,
@@ -86,6 +111,15 @@ describe("jobs", () => {
       status: "READY",
     });
     expect(renderDocument).toHaveBeenCalledWith(payload);
+
+    const notificationPayload = {
+      notificationId: "9a1c1a52-8b7d-4c10-9f2e-6a5b4d3c2e1f",
+      tenantId: "tenant-1",
+    };
+    await expect(
+      process({ name: SEND_NOTIFICATION_JOB, data: notificationPayload }),
+    ).resolves.toEqual({ status: "SENT" });
+    expect(sendNotification).toHaveBeenCalledWith(notificationPayload);
 
     await expect(process({ name: "exchange-rate.refresh", data: {} })).rejects.toThrow(
       "Trabajo desconocido: exchange-rate.refresh",

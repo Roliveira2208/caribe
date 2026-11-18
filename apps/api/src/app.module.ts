@@ -9,6 +9,7 @@ import { CatalogModule } from "./catalog/catalog.module.js";
 import { DocumentsModule } from "./documents/documents.module.js";
 import { ProblemDetailsFilter } from "./errors/problem-details.filter.js";
 import { JobsModule } from "./jobs/jobs.module.js";
+import { NotificationsModule } from "./notifications/notifications.module.js";
 import { PaymentsModule } from "./payments/payments.module.js";
 import { RatesModule } from "./rates/rates.module.js";
 import { TenantModule } from "./tenant/tenant.module.js";
@@ -25,6 +26,7 @@ import { TenantSettingsModule } from "./tenant-settings/tenant-settings.module.j
     BookingsModule,
     DocumentsModule,
     JobsModule,
+    NotificationsModule,
     PaymentsModule,
     RatesModule,
     TenantModule,

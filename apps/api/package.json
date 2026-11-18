@@ -27,6 +27,7 @@
     "bullmq": "6.7.6",
     "dotenv": "18.0.9",
     "ioredis": "6.0.0",
+    "nodemailer": "7.0.11",
     "pdfkit": "0.20.2",
     "pg": "8.23.1",
     "qrcode": "1.5.4",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@caribe/eslint-config": "workspace:*",
     "@caribe/tsconfig": "workspace:*",
+    "@types/nodemailer": "7.0.11",
     "@types/pdfkit": "0.17.7",
     "@types/pg": "8.23.1",
     "@types/qrcode": "1.5.6",

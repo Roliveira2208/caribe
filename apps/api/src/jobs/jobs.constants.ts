@@ -42,6 +42,28 @@ export const renderDocumentPayloadSchema = z.strictObject({
 export type RenderDocumentPayload = z.infer<typeof renderDocumentPayloadSchema>;
 
 /**
+ * Correo de confirmación de reserva (T-F1-12, spec notifications "Correo
+ * encolado"). El trabajo se encola tras confirmar la reserva; los 3 intentos y
+ * la espera creciente los aplica `NotificationService`, no BullMQ, para que un
+ * mismo evento no pueda enviarse nueve veces.
+ */
+export const SEND_NOTIFICATION_JOB = "notifications.send";
+
+/** 3 intentos en total: el primero más 2 reintentos. */
+export const NOTIFICATION_JOB_ATTEMPTS = 3;
+
+/** Espera creciente entre intentos, en milisegundos. */
+export const NOTIFICATION_JOB_DELAYS = [1000, 2000] as const;
+
+/** Cuerpo del trabajo: sin PII, solo identificadores. Se valida al despachar. */
+export const notificationPayloadSchema = z.strictObject({
+  notificationId: z.uuid(),
+  tenantId: z.string().min(1),
+});
+
+export type NotificationPayload = z.infer<typeof notificationPayloadSchema>;
+
+/**
  * BullMQ solo arranca con `REDIS_URL` configurado y fuera de las pruebas.
  *
  * Los e2e comparten PostgreSQL y no levantan Redis; con el planificador
