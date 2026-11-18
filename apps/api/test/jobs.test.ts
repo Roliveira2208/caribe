@@ -1,12 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  DOCUMENT_JOB_ATTEMPTS,
+  DOCUMENT_JOB_BACKOFF,
   EXPIRE_BOOKINGS_JOB,
   EXPIRE_BOOKINGS_SCHEDULE,
+  RENDER_DOCUMENT_JOB,
   jobsEnabled,
 } from "../src/jobs/jobs.constants.js";
 import {
   createJobProcessor,
+  enqueueDocumentRender,
   registerSchedules,
+  type JobQueue,
   type SchedulerQueue,
 } from "../src/jobs/jobs.scheduler.js";
 
@@ -37,17 +42,55 @@ describe("jobs", () => {
     expect(EXPIRE_BOOKINGS_SCHEDULE).toBe("* * * * *");
   });
 
+  it("el render de documentos es por evento, con 3 intentos y espera exponencial", async () => {
+    expect(RENDER_DOCUMENT_JOB).toBe("documents.render");
+    expect(DOCUMENT_JOB_ATTEMPTS).toBe(3);
+    expect(DOCUMENT_JOB_BACKOFF).toEqual({ type: "exponential", delay: 1000 });
+
+    const calls: Array<Parameters<JobQueue["add"]>> = [];
+    const queue: JobQueue = {
+      async add(name, data, opts) {
+        calls.push([name, data, opts]);
+        return undefined;
+      },
+    };
+    const payload = {
+      documentId: "4f3c1a52-8b7d-4c10-9f2e-6a5b4d3c2e1f",
+      tenantId: "tenant-1",
+    };
+    await enqueueDocumentRender(queue, payload);
+    expect(calls).toEqual([
+      [
+        RENDER_DOCUMENT_JOB,
+        payload,
+        { attempts: 3, backoff: { type: "exponential", delay: 1000 } },
+      ],
+    ]);
+  });
+
   it("despacha el trabajo por nombre y falla cerrado con uno desconocido", async () => {
     const expireBookings = vi.fn(async () => ({ expired: 2 }));
-    const process = createJobProcessor({ expireBookings });
+    const renderDocument = vi.fn(async () => ({ status: "READY" }));
+    const process = createJobProcessor({ expireBookings, renderDocument });
 
-    await expect(process({ name: EXPIRE_BOOKINGS_JOB })).resolves.toEqual({ expired: 2 });
+    await expect(process({ name: EXPIRE_BOOKINGS_JOB, data: {} })).resolves.toEqual({
+      expired: 2,
+    });
     expect(expireBookings).toHaveBeenCalledTimes(1);
 
-    await expect(process({ name: "exchange-rate.refresh" })).rejects.toThrow(
+    const payload = {
+      documentId: "4f3c1a52-8b7d-4c10-9f2e-6a5b4d3c2e1f",
+      tenantId: "tenant-1",
+    };
+    await expect(process({ name: RENDER_DOCUMENT_JOB, data: payload })).resolves.toEqual({
+      status: "READY",
+    });
+    expect(renderDocument).toHaveBeenCalledWith(payload);
+
+    await expect(process({ name: "exchange-rate.refresh", data: {} })).rejects.toThrow(
       "Trabajo desconocido: exchange-rate.refresh",
     );
-    await expect(process({ name: "otro.trabajo" })).rejects.toThrow(
+    await expect(process({ name: "otro.trabajo", data: {} })).rejects.toThrow(
       "Trabajo desconocido: otro.trabajo",
     );
   });

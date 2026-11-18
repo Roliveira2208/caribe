@@ -1,3 +1,5 @@
+import { z } from "@caribe/shared";
+
 /**
  * Nombres, calendarios y arranque de los trabajos en segundo plano (T-F1-8,
  * design §3.3).
@@ -14,6 +16,30 @@ export const EXPIRE_BOOKINGS_JOB = "bookings.expire";
 
 /** Cada minuto: la retención se mide en minutos y la spec pide ese ritmo. */
 export const EXPIRE_BOOKINGS_SCHEDULE = "* * * * *";
+
+/**
+ * Renderizado de documentos (T-F1-11d, spec documents "Reintentos
+ * automáticos"). Es un trabajo por evento: se encola al confirmar la reserva o
+ * aprobar el pago, no tiene planificador propio.
+ */
+export const RENDER_DOCUMENT_JOB = "documents.render";
+
+/** 3 intentos en total: el primero más 2 reintentos. */
+export const DOCUMENT_JOB_ATTEMPTS = 3;
+
+/** Espera creciente entre intentos, en milisegundos. */
+export const DOCUMENT_JOB_DELAYS = [1000, 2000] as const;
+
+/** Backoff exponencial equivalente para BullMQ. */
+export const DOCUMENT_JOB_BACKOFF = { type: "exponential", delay: 1000 } as const;
+
+/** Cuerpo del trabajo: sin PII, solo identificadores. Se valida al despachar. */
+export const renderDocumentPayloadSchema = z.strictObject({
+  documentId: z.uuid(),
+  tenantId: z.string().min(1),
+});
+
+export type RenderDocumentPayload = z.infer<typeof renderDocumentPayloadSchema>;
 
 /**
  * BullMQ solo arranca con `REDIS_URL` configurado y fuera de las pruebas.

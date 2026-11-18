@@ -1,11 +1,17 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import { Queue, Worker, type Job } from "bullmq";
+import { Queue, Worker } from "bullmq";
+import { DocumentRenderingService } from "../documents/document-rendering.service.js";
 import { BookingExpirationService } from "./booking-expiration.service.js";
 import {
+  DOCUMENT_JOB_ATTEMPTS,
+  DOCUMENT_JOB_BACKOFF,
   EXPIRE_BOOKINGS_JOB,
   EXPIRE_BOOKINGS_SCHEDULE,
   JOBS_QUEUE_NAME,
+  RENDER_DOCUMENT_JOB,
   jobsEnabled,
+  renderDocumentPayloadSchema,
+  type RenderDocumentPayload,
 } from "./jobs.constants.js";
 
 /** Lo mínimo que el planificador necesita de la cola (doble en pruebas). */
@@ -23,9 +29,42 @@ export interface SchedulerQueue {
   ): Promise<unknown>;
 }
 
+/** Cola mínima para encolar el render con sus opciones de reintento. */
+export interface JobQueue {
+  add(
+    name: string,
+    data: unknown,
+    opts?: {
+      attempts?: number;
+      backoff?: { type: "exponential"; delay: number };
+    },
+  ): Promise<unknown>;
+}
+
+/**
+ * Encola un render con 3 intentos y espera exponencial, tal como exige la spec
+ * "Reintentos automáticos". El cuerpo solo lleva identificadores, nunca PII.
+ */
+export async function enqueueDocumentRender(
+  queue: JobQueue,
+  payload: RenderDocumentPayload,
+): Promise<void> {
+  await queue.add(RENDER_DOCUMENT_JOB, payload, {
+    attempts: DOCUMENT_JOB_ATTEMPTS,
+    backoff: DOCUMENT_JOB_BACKOFF,
+  });
+}
+
 /** Cuerpo de cada trabajo, inyectable para probar el despacho sin Redis. */
 export interface JobHandlers {
   expireBookings(): Promise<unknown>;
+  renderDocument(payload: RenderDocumentPayload): Promise<unknown>;
+}
+
+/** Trabajo despachable: BullMQ entrega `data`, las pruebas lo simulan. */
+export interface DispatchableJob {
+  name: string;
+  data?: unknown;
 }
 
 /**
@@ -43,11 +82,13 @@ export async function registerSchedules(queue: SchedulerQueue): Promise<void> {
 /** Despacha por nombre de trabajo; un nombre desconocido falla cerrado. */
 export function createJobProcessor(
   handlers: JobHandlers,
-): (job: Pick<Job, "name">) => Promise<unknown> {
+): (job: DispatchableJob) => Promise<unknown> {
   return async (job) => {
     switch (job.name) {
       case EXPIRE_BOOKINGS_JOB:
         return handlers.expireBookings();
+      case RENDER_DOCUMENT_JOB:
+        return handlers.renderDocument(renderDocumentPayloadSchema.parse(job.data));
       default:
         throw new Error(`Trabajo desconocido: ${job.name}`);
     }
@@ -69,7 +110,10 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
   private queue: Queue | null = null;
   private worker: Worker | null = null;
 
-  constructor(private readonly expiration: BookingExpirationService) {}
+  constructor(
+    private readonly expiration: BookingExpirationService,
+    private readonly rendering: DocumentRenderingService,
+  ) {}
 
   onModuleInit(): void {
     if (!jobsEnabled()) {
@@ -77,6 +121,21 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
       return;
     }
     this.start(process.env.REDIS_URL as string);
+  }
+
+  /**
+   * Encola el render desde la aprobación del pago. Sin Redis el documento
+   * queda `PENDING` y se reintenta al configurar la cola (F1 no tiene reintento
+   * manual desde la web; queda para F2).
+   */
+  async enqueueDocumentRender(payload: RenderDocumentPayload): Promise<void> {
+    if (!this.queue) {
+      this.logger.warn(
+        `BullMQ deshabilitado: el documento ${payload.documentId} queda PENDING hasta configurar REDIS_URL.`,
+      );
+      return;
+    }
+    await enqueueDocumentRender(this.queue, payload);
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -96,6 +155,8 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
       JOBS_QUEUE_NAME,
       createJobProcessor({
         expireBookings: () => this.expiration.expireDueBookings(),
+        renderDocument: (payload) =>
+          this.rendering.renderWithRetries(payload.documentId, payload.tenantId),
       }),
       { connection },
     );

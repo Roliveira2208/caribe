@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module.js";
+import { DocumentsModule } from "../documents/documents.module.js";
 import { TenantModule } from "../tenant/tenant.module.js";
 import { BookingExpirationService } from "./booking-expiration.service.js";
 import { JobsScheduler } from "./jobs.scheduler.js";
@@ -12,8 +13,8 @@ import { JobsScheduler } from "./jobs.scheduler.js";
  * sin depender de BullMQ ni de Redis.
  */
 @Module({
-  imports: [TenantModule, AuditModule],
+  imports: [TenantModule, AuditModule, DocumentsModule],
   providers: [BookingExpirationService, JobsScheduler],
-  exports: [BookingExpirationService],
+  exports: [BookingExpirationService, JobsScheduler],
 })
 export class JobsModule {}
