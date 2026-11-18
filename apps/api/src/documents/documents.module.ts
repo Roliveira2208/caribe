@@ -1,6 +1,8 @@
 import { Injectable, Module, type OnModuleInit } from "@nestjs/common";
 import { apiConfig } from "../config.js";
 import { ensureDocumentsDirectory } from "./documents-directory.js";
+import { FreeFormReceiptProvider } from "./free-form-receipt.provider.js";
+import { INVOICE_PROVIDER } from "./invoice-provider.js";
 
 /**
  * Prepara el almacenamiento local antes de servir peticiones. Si el directorio
@@ -15,6 +17,13 @@ class DocumentsDirectoryInitializer implements OnModuleInit {
 }
 
 @Module({
-  providers: [DocumentsDirectoryInitializer],
+  providers: [
+    DocumentsDirectoryInitializer,
+    {
+      provide: INVOICE_PROVIDER,
+      useFactory: () => new FreeFormReceiptProvider({ documentsDir: apiConfig.documentsDir }),
+    },
+  ],
+  exports: [INVOICE_PROVIDER],
 })
 export class DocumentsModule {}

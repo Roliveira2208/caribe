@@ -180,7 +180,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   directorio al arrancar (falla el arranque si no se puede escribir) y helper puro de ruta relativa que
   rechace `..`, ruta absoluta, esquema de URL y barra invertida con 400 `INVALID_PATH`.
   Prueba: `documents-config` (configuración y directorio) y `documents-path` (ruta manipulada).
-- [ ] T-F1-11b `InvoiceProvider`/`FreeFormReceiptProvider`: PDF en español generado solo desde datos
+- [x] T-F1-11b `InvoiceProvider`/`FreeFormReceiptProvider`: PDF en español generado solo desde datos
   congelados, leyenda "Documento no fiscal" en todas las páginas, QR con la URL absoluta
   `${WEB_URL}/reservas/<code>` sin datos personales ni tokens y textos del viajero como datos planos.
   Prueba: `documents-render` (leyenda, QR, escaping) y documents › "QR sin datos personales".
