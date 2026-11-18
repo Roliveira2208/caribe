@@ -305,6 +305,9 @@ describe("payments (alta y revisión)", () => {
     const tenantIds = [orgA, orgB, orgFail, orgNoRate];
     const userIds = [clientA, clientB].filter((id) => id.length > 0);
     await dropSlowPaymentUpdate();
+    await owner.query(`DELETE FROM "documents" WHERE "tenant_id" = ANY($1::text[])`, [
+      tenantIds,
+    ]);
     await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [
       tenantIds,
     ]);
@@ -339,6 +342,9 @@ describe("payments (alta y revisión)", () => {
       await dropSlowPaymentUpdate();
       const tenantIds = [orgA, orgB, orgFail, orgNoRate];
       const userIds = [clientA, clientB].filter((id) => id.length > 0);
+      await owner.query(`DELETE FROM "documents" WHERE "tenant_id" = ANY($1::text[])`, [
+        tenantIds,
+      ]);
       await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [
         tenantIds,
       ]);

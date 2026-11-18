@@ -356,6 +356,9 @@ describe("bookings (creacion de reservas)", () => {
   beforeEach(async () => {
     // El trigger de fallo de auditoría no se dispara para orgA/orgHold, pero se
     // recrea por si una corrida anterior se interrumpió.
+    await owner.query(`DELETE FROM "documents" WHERE "tenant_id" = ANY($1::text[])`, [
+      [orgA, orgHold, orgFail],
+    ]);
     await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [
       [orgA, orgHold, orgFail],
     ]);
@@ -379,6 +382,9 @@ describe("bookings (creacion de reservas)", () => {
       await auditFailure?.drop();
       const userIds = [clientA, clientB].filter((id) => id.length > 0);
       const tenantIds = [orgA, orgHold, orgFail];
+      await owner.query(`DELETE FROM "documents" WHERE "tenant_id" = ANY($1::text[])`, [
+        tenantIds,
+      ]);
       await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [
         tenantIds,
       ]);

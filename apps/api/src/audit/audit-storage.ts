@@ -21,9 +21,27 @@ export interface AuditAttachment {
 export interface AuditStorage {
   tx?: Prisma.TransactionClient;
   attachment?: AuditAttachment;
+  /** Efectos secundarios que solo pueden correr tras confirmar la transacción. */
+  afterCommit?: Array<() => Promise<void>>;
 }
 
 export const auditStorage = new AsyncLocalStorage<AuditStorage>();
+
+/**
+ * Registra un efecto posterior al commit (T-F1-11f): encolar el render de un
+ * documento desde la aprobación de un pago. Dentro de la transacción solo se
+ * reserva la fila `PENDING`; el trabajo no debe ver una fila que aún puede
+ * revertirse. Fuera de una ruta @Auditable falla ruidoso: es un error de
+ * cableado, no un efecto que debamos silenciar.
+ */
+export function runAfterCommit(hook: () => Promise<void>): void {
+  const store = auditStorage.getStore();
+  if (!store) {
+    throw new Error("runAfterCommit solo se llama dentro de una ruta @Auditable");
+  }
+  store.afterCommit ??= [];
+  store.afterCommit.push(hook);
+}
 
 /**
  * Lo llama el handler de una ruta @Auditable para aportar entityId y los

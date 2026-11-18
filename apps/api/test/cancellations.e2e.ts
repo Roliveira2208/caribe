@@ -212,6 +212,7 @@ describe("cancellations (cancelación y reembolso)", () => {
   beforeEach(async () => {
     const tenantIds = [orgA, orgB];
     await deleteRefunds(tenantIds);
+    await owner.query(`DELETE FROM "documents" WHERE "tenant_id" = ANY($1::text[])`, [tenantIds]);
     await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [tenantIds]);
     await owner.query(`DELETE FROM "bookings" WHERE "tenant_id" = ANY($1::text[])`, [tenantIds]);
     await owner.query(
@@ -232,6 +233,7 @@ describe("cancellations (cancelación y reembolso)", () => {
     if (owner) {
       const tenantIds = [orgA, orgB];
       await deleteRefunds(tenantIds);
+      await owner.query(`DELETE FROM "documents" WHERE "tenant_id" = ANY($1::text[])`, [tenantIds]);
       await owner.query(`DELETE FROM "payments" WHERE "tenant_id" = ANY($1::text[])`, [tenantIds]);
       await owner.query(`DELETE FROM "bookings" WHERE "tenant_id" = ANY($1::text[])`, [tenantIds]);
       await owner.query(

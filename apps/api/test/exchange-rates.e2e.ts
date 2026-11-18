@@ -253,6 +253,9 @@ describe("exchange-rates (tasas)", () => {
     afterAll(async () => {
       if (paymentBookingId) {
         await prisma.$executeRaw`
+          DELETE FROM "documents" WHERE "booking_id" = ${paymentBookingId}
+        `;
+        await prisma.$executeRaw`
           DELETE FROM "payments" WHERE "booking_id" = ${paymentBookingId}
         `;
         await prisma.$executeRaw`

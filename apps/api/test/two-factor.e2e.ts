@@ -949,6 +949,13 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
     reason:
       "El dueño reporta el pago de su reserva; el servidor calcula montos y congela la tasa (spec payments, 'Creación de pago').",
   },
+  {
+    method: "GET",
+    path: "documents/:id/download",
+    justification: "self-service",
+    reason:
+      "Descarga autenticada: el dueño obtiene sus PDFs y el personal con booking:read los de su agencia (spec documents, 'Descarga autenticada').",
+  },
 ];
 
 /**

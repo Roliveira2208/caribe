@@ -117,7 +117,9 @@ describe("render de documentos", () => {
     expect(issued.fileUrl).toMatch(/^vouchers\/[0-9a-f-]{36}\.pdf$/);
     expect(issued.fileUrl).toContain(documentId);
     expect(issued.fileUrl).not.toContain(code);
-    expect(issued.fileUrl).not.toContain("42");
+    // La regex anterior ya garantiza que el nombre es el UUID del documento,
+    // no el número correlativo. Buscar "42" dentro de un UUID daría falsos
+    // positivos cuando los caracteres del UUID formen esa secuencia.
 
     const pdf = await readFile(join(dir, issued.fileUrl));
     const text = pdfText(pdf);

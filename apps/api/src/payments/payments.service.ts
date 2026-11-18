@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   formatAmount,
   formatRate,
@@ -14,6 +14,7 @@ import {
   type PaymentStatusValue,
   type RefundIntent,
 } from "@caribe/shared";
+import { runAfterCommit } from "../audit/audit-storage.js";
 import { AuditService } from "../audit/audit.service.js";
 import {
   parsePolicySnapshot,
@@ -21,8 +22,13 @@ import {
   refundPercentage,
 } from "../bookings/cancellation-policy.js";
 import type { BookingStatusValue } from "../bookings/bookings.schemas.js";
+import {
+  DocumentIssuanceService,
+  type ReservedDocument,
+} from "../documents/document-issuance.service.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { Prisma } from "../generated/prisma/client.js";
+import { JobsScheduler } from "../jobs/jobs.scheduler.js";
 import {
   claimIdempotencyKey,
   idempotencyKeyWhere,
@@ -112,6 +118,12 @@ interface PayParams {
   ip: string | null;
 }
 
+/** Resultado interno del alta: pago serializado y documentos a encolar. */
+interface PayResult {
+  payment: PaymentResponse;
+  documents: ReservedDocument[];
+}
+
 /**
  * Pagos (T-F1-9, specs/payments y design §7).
  *
@@ -128,12 +140,60 @@ interface PayParams {
  */
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly tenantService: TenantService,
     private readonly auditService: AuditService,
     private readonly exchangeRateService: ExchangeRateService,
+    private readonly documents: DocumentIssuanceService,
+    private readonly jobs: JobsScheduler,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
   ) {}
+
+  /**
+   * Reserva el voucher y el comprobante DENTRO de la transacción que aprueba
+   * el pago (T-F1-11f, spec documents "Voucher" y "Comprobante de pago"). Si
+   * la transacción se revierte, las dos filas `PENDING` desaparecen con ella;
+   * la numeración corre a cargo de `DocumentIssuanceService` bajo `FOR UPDATE`.
+   */
+  private async reserveDocuments(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    bookingId: string,
+    paymentId: string,
+  ): Promise<ReservedDocument[]> {
+    const voucher = await this.documents.reserve(tx, {
+      tenantId,
+      bookingId,
+      type: "VOUCHER",
+    });
+    const receipt = await this.documents.reserve(tx, {
+      tenantId,
+      bookingId,
+      paymentId,
+      type: "RECEIPT",
+    });
+    return [voucher, receipt];
+  }
+
+  /**
+   * Encola los renders generados por una aprobación. Un fallo de Redis no debe
+   * convertir un pago aprobado en un error de la API: se registra y la fila
+   * queda `PENDING` para reintentarla al configurar la cola.
+   */
+  private async enqueueDocumentRenders(documents: ReservedDocument[]): Promise<void> {
+    for (const document of documents) {
+      try {
+        await this.jobs.enqueueDocumentRender({
+          documentId: document.id,
+          tenantId: document.tenantId,
+        });
+      } catch (error) {
+        this.logger.error(`No se pudo encolar el documento ${document.id}: ${String(error)}`);
+      }
+    }
+  }
 
   /** Alta de un pago de una reserva propia (spec payments, "Creación de pago"). */
   async create(input: {
@@ -379,6 +439,15 @@ export class PaymentsService {
         where: { id: payment.bookingId },
         data: { status: "CONFIRMED" },
       });
+      const documents = await this.reserveDocuments(
+        tx,
+        tenantId,
+        payment.bookingId,
+        paymentId,
+      );
+      // El render se encola solo después de que el interceptor confirme pago,
+      // reserva, documentos y auditoría en la misma transacción.
+      runAfterCommit(() => this.enqueueDocumentRenders(documents));
     } else {
       await tx.payment.update({
         where: { id: paymentId },
@@ -522,9 +591,14 @@ export class PaymentsService {
    */
   private async attemptPayment(params: PayParams): Promise<PaymentResponse> {
     try {
-      return await this.tenantService.withOwnerTenant(params.userId, params.tenantId, (tx) =>
+      const result = await this.tenantService.withOwnerTenant(params.userId, params.tenantId, (tx) =>
         this.pay(tx, params),
       );
+      // En modo AUTO no hay interceptor de auditoría: la transacción de
+      // `withOwnerTenant` ya se confirmó al resolver, así que aquí es seguro
+      // encolar los dos documentos reservados dentro de ella.
+      await this.enqueueDocumentRenders(result.documents);
+      return result.payment;
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new ApiProblemException(
@@ -537,7 +611,7 @@ export class PaymentsService {
   }
 
   /** Una transacción completa de alta de pago. */
-  private async pay(tx: Prisma.TransactionClient, params: PayParams): Promise<PaymentResponse> {
+  private async pay(tx: Prisma.TransactionClient, params: PayParams): Promise<PayResult> {
     const rows = await tx.$queryRaw<PayableBookingRow[]>(Prisma.sql`
       SELECT "id" AS id,
              "tenant_id" AS tenant_id,
@@ -613,11 +687,18 @@ export class PaymentsService {
       },
     });
 
+    let documents: ReservedDocument[] = [];
     if (providerPayment.status === "APPROVED") {
       await tx.booking.update({
         where: { id: params.bookingId },
         data: { status: "CONFIRMED" },
       });
+      documents = await this.reserveDocuments(
+        tx,
+        params.tenantId,
+        params.bookingId,
+        paymentId,
+      );
     }
 
     await this.auditService.record(tx, {
@@ -650,7 +731,7 @@ export class PaymentsService {
     });
 
     const created = await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
-    return toPaymentResponse(created);
+    return { payment: toPaymentResponse(created), documents };
   }
 
   /** Reserva propia con su estado de vencimiento, leída en el contexto `owner`. */

@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from "@nestjs/common";
 import type { CallHandler, ExecutionContext, NestInterceptor } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { from, firstValueFrom, type Observable } from "rxjs";
@@ -34,6 +39,8 @@ interface AuditableRequest {
  */
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly auditService: AuditService,
@@ -65,11 +72,11 @@ export class AuditInterceptor implements NestInterceptor {
 
     const store: AuditStorage = {};
     return from(
-      auditStorage.run(store, () =>
-        prisma.$transaction(async (tx) => {
+      auditStorage.run(store, async () => {
+        const result = await prisma.$transaction(async (tx) => {
           store.tx = tx;
           await this.tenantService.bindContext(resolved, tx);
-          const result = await firstValueFrom(next.handle());
+          const handlerResult = await firstValueFrom(next.handle());
           const attachment = store.attachment;
           if (!attachment) {
             // Fallo cerrado: una accion sensible sin fila de auditoria no se
@@ -86,9 +93,21 @@ export class AuditInterceptor implements NestInterceptor {
             after: attachment.after,
             ip: request.ip,
           });
-          return result;
-        }),
-      ),
+          return handlerResult;
+        });
+
+        // Efectos posteriores al commit (T-F1-11f): la transacción ya se
+        // confirmó, así que un fallo al encolar no puede revertir el pago ni
+        // la reserva. Se registra y la respuesta sigue adelante.
+        for (const hook of store.afterCommit ?? []) {
+          try {
+            await hook();
+          } catch (error) {
+            this.logger.error(`Falló un efecto posterior al commit: ${String(error)}`);
+          }
+        }
+        return result;
+      }),
     );
   }
 }
