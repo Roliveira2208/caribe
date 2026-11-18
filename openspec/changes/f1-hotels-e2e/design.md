@@ -505,8 +505,12 @@ Justificadas aquí, con pin exacto al instalar y revisión de `pnpm-workspace.ya
 - `bullmq` + `ioredis`: expiración, PDF, correo y caché de tasa (D13). `ioredis` entra en T-F1-5 para
   la caché de 1 h; `bullmq` entra en T-F1-8 con el primer trabajo programado.
 - `nodemailer`: correo SMTP.
-- `pdfkit`: generación de PDF sin navegador.
-- `qrcode`: QR del voucher.
+- `pdfkit@0.20.2` (+ `@types/pdfkit@0.17.7` en desarrollo): generación de PDF sin navegador; las fuentes
+  estándar de PDFKit cubren el español de F1 sin archivos de fuente adicionales.
+- `qrcode@1.5.4` (+ `@types/qrcode@1.5.6` en desarrollo): QR del voucher; se incrusta como PNG en el PDF
+  y su carga útil es solo la URL absoluta de la web con el código de reserva.
+- Tras instalarlos se revisó `pnpm-workspace.yaml`: `allowBuilds` conserva sus aprobaciones previas y
+  ninguna de estas dependencias necesita una nueva.
 
 Antes de instalar cualquier dependencia nueva se comprueba que cumple `minimumReleaseAge` de pnpm 12.
 Hoy `pnpm config get minimumReleaseAge` devuelve `undefined`, así que aplica la ventana por defecto de

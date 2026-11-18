@@ -175,10 +175,34 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   antes de T-F1-11.
   Resultado: `docs/plans/security-f1-core.md` en verde, sin fallos intermitentes (22/22 archivos
   completos en paralelo y 20/20 aislados); F1-S2 corregido y F1-S3 sin `tenantId`.
-- [ ] T-F1-11 `DocumentModule`: voucher y comprobante PDF en español, QR, numeración correlativa,
-  almacenamiento local (`DOCUMENTS_DIR` en `.env.example`), nombre UUID, descarga autenticada con
-  propiedad y protección de ruta, y reintentos.
-  Prueba: documents › "Voucher", "Comprobante de pago", "Descarga autenticada" y "Ruta manipulada".
+- [x] T-F1-11a Infraestructura de documentos: instalar `pdfkit` y `qrcode` con pin exacto (justificado en
+  design §12), añadir `DOCUMENTS_DIR` a `.env.example` y a la configuración, crear y validar el
+  directorio al arrancar (falla el arranque si no se puede escribir) y helper puro de ruta relativa que
+  rechace `..`, ruta absoluta, esquema de URL y barra invertida con 400 `INVALID_PATH`.
+  Prueba: `documents-config` (configuración y directorio) y `documents-path` (ruta manipulada).
+- [ ] T-F1-11b `InvoiceProvider`/`FreeFormReceiptProvider`: PDF en español generado solo desde datos
+  congelados, leyenda "Documento no fiscal" en todas las páginas, QR con la URL absoluta
+  `${WEB_URL}/reservas/<code>` sin datos personales ni tokens y textos del viajero como datos planos.
+  Prueba: `documents-render` (leyenda, QR, escaping) y documents › "QR sin datos personales".
+- [ ] T-F1-11c Numeración e idempotencia: `DocumentIssuanceService.reserve()` crea la fila `PENDING`
+  dentro de la transacción de negocio con el contador por agencia y tipo bloqueado
+  (`SELECT ... FOR UPDATE` + `UPDATE ... RETURNING`), reutiliza el documento existente sin consumir
+  número y respeta la identidad inmutable.
+  Prueba: `documents-issuance` (dos emisiones concurrentes, reintento, inmutabilidad) y documents ›
+  "Numeración correlativa", "Reintento del mismo pago", "Un voucher por reserva", "Un comprobante por
+  pago" y "Número único por agencia y tipo".
+- [ ] T-F1-11d Ciclo de vida y reintentos: renderizado invocable sin Redis, `READY` con `file_url` de
+  UUID, `FAILED` tras 3 intentos con el error registrado, sin bloquear reserva ni pago.
+  Prueba: `documents-lifecycle` (PENDING/READY/FAILED y 3 intentos) y documents › "Generación fallida".
+- [ ] T-F1-11e Descarga autenticada: `GET /documents/:id/download` con sesión, propiedad del dueño o de
+  la agencia activa revalidada, 401/404, `Content-Disposition: attachment`, 409 `DOCUMENT_PENDING`,
+  503 `DOCUMENT_UNAVAILABLE` y 400 `INVALID_PATH` sin leer archivo.
+  Prueba: `documents-download` y documents › "Descarga autenticada", "Descargar voucher ajeno",
+  "Personal de la agencia descarga", "Sin sesión", "Documento de otra agencia", "Nombre no
+  adivinable", "Ruta manipulada" y "URL pública".
+- [ ] T-F1-11f Integración: reservar voucher y comprobante en la aprobación manual y automática del
+  pago, dentro de la misma transacción, sin revertir la confirmación si falla la generación del PDF.
+  Prueba: e2e de pago aprobado → ambos documentos; marcar T-F1-11 como terminada.
 - [ ] T-F1-12 `NotificationModule` con un solo correo de confirmación de reserva (SMTP local, `SMTP_*`
   en `.env.example`), `user.locale` y deduplicación. Los demás avisos son F2.
   Prueba: escenarios de `notifications` (spec nueva): confirmación, sin otros avisos e idempotencia.
