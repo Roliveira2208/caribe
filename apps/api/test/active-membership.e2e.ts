@@ -93,6 +93,7 @@ describe("agencia activa (membresía revocada)", () => {
     { name: "reservas: cancelar", method: "POST", path: `/bookings/${id}/cancel` },
     { name: "auditoría: listar", method: "GET", path: "/admin/audit-logs" },
     { name: "eventos de autenticación: listar", method: "GET", path: "/admin/auth-events" },
+    { name: "documentos: descargar", method: "GET", path: `/documents/${id}/download` },
   ];
 
   beforeAll(async () => {

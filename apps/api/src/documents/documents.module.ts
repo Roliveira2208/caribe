@@ -1,8 +1,10 @@
 import { Injectable, Module, type OnModuleInit } from "@nestjs/common";
 import { apiConfig } from "../config.js";
 import { TenantModule } from "../tenant/tenant.module.js";
+import { DocumentDownloadService } from "./document-download.service.js";
 import { DocumentIssuanceService } from "./document-issuance.service.js";
 import { DocumentRenderingService } from "./document-rendering.service.js";
+import { DocumentsController } from "./documents.controller.js";
 import { ensureDocumentsDirectory } from "./documents-directory.js";
 import { FreeFormReceiptProvider } from "./free-form-receipt.provider.js";
 import { INVOICE_PROVIDER } from "./invoice-provider.js";
@@ -23,6 +25,7 @@ class DocumentsDirectoryInitializer implements OnModuleInit {
   imports: [TenantModule],
   providers: [
     DocumentsDirectoryInitializer,
+    DocumentDownloadService,
     DocumentIssuanceService,
     DocumentRenderingService,
     {
@@ -30,6 +33,12 @@ class DocumentsDirectoryInitializer implements OnModuleInit {
       useFactory: () => new FreeFormReceiptProvider({ documentsDir: apiConfig.documentsDir }),
     },
   ],
-  exports: [INVOICE_PROVIDER, DocumentIssuanceService, DocumentRenderingService],
+  controllers: [DocumentsController],
+  exports: [
+    INVOICE_PROVIDER,
+    DocumentDownloadService,
+    DocumentIssuanceService,
+    DocumentRenderingService,
+  ],
 })
 export class DocumentsModule {}

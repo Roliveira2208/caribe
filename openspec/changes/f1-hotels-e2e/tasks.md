@@ -194,7 +194,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [x] T-F1-11d Ciclo de vida y reintentos: renderizado invocable sin Redis, `READY` con `file_url` de
   UUID, `FAILED` tras 3 intentos con el error registrado, sin bloquear reserva ni pago.
   Prueba: `documents-lifecycle` (PENDING/READY/FAILED y 3 intentos) y documents › "Generación fallida".
-- [ ] T-F1-11e Descarga autenticada: `GET /documents/:id/download` con sesión, propiedad del dueño o de
+- [x] T-F1-11e Descarga autenticada: `GET /documents/:id/download` con sesión, propiedad del dueño o de
   la agencia activa revalidada, 401/404, `Content-Disposition: attachment`, 409 `DOCUMENT_PENDING`,
   503 `DOCUMENT_UNAVAILABLE` y 400 `INVALID_PATH` sin leer archivo.
   Prueba: `documents-download` y documents › "Descarga autenticada", "Descargar voucher ajeno",
