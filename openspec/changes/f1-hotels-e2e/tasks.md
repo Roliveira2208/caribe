@@ -184,7 +184,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   congelados, leyenda "Documento no fiscal" en todas las páginas, QR con la URL absoluta
   `${WEB_URL}/reservas/<code>` sin datos personales ni tokens y textos del viajero como datos planos.
   Prueba: `documents-render` (leyenda, QR, escaping) y documents › "QR sin datos personales".
-- [ ] T-F1-11c Numeración e idempotencia: `DocumentIssuanceService.reserve()` crea la fila `PENDING`
+- [x] T-F1-11c Numeración e idempotencia: `DocumentIssuanceService.reserve()` crea la fila `PENDING`
   dentro de la transacción de negocio con el contador por agencia y tipo bloqueado
   (`SELECT ... FOR UPDATE` + `UPDATE ... RETURNING`), reutiliza el documento existente sin consumir
   número y respeta la identidad inmutable.
