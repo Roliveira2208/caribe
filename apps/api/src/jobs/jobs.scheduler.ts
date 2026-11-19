@@ -9,6 +9,8 @@ import {
   EXPIRE_BOOKINGS_JOB,
   EXPIRE_BOOKINGS_SCHEDULE,
   JOBS_QUEUE_NAME,
+  RECOVER_PENDING_JOB,
+  RECOVER_PENDING_SCHEDULE,
   RENDER_DOCUMENT_JOB,
   SEND_NOTIFICATION_JOB,
   jobsEnabled,
@@ -17,6 +19,7 @@ import {
   type NotificationPayload,
   type RenderDocumentPayload,
 } from "./jobs.constants.js";
+import { PendingRecoveryService, type RecoverySummary } from "./pending-recovery.service.js";
 
 /** Lo mínimo que el planificador necesita de la cola (doble en pruebas). */
 export interface SchedulerQueue {
@@ -69,6 +72,7 @@ export interface JobHandlers {
   expireBookings(): Promise<unknown>;
   renderDocument(payload: RenderDocumentPayload): Promise<unknown>;
   sendNotification(payload: NotificationPayload): Promise<unknown>;
+  recoverPending(): Promise<RecoverySummary>;
 }
 
 /** Encola el correo. El servicio hará los 3 intentos con espera creciente. */
@@ -95,6 +99,11 @@ export async function registerSchedules(queue: SchedulerQueue): Promise<void> {
     { pattern: EXPIRE_BOOKINGS_SCHEDULE },
     { name: EXPIRE_BOOKINGS_JOB },
   );
+  await queue.upsertJobScheduler(
+    RECOVER_PENDING_JOB,
+    { pattern: RECOVER_PENDING_SCHEDULE },
+    { name: RECOVER_PENDING_JOB },
+  );
 }
 
 /** Despacha por nombre de trabajo; un nombre desconocido falla cerrado. */
@@ -109,6 +118,8 @@ export function createJobProcessor(
         return handlers.renderDocument(renderDocumentPayloadSchema.parse(job.data));
       case SEND_NOTIFICATION_JOB:
         return handlers.sendNotification(notificationPayloadSchema.parse(job.data));
+      case RECOVER_PENDING_JOB:
+        return handlers.recoverPending();
       default:
         throw new Error(`Trabajo desconocido: ${job.name}`);
     }
@@ -134,7 +145,16 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
     private readonly expiration: BookingExpirationService,
     private readonly rendering: DocumentRenderingService,
     private readonly notifications: NotificationService,
+    private readonly recovery: PendingRecoveryService,
   ) {}
+
+  /** Pasada del barrido; las colas reales solo existen con BullMQ activo. */
+  async recoverPending(): Promise<RecoverySummary> {
+    return this.recovery.recoverStalePending({
+      document: (payload) => this.enqueueDocumentRender(payload),
+      notification: (payload) => this.enqueueNotification(payload),
+    });
+  }
 
   onModuleInit(): void {
     if (!jobsEnabled()) {
@@ -194,6 +214,7 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
           this.rendering.renderWithRetries(payload.documentId, payload.tenantId),
         sendNotification: (payload) =>
           this.notifications.sendWithRetries(payload.notificationId, payload.tenantId),
+        recoverPending: () => this.recoverPending(),
       }),
       { connection },
     );

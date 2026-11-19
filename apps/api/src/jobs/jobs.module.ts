@@ -5,6 +5,7 @@ import { NotificationsModule } from "../notifications/notifications.module.js";
 import { TenantModule } from "../tenant/tenant.module.js";
 import { BookingExpirationService } from "./booking-expiration.service.js";
 import { JobsScheduler } from "./jobs.scheduler.js";
+import { PendingRecoveryService } from "./pending-recovery.service.js";
 
 /**
  * Trabajos en segundo plano (T-F1-8, design §3.3): expiración de retenciones
@@ -15,7 +16,7 @@ import { JobsScheduler } from "./jobs.scheduler.js";
  */
 @Module({
   imports: [TenantModule, AuditModule, DocumentsModule, NotificationsModule],
-  providers: [BookingExpirationService, JobsScheduler],
-  exports: [BookingExpirationService, JobsScheduler],
+  providers: [BookingExpirationService, PendingRecoveryService, JobsScheduler],
+  exports: [BookingExpirationService, PendingRecoveryService, JobsScheduler],
 })
 export class JobsModule {}

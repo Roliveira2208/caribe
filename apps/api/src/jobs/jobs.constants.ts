@@ -18,6 +18,27 @@ export const EXPIRE_BOOKINGS_JOB = "bookings.expire";
 export const EXPIRE_BOOKINGS_SCHEDULE = "* * * * *";
 
 /**
+ * Barrido de filas `PENDING` huérfanas (T-F1-12b): si el proceso cae entre el
+ * commit que reservó un documento o aviso y el encolado, la fila nunca se
+ * procesa. Una pasada por agencia la re-encola pasados N minutos.
+ */
+export const RECOVER_PENDING_JOB = "jobs.recover-pending";
+
+/** Igual que la expiración: la tolerancia se mide en minutos. */
+export const RECOVER_PENDING_SCHEDULE = "* * * * *";
+
+/** Umbral por defecto; se puede subir con `PENDING_RECOVERY_MINUTES`. */
+export const DEFAULT_PENDING_RECOVERY_MINUTES = 5;
+
+/** Entero positivo, o el valor por defecto si la variable no es válida. */
+export function pendingRecoveryMinutes(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env["PENDING_RECOVERY_MINUTES"];
+  if (raw === undefined || raw.trim() === "") return DEFAULT_PENDING_RECOVERY_MINUTES;
+  const value = Number(raw);
+  return Number.isInteger(value) && value > 0 ? value : DEFAULT_PENDING_RECOVERY_MINUTES;
+}
+
+/**
  * Renderizado de documentos (T-F1-11d, spec documents "Reintentos
  * automáticos"). Es un trabajo por evento: se encola al confirmar la reserva o
  * aprobar el pago, no tiene planificador propio.

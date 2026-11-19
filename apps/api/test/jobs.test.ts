@@ -6,9 +6,12 @@ import {
   EXPIRE_BOOKINGS_SCHEDULE,
   NOTIFICATION_JOB_ATTEMPTS,
   NOTIFICATION_JOB_DELAYS,
+  RECOVER_PENDING_JOB,
+  RECOVER_PENDING_SCHEDULE,
   RENDER_DOCUMENT_JOB,
   SEND_NOTIFICATION_JOB,
   jobsEnabled,
+  pendingRecoveryMinutes,
 } from "../src/jobs/jobs.constants.js";
 import {
   createJobProcessor,
@@ -25,7 +28,7 @@ import {
  * trabajo programado: solo se expira la retención.
  */
 describe("jobs", () => {
-  it("programa solo la expiración cada minuto", async () => {
+  it("programa la expiración y el barrido de pendientes cada minuto", async () => {
     const calls: Array<Parameters<SchedulerQueue["upsertJobScheduler"]>> = [];
     const queue: SchedulerQueue = {
       async upsertJobScheduler(id, repeat, template) {
@@ -42,8 +45,21 @@ describe("jobs", () => {
         { pattern: EXPIRE_BOOKINGS_SCHEDULE },
         { name: EXPIRE_BOOKINGS_JOB },
       ],
+      [
+        RECOVER_PENDING_JOB,
+        { pattern: RECOVER_PENDING_SCHEDULE },
+        { name: RECOVER_PENDING_JOB },
+      ],
     ]);
     expect(EXPIRE_BOOKINGS_SCHEDULE).toBe("* * * * *");
+    expect(RECOVER_PENDING_SCHEDULE).toBe("* * * * *");
+  });
+
+  it("lee el umbral del barrido desde el entorno con 5 minutos por defecto", () => {
+    expect(pendingRecoveryMinutes({})).toBe(5);
+    expect(pendingRecoveryMinutes({ PENDING_RECOVERY_MINUTES: "15" })).toBe(15);
+    expect(pendingRecoveryMinutes({ PENDING_RECOVERY_MINUTES: "0" })).toBe(5);
+    expect(pendingRecoveryMinutes({ PENDING_RECOVERY_MINUTES: "no-es-numero" })).toBe(5);
   });
 
   it("el render de documentos es por evento, con 3 intentos y espera exponencial", async () => {
@@ -96,12 +112,31 @@ describe("jobs", () => {
     const expireBookings = vi.fn(async () => ({ expired: 2 }));
     const renderDocument = vi.fn(async () => ({ status: "READY" }));
     const sendNotification = vi.fn(async () => ({ status: "SENT" }));
-    const process = createJobProcessor({ expireBookings, renderDocument, sendNotification });
+    const recoverPending = vi.fn(async () => ({
+      organizations: 2,
+      documents: 1,
+      notifications: 1,
+      failed: 0,
+    }));
+    const process = createJobProcessor({
+      expireBookings,
+      renderDocument,
+      sendNotification,
+      recoverPending,
+    });
 
     await expect(process({ name: EXPIRE_BOOKINGS_JOB, data: {} })).resolves.toEqual({
       expired: 2,
     });
     expect(expireBookings).toHaveBeenCalledTimes(1);
+
+    await expect(process({ name: RECOVER_PENDING_JOB, data: {} })).resolves.toEqual({
+      organizations: 2,
+      documents: 1,
+      notifications: 1,
+      failed: 0,
+    });
+    expect(recoverPending).toHaveBeenCalledTimes(1);
 
     const payload = {
       documentId: "4f3c1a52-8b7d-4c10-9f2e-6a5b4d3c2e1f",
