@@ -12,8 +12,9 @@ respaldo y congelada al pagar, pago simulado en modo AUTO y MANUAL, voucher y co
 Deltas de catalog, booking, exchange-rates, payments, documents, audit y auth-access; specs nuevas de
 api-errors, notifications y tenant-isolation. Implementación parcial: solo tipo `hotel`.
 La aprobación manual desde el panel completo llega en F2; en F1 se aprueba con un endpoint y una pantalla mínima.
-Notificaciones F1: solo el correo de confirmación de reserva; el resto de avisos es F2. El alcance por
-escenario está en `scope.md`.
+Notificaciones F1: solo el correo de confirmación de reserva; el resto de avisos es F2. Se añade un
+barrido de filas `PENDING` huérfanas (documentos y avisos) para recuperar trabajos perdidos entre el
+commit y el encolado. El alcance por escenario está en `scope.md`.
 
 ## Preguntas abiertas
 - Disponibilidad de DolarAPI antes de implementar (SDD §6.5); si falla, empezar con el override manual.

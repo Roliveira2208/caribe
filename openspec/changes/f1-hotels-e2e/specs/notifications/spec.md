@@ -89,6 +89,11 @@ evento repetido por una operación idempotente SHALL NOT generar un aviso nuevo.
 - WHEN se consulta su registro
 - THEN queda `FAILED` y la reserva no cambia
 
+#### Scenario: Fila huérfana tras una caída
+- GIVEN un aviso `PENDING` creado hace más de 5 minutos cuyo trabajo nunca se encoló
+- WHEN corre el barrido de pendientes
+- THEN se re-encola su envío en la agencia correcta y el aviso sigue `PENDING` hasta enviarse
+
 ### Requirement: Destinatario y privacidad
 El aviso SHALL enviarse solo al correo del usuario dueño de la reserva. No SHALL incluir copias ni copias
 ocultas a otras personas ni a la agencia en F1. El cuerpo SHALL NOT incluir datos de tarjeta, tokens,

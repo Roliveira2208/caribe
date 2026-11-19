@@ -135,6 +135,11 @@ SHALL responder 409 `DOCUMENT_PENDING`; si está `FAILED`, SHALL responder 503 `
 - WHEN el trabajo reintenta
 - THEN lo hace hasta 3 veces con espera creciente
 
+#### Scenario: Fila huérfana tras una caída
+- GIVEN un documento `PENDING` creado hace más de 5 minutos cuyo trabajo nunca se encoló
+- WHEN corre el barrido de pendientes
+- THEN se re-encola su render en la agencia correcta y el documento sigue `PENDING` hasta emitirse
+
 ### Requirement: Idempotencia y unicidad del documento
 Un voucher SHALL ser único por reserva y tipo; un comprobante SHALL ser único por pago y tipo. La base
 SHALL imponer esa unicidad y el número SHALL ser único por agencia y tipo. Un reintento SHALL NOT emitir

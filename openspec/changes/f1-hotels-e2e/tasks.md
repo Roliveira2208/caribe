@@ -206,6 +206,11 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [x] T-F1-12 `NotificationModule` con un solo correo de confirmación de reserva (SMTP local, `SMTP_*`
   en `.env.example`), `user.locale` y deduplicación. Los demás avisos son F2.
   Prueba: escenarios de `notifications` (spec nueva): confirmación, sin otros avisos e idempotencia.
+- [ ] T-F1-12b Barrido cada minuto de documentos y avisos `PENDING` con más de 5 minutos desde su
+  creación (configurable por entorno); re-encola por agencia con `withTenant` para recuperar filas
+  huérfanas si el proceso cae entre el commit y el encolado, sin tocar agencias que fallen.
+  Prueba: `pending-recovery` (simulación de caída, umbral, entregas duplicadas, fallo por agencia) y
+  `jobs` (calendario y despacho del barrido).
 - [ ] T-F1-13a Web: buscador y resultados. Wireframe aprobado antes de construir.
   Prueba: catalog › "Búsqueda y filtros".
 - [ ] T-F1-13b Web: detalle del hotel. Wireframe aprobado antes de construir.
