@@ -1,14 +1,16 @@
-// Entorno de pruebas: los valores reales del proceso o del .env ganan; estos
-// son solo valores por defecto para correr vitest sin configurar nada (la BD
-// local de docker compose). La CI inyecta DATABASE_URL a nivel de job.
+// Entorno de pruebas: el servidor y las credenciales vienen del proceso o del
+// .env; si no hay nada configurado se usa el docker compose local. El nombre de
+// la base siempre se reescribe a caribe_test (ver test-db.ts).
 import { join } from "node:path";
 import dotenv from "dotenv";
+import { testDatabaseUrl } from "./test-db.js";
 
 dotenv.config({ path: join(process.cwd(), ".env") });
 dotenv.config({ path: join(process.cwd(), "../../.env") });
 
-process.env.DATABASE_URL ??=
-  "postgresql://caribe_dev:caribe_dev_password@localhost:5433/caribe_dev?schema=public";
+// Se FUERZA la base de pruebas: los e2e limpian y siembran datos, y un `.env`
+// con la URL de desarrollo no debe poder desviarlos a `caribe_dev`.
+process.env.DATABASE_URL = testDatabaseUrl();
 process.env.BETTER_AUTH_SECRET ??= "test-secret-no-usar-en-produccion-0123456789";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3002";
 process.env.TRUSTED_ORIGINS ??= "http://localhost:3000,http://localhost:3001";

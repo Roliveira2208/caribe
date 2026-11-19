@@ -7,6 +7,8 @@ export default defineConfig({
     // Los e2e arrancan la app real y tocan PostgreSQL: necesitan mas tiempo
     // que los tests unitarios y un entorno de variables predecible.
     setupFiles: ["./test/setup-env.ts"],
+    // Limpieza propia de caribe_test antes y después de la corrida.
+    globalSetup: ["./test/global-setup.ts"],
     testTimeout: 20_000,
     hookTimeout: 30_000,
     // Los e2e comparten una sola base PostgreSQL y varios fijan estado global

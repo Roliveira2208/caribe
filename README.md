@@ -12,6 +12,19 @@ desarrollo asistido por IA (Spec Driven Development). Empieza por `docs/workflow
 migraciones. El rol restringido `caribe_app` nace sin contraseña: define `CARIBE_APP_DB_PASSWORD` en tu
 `.env` (ver `.env.example`) y asígnala con `pnpm db:app-password`.
 
+## Base de datos de pruebas
+
+Los tests **nunca** usan `caribe_dev`: `pnpm db:test:prepare` crea `caribe_test` en el mismo servidor y
+le aplica las mismas migraciones versionadas (es idempotente; ejecútalo tras `pnpm db:up`). Vitest
+fuerza el nombre `caribe_test` aunque tu `.env` apunte a otra base, y trunca sus tablas al empezar y al
+terminar la corrida. Así los datos de demostración de `caribe_dev` quedan intactos.
+
+```
+pnpm db:up
+pnpm db:test:prepare
+pnpm test
+```
+
 ## Demo local (F1)
 
 1. `pnpm db:up` y `pnpm db:migrate:deploy` (o `pnpm db:migrate:dev` si estás creando migraciones).
