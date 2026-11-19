@@ -1,4 +1,4 @@
-# Servicios locales de desarrollo: PostgreSQL y Redis.
+# Servicios locales de desarrollo: PostgreSQL, Redis y Mailpit (SMTP local).
 # Las apps corren aparte con pnpm dev; esto solo levanta los almacenes.
 name: caribe
 
@@ -28,6 +28,22 @@ services:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # SMTP de desarrollo: los correos no salen a Internet, se ven en la web.
+  # Ningún puerto se solapa con PostgreSQL (5433) ni Redis (6380).
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "${SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8025/"]
       interval: 5s
       timeout: 3s
       retries: 10

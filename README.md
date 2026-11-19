@@ -25,6 +25,18 @@ pnpm db:test:prepare
 pnpm test
 ```
 
+## Correo local con Mailpit
+
+`pnpm db:up` también levanta Mailpit: un servidor SMTP que **no envía** correos a Internet, los guarda
+en una bandeja local. En tu `.env` apunta la API a él con `SMTP_HOST=localhost` y `SMTP_PORT=1025`
+(el `SMTP_FROM` es el remitente que verás en los mensajes). Después de reservar (o de simular un pago
+aprobado), abre **http://localhost:8025** para ver el correo de confirmación, su asunto y su
+contenido en texto y HTML. La interfaz permite buscar por destinatario y borrar la bandeja.
+
+El puerto SMTP es `1025` y el de la interfaz web `8025` (configurable con `MAILPIT_UI_PORT`); ninguno
+choca con PostgreSQL (5433) ni Redis (6380). En tests no se usa SMTP real: el proveedor de
+notificaciones se dobla, así que no hace falta Mailpit para correr `pnpm test`.
+
 ## Demo local (F1)
 
 1. `pnpm db:up` y `pnpm db:migrate:deploy` (o `pnpm db:migrate:dev` si estás creando migraciones).
