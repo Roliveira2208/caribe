@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 900" width="820" height="900" role="img" aria-labelledby="wf-title wf-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 1010" width="820" height="1010" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="820" height="1010" fill="#ffffff"/>
+
   <title id="wf-title">Búsqueda — móvil</title>
   <desc id="wf-desc">Wireframe de baja fidelidad de la búsqueda en móvil: buscador colapsado, filtros como chips y tarjetas apiladas con precio en USD y equivalente en VES con fecha de la tasa.</desc>
   <style>
@@ -28,13 +30,14 @@
     .bar { fill: #fff; stroke: #999; stroke-width: 1; }
   </style>
 
-  <text x="16" y="28" class="cap">Caribe · Web — Búsqueda · móvil · wireframe de baja fidelidad · es</text>
+  <text x="16" y="28" class="cap">Caribe · Web — Búsqueda · móvil · wireframe de baja fidelidad · es / en</text>
 
   <!-- Teléfono -->
   <rect x="30" y="48" width="390" height="790" rx="24" class="phone"/>
   <rect x="46" y="64" width="358" height="44" class="bar"/>
   <text x="60" y="92" class="h1">Caribe</text>
-  <text x="370" y="92" class="lbl" text-anchor="end">ES</text>
+  <text x="332" y="92" class="lbl" text-anchor="end">BCV 36,00 · 10/11</text>
+  <text x="390" y="92" class="lbl" text-anchor="end">ES | EN</text>
 
   <!-- Buscador colapsado -->
   <rect x="46" y="120" width="358" height="44" class="field"/>
@@ -93,6 +96,8 @@
   <rect x="224" y="652" width="110" height="8" class="line"/>
   <text x="224" y="680" class="price">$60 USD</text>
   <text x="224" y="696" class="ves">≈ 2.160,00 Bs · tasa BCV 10/11/2026</text>
+  <rect x="224" y="706" width="90" height="28" class="btnbox"/>
+  <text x="269" y="724" class="btn" text-anchor="middle">Ver detalle</text>
 
   <!-- Navegación inferior -->
   <rect x="46" y="768" width="358" height="52" class="bar"/>
@@ -103,11 +108,22 @@
   <!-- Notas -->
   <rect x="450" y="48" width="354" height="790" class="notes"/>
   <text x="466" y="76" class="notetitle">Reglas visibles en esta pantalla</text>
-  <text x="466" y="102" class="note">[1] Cada tarjeta muestra el precio en USD con el equivalente en VES</text>
-  <text x="466" y="120" class="note">a la tasa BCV vigente y su fecha valor. El equivalente es informativo.</text>
-  <text x="466" y="148" class="note">[2] Mobile-first: columna única, filtros como chips horizontales y</text>
-  <text x="466" y="166" class="note">orden por precio accesible desde la cabecera de resultados.</text>
-  <text x="466" y="194" class="note">[3] Navegación inferior persistente: Inicio · Buscar · Mis reservas.</text>
-  <text x="466" y="222" class="note">[4] Mis reservas se consultan sin conexión (PWA); crear y pagar exige</text>
-  <text x="466" y="240" class="note">conexión y la interfaz lo indica.</text>
+  <text x="466" y="102" class="note">[1] Precio USD + VES informativo a la tasa BCV</text>
+  <text x="466" y="120" class="note">10/11/2026 visible en cada tarjeta.</text>
+  <text x="466" y="148" class="note">[2] Mobile-first: columna única, chips de filtros y</text>
+  <text x="466" y="166" class="note">orden por precio en la cabecera.</text>
+  <text x="466" y="194" class="note">[3] Navegación inferior: Inicio · Buscar · Mis reservas.</text>
+  <text x="466" y="222" class="note">[4] Mis reservas se consultan sin conexión (PWA); crear</text>
+  <text x="466" y="240" class="note">y pagar exige conexión; la interfaz lo indica.</text>
+  <text x="466" y="268" class="note">[5] Foco visible, etiquetas y contraste AA; zonas</text>
+  <text x="466" y="286" class="note">táctiles ≥ 44 × 44 px.</text>
+
+  <!-- Textos es/en: mismas claves, columna única -->
+  <rect x="20" y="850" width="810" height="140" class="notes"/>
+  <text x="36" y="878" class="notetitle">Textos es / en (mismas claves, columna única)</text>
+  <text x="36" y="904" class="note">es: Buscar destino · fechas · personas · Filtros · Ver detalle ·</text>
+  <text x="36" y="922" class="note">tasa BCV 10/11/2026 · Sin resultados · Inicio · Mis reservas</text>
+  <text x="36" y="948" class="note">en: Search destination · dates · travelers · Filters · View detail ·</text>
+  <text x="36" y="966" class="note">BCV rate 10 Nov 2026 · No results · Home · My bookings</text>
+  <text x="36" y="984" class="note">El selector ES/EN de la cabecera cambia todas las etiquetas.</text>
 </svg>

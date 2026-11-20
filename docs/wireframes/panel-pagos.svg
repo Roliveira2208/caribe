@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" role="img" aria-labelledby="wf-title wf-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="1200" height="760" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="1200" height="760" fill="#ffffff"/>
+
   <title id="wf-title">Panel de pagos — admin</title>
   <desc id="wf-desc">Wireframe de baja fidelidad del panel de reservas y pagos del admin: badge del modo de aprobación (AUTO o MANUAL), filtros por estado, método y fecha, y tabla de pagos con estado IN_REVIEW, APPROVED o REJECTED y acciones de aprobar o rechazar.</desc>
   <style>
@@ -25,7 +27,7 @@
   </style>
 
   <!-- Encabezado del wireframe -->
-  <text x="16" y="28" class="cap">Caribe Admin — Reservas y pagos · escritorio · wireframe de baja fidelidad · es</text>
+  <text x="16" y="28" class="cap">Caribe Admin — Reservas y pagos · escritorio · wireframe de baja fidelidad · es / en</text>
 
   <!-- Header del panel -->
   <rect x="16" y="44" width="1168" height="44" class="box"/>
@@ -64,7 +66,7 @@
   <text x="290" y="237" class="lbl">Cliente</text>
   <text x="470" y="237" class="lbl">Método</text>
   <text x="630" y="237" class="lbl">Monto USD</text>
-  <text x="740" y="237" class="lbl">VES · tasa</text>
+  <text x="740" y="237" class="lbl">VES · tasa (10/11/26)</text>
   <text x="920" y="237" class="lbl">Estado</text>
   <text x="1050" y="237" class="lbl">Acciones</text>
 
@@ -135,9 +137,16 @@
   <text x="16" y="500" class="lbl">Página 1 de 6 · 1 2 3 … →</text>
 
   <!-- Reglas visibles -->
-  <rect x="16" y="520" width="1168" height="110" class="notes"/>
+  <rect x="16" y="520" width="1168" height="130" class="notes"/>
   <text x="32" y="544" class="notetitle">Reglas visibles en esta pantalla</text>
   <text x="32" y="566" class="note">[1] Cada pago guarda su par original (exchange_rate_id y amount_ves): la columna VES · tasa muestra el monto congelado y la tasa con que se pagó, sin recálculo.</text>
   <text x="32" y="586" class="note">[2] Estados del pago: IN_REVIEW (en revisión), APPROVED (aprobado), REJECTED (rechazado); aprobar o rechazar escribe en audit_logs.</text>
   <text x="32" y="606" class="note">[3] Modo de aprobación por agencia (payment_mode): AUTO aprueba al instante; MANUAL exige revisión (badge de arriba).</text>
+  <text x="32" y="624" class="note">[4] Foco visible en filtros y acciones, etiquetas asociadas y contraste AA en badges y botones.</text>
+
+  <!-- Textos es/en -->
+  <rect x="16" y="662" width="1168" height="88" class="notes"/>
+  <text x="32" y="686" class="notetitle">Textos es / en (mismas claves, sin cadenas fijas en componentes)</text>
+  <text x="32" y="708" class="note">es: Estado · Método · Fecha · Buscar · Pago · Reserva · Cliente · Monto USD · Aprobar · Rechazar · pagos en revisión</text>
+  <text x="32" y="728" class="note">en: Status · Method · Date · Search · Payment · Booking · Customer · Amount USD · Approve · Reject · payments under review</text>
 </svg>

@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-labelledby="wf-title wf-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1000" width="1200" height="1000" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="1200" height="1000" fill="#ffffff"/>
+
   <title id="wf-title">Búsqueda — escritorio</title>
   <desc id="wf-desc">Wireframe de baja fidelidad de la búsqueda de la web: buscador (destino, fechas, personas, tipo), filtros y resultados con precio en USD y equivalente en VES a la tasa BCV con su fecha valor.</desc>
   <style>
@@ -27,13 +29,21 @@
   </style>
 
   <!-- Encabezado del wireframe -->
-  <text x="16" y="28" class="cap">Caribe · Web — Búsqueda · escritorio · wireframe de baja fidelidad · es</text>
+  <text x="16" y="28" class="cap">Caribe · Web — Búsqueda · escritorio · wireframe de baja fidelidad · es / en</text>
 
   <!-- Header del sitio -->
   <rect x="16" y="44" width="1168" height="44" class="box"/>
   <text x="32" y="72" class="h1">Caribe</text>
-  <text x="975" y="72" class="lbl">Iniciar sesión</text>
-  <text x="1082" y="72" class="lbl">ES | EN</text>
+  <text x="210" y="72" class="lbl">Inicio</text>
+  <text x="270" y="72" class="lbl">Tours</text>
+  <text x="330" y="72" class="lbl">Hoteles</text>
+  <text x="405" y="72" class="lbl">Paquetes</text>
+  <text x="485" y="72" class="lbl">Destinos</text>
+  <text x="570" y="72" class="lbl">Vuelos</text>
+  <text x="635" y="72" class="lbl">Contacto</text>
+  <text x="960" y="72" class="lbl" text-anchor="end">Tasa BCV 36,00 Bs/$ · 10/11/2026</text>
+  <text x="990" y="72" class="lbl">Iniciar sesión</text>
+  <text x="1100" y="72" class="lbl">ES | EN</text>
 
   <!-- Buscador -->
   <rect x="16" y="100" width="1168" height="76" class="panel"/>
@@ -125,9 +135,16 @@
   <text x="252" y="752" class="lbl">Página 1 de 8 · 1 2 3 4 … →</text>
 
   <!-- Reglas visibles -->
-  <rect x="16" y="768" width="1168" height="110" class="notes"/>
+  <rect x="16" y="768" width="1168" height="120" class="notes"/>
   <text x="32" y="792" class="notetitle">Reglas visibles en esta pantalla</text>
-  <text x="32" y="814" class="note">[1] Precio en USD con el equivalente en VES a la tasa BCV vigente y su fecha valor; en el catálogo el equivalente es informativo.</text>
+  <text x="32" y="814" class="note">[1] Precio en USD con el equivalente en VES a la tasa BCV vigente y su fecha valor; en el catálogo el equivalente es informativo. El header muestra la tasa del día.</text>
   <text x="32" y="834" class="note">[2] Lista filtrable (destino, tipo, precio en USD) y ordenable; cada tarjeta lleva el CTA «Ver detalle».</text>
   <text x="32" y="854" class="note">[3] Versión móvil de esta pantalla: busqueda-movil.svg (misma información, columna única).</text>
+  <text x="32" y="874" class="note">[4] Foco visible al tabular, etiquetas asociadas a cada campo y contraste AA en texto y botones.</text>
+
+  <!-- Textos es/en: mismas claves, sin cadenas fijas en componentes -->
+  <rect x="16" y="900" width="1168" height="90" class="notes"/>
+  <text x="32" y="924" class="notetitle">Textos es / en (claves de mensajes, nunca cadenas fijas)</text>
+  <text x="32" y="946" class="note">es: Destino · Fechas · Personas · Tipo · Buscar · Filtros · Ver detalle · tasa BCV 10/11/2026 · Sin resultados</text>
+  <text x="32" y="966" class="note">en: Destination · Dates · Travelers · Type · Search · Filters · View detail · BCV rate 10 Nov 2026 · No results</text>
 </svg>

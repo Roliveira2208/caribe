@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 1980" width="830" height="1980" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="830" height="1980" fill="#ffffff"/>
+
+<title id="wf-title">Inicio — móvil</title>
+<desc id="wf-desc">Wireframe móvil de Caribe. El Hero ocupa toda la primera pantalla móvil y el buscador se presenta al hacer scroll, con categorías en chips y campos apilados.</desc>
+<style>
+ text{font-family:"Segoe UI",system-ui,sans-serif;fill:#333}.cap{font-size:13px;fill:#777}.h1{font-size:20px;font-weight:700}.h2{font-size:16px;font-weight:700}.h3{font-size:13px;font-weight:700}.lbl{font-size:10.5px;fill:#555}.val{font-size:11px}.small{font-size:10px;fill:#666}.heroTitle{font-size:27px;font-weight:700;fill:#fff}.heroSub{font-size:12px;fill:#fff}.white{fill:#fff}.phone{fill:#fff;stroke:#666;stroke-width:1.5}.box{fill:#fff;stroke:#888;stroke-width:1}.panel{fill:#f7f7f7;stroke:#888;stroke-width:1}.field{fill:#fff;stroke:#999;stroke-width:1}.ph{fill:#e7e7e7;stroke:#aaa;stroke-width:1}.line{fill:#e5e5e5}.btnbox{fill:#e7e7e7;stroke:#666;stroke-width:1}.chip{fill:#fff;stroke:#777;stroke-width:1}.selected{fill:#e5e5e5;stroke:#555;stroke-width:1}.notes{fill:#fff;stroke:#888;stroke-width:1.2;stroke-dasharray:6 4}.note{font-size:11px;fill:#555}.notetitle{font-size:13px;font-weight:700}.rule{stroke:#777;stroke-width:1.2;stroke-dasharray:7 5}.mark{fill:#fff;stroke:#555;stroke-width:1}.marktxt{font-size:11px;font-weight:700}
+</style>
+<text x="16" y="28" class="cap">Caribe · Web — Inicio · móvil · wireframe de baja fidelidad · Hero = 100vh · es / en</text>
+<rect x="24" y="48" width="390" height="1888" rx="26" class="phone"/>
+<!-- Hero mobile: 844 px viewport height -->
+<rect x="40" y="64" width="358" height="844" class="ph"/>
+<path d="M40 64 L398 908 M398 64 L40 908" stroke="#c8c8c8"/>
+<rect x="40" y="64" width="358" height="844" fill="#333" opacity="0.25"/>
+<rect x="52" y="78" width="334" height="52" rx="7" fill="#222" opacity="0.38" stroke="#fff" stroke-opacity="0.4"/>
+<text x="68" y="111" class="white" font-size="21" font-weight="700">Caribe</text><text x="322" y="110" text-anchor="end" class="white" font-size="11">ES|EN</text><text x="354" y="110" text-anchor="end" class="white" font-size="13">☰</text>
+<rect x="52" y="138" width="334" height="28" rx="5" fill="#fff" opacity="0.2" stroke="#fff" stroke-opacity="0.45"/>
+<text x="219" y="157" text-anchor="middle" class="white" font-size="11">Tasa BCV 36,00 Bs/$ · 10/11/2026</text>
+<text x="219" y="440" text-anchor="middle" font-size="19" font-weight="700" fill="#555">FOTOGRAFÍA HERO</text><text x="219" y="462" text-anchor="middle" class="lbl">Imagen panorámica a sangre</text>
+<text x="62" y="555" class="heroSub">VIAJES · EXPERIENCIAS · VENEZUELA</text>
+<text x="62" y="598" class="heroTitle">Tu próxima aventura</text><text x="62" y="632" class="heroTitle">comienza aquí.</text>
+<text x="62" y="668" class="heroSub">Descubre destinos, hoteles, paquetes y tours.</text>
+<rect x="62" y="704" width="170" height="42" rx="5" fill="#fff"/><text x="147" y="730" text-anchor="middle" class="h3">Explorar destinos</text>
+<text x="219" y="876" text-anchor="middle" class="white" font-size="11">Desliza para descubrir  ↓</text>
+<line x1="24" y1="908" x2="414" y2="908" class="rule"/><text x="406" y="900" text-anchor="end" class="small">FIN DEL PRIMER VIEWPORT · 100vh</text>
+<!-- Buscador tras scroll -->
+<text x="56" y="954" class="h2">¿A dónde quieres viajar?</text>
+<text x="56" y="976" class="small">Elige una categoría y completa tu búsqueda.</text>
+<rect x="48" y="994" width="342" height="480" rx="8" class="panel"/>
+<rect x="62" y="1010" width="70" height="30" rx="15" class="selected"/><text x="97" y="1030" text-anchor="middle" class="small">Tours</text>
+<rect x="140" y="1010" width="72" height="30" rx="15" class="chip"/><text x="176" y="1030" text-anchor="middle" class="small">Hoteles</text>
+<rect x="220" y="1010" width="80" height="30" rx="15" class="chip"/><text x="260" y="1030" text-anchor="middle" class="small">Paquetes</text>
+<rect x="308" y="1010" width="68" height="30" rx="15" class="chip"/><text x="342" y="1030" text-anchor="middle" class="small">Vuelos</text>
+<text x="64" y="1070" class="lbl">Destino</text><rect x="62" y="1078" width="314" height="42" rx="4" class="field"/><text x="74" y="1104" class="val">¿A dónde quieres ir? ▾</text>
+<text x="64" y="1148" class="lbl">Fecha de ida</text><rect x="62" y="1156" width="314" height="42" rx="4" class="field"/><text x="74" y="1182" class="val">Seleccionar fecha</text>
+<text x="64" y="1226" class="lbl">Fecha de regreso</text><rect x="62" y="1234" width="314" height="42" rx="4" class="field"/><text x="74" y="1260" class="val">Seleccionar fecha</text>
+<text x="64" y="1304" class="lbl">Adultos</text><rect x="62" y="1312" width="145" height="42" rx="4" class="field"/><text x="74" y="1338" class="val">2 adultos  −  +</text>
+<text x="224" y="1304" class="lbl">Niños</text><rect x="218" y="1312" width="158" height="42" rx="4" class="field"/><text x="230" y="1338" class="val">0 niños  −  +</text>
+<rect x="62" y="1370" width="314" height="48" rx="5" class="btnbox"/><text x="219" y="1400" text-anchor="middle" class="h3">BUSCAR EXPERIENCIAS</text>
+<text x="62" y="1448" class="small">Si agregas niños, indicar edad de cada uno.</text>
+<circle cx="366" cy="1450" r="10" class="mark"/><text x="366" y="1454" text-anchor="middle" class="marktxt">1</text>
+<!-- Muestras de destino -->
+<text x="56" y="1520" class="h2">Destinos destacados</text>
+<rect x="56" y="1540" width="314" height="108" rx="6" class="box"/><rect x="68" y="1552" width="110" height="84" class="ph"/><text x="194" y="1584" class="h3">Los Roques</text><text x="194" y="1606" class="small">Playas y cayos</text>
+<rect x="56" y="1660" width="314" height="108" rx="6" class="box"/><rect x="68" y="1672" width="110" height="84" class="ph"/><text x="194" y="1704" class="h3">Isla de Margarita</text><text x="194" y="1726" class="small">Sol, playas y gastronomía</text>
+<text x="56" y="1810" class="h2">Tours y experiencias</text><rect x="56" y="1830" width="314" height="78" rx="6" class="box"/><text x="72" y="1858" class="h3">Tour Cayo de Agua</text><text x="72" y="1877" class="small">Los Roques · $120 USD ≈ 4.320,00 Bs</text><text x="72" y="1897" class="small">tasa BCV 10/11/2026 (informativo)</text>
+<!-- Anotaciones -->
+<rect x="450" y="48" width="360" height="1888" class="notes"/>
+<text x="468" y="78" class="notetitle">Reglas visibles en esta pantalla</text>
+<text x="468" y="112" class="note">[1] Hero de altura completa en móvil</text><text x="468" y="130" class="note">(100vh). No debe quedar reducido a una</text><text x="468" y="148" class="note">franja ni compartir pantalla con el buscador.</text><text x="468" y="166" class="note">El header muestra la tasa BCV del día y su fecha.</text>
+<text x="468" y="188" class="note">[2] Al desplazarse aparece el buscador;</text><text x="468" y="206" class="note">categorías en chips horizontales y campos</text><text x="468" y="224" class="note">apilados para facilitar el uso táctil.</text>
+<text x="468" y="264" class="note">[3] Campos: destino, ida, regreso, adultos</text><text x="468" y="282" class="note">y niños. Las edades se solicitan cuando</text><text x="468" y="300" class="note">se agregan menores.</text>
+<text x="468" y="340" class="note">[4] Menú compacto tipo hamburguesa;</text><text x="468" y="358" class="note">al abrirse muestra Inicio, Tours, Hoteles,</text><text x="468" y="376" class="note">Paquetes, Destinos, Vuelos y Contacto.</text>
+<text x="468" y="416" class="note">[5] Las tarjetas de destinos y experiencias</text><text x="468" y="434" class="note">enlazan con búsqueda y detalle de producto.</text>
+<text x="468" y="474" class="note">La búsqueda mantiene precios USD y VES</text><text x="468" y="492" class="note">con tasa BCV y fecha valor en resultados.</text>
+<text x="468" y="550" class="small">La página es más larga que el viewport: el</text><text x="468" y="568" class="small">usuario recorre los módulos con scroll.</text>
+<text x="468" y="620" class="notetitle">Accesibilidad + textos es / en</text>
+<text x="468" y="646" class="note">[6] Foco visible, etiquetas y contraste AA; zonas</text><text x="468" y="664" class="note">táctiles ≥ 44 × 44 px.</text>
+<text x="468" y="692" class="note">es: Inicio · Tours · Hoteles · Explorar destinos</text>
+<text x="468" y="712" class="note">en: Home · Tours · Hotels · Explore destinations</text>
+<text x="468" y="732" class="note">es: Destino · Fechas · Adultos · Niños · Buscar</text>
+<text x="468" y="752" class="note">en: Destination · Dates · Adults · Children · Search</text>
+</svg>

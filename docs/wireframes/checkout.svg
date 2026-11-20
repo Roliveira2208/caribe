@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1290" width="1200" height="1290" role="img" aria-labelledby="wf-title wf-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1390" width="1200" height="1390" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="1200" height="1390" fill="#ffffff"/>
+
   <title id="wf-title">Checkout — escritorio</title>
   <desc id="wf-desc">Wireframe de baja fidelidad del checkout en tres pasos: datos del viajero con resumen y selector de moneda, pago con temporizador de retención del cupo y métodos simulados, y confirmación con estado del pago en revisión y voucher de reserva con la leyenda de documento no fiscal.</desc>
   <style>
@@ -31,7 +33,7 @@
   </style>
 
   <!-- Encabezado del wireframe -->
-  <text x="16" y="28" class="cap">Caribe · Web — Checkout · escritorio · pasos 1 a 3 · wireframe de baja fidelidad · es</text>
+  <text x="16" y="28" class="cap">Caribe · Web — Checkout · escritorio · pasos 1 a 3 · wireframe de baja fidelidad · es / en</text>
 
   <!-- Paso 1: viajero y resumen -->
   <rect x="16" y="44" width="1168" height="300" class="box"/>
@@ -152,7 +154,7 @@
   <text x="600" y="980" class="lbl">Ver en Mis reservas ›</text>
 
   <!-- Reglas visibles -->
-  <rect x="16" y="1094" width="1168" height="176" class="notes"/>
+  <rect x="16" y="1094" width="1168" height="192" class="notes"/>
   <text x="32" y="1118" class="notetitle">Reglas visibles en esta pantalla</text>
   <text x="32" y="1140" class="note">[1] Al iniciar el pago se registra la tasa BCV del día y el monto en VES queda congelado; nunca se recalcula.</text>
   <text x="32" y="1158" class="note">[2] El cupo se retiene 30 min (hold_minutes) con cuenta regresiva visible; al vencer, la reserva pasa a EXPIRED.</text>
@@ -160,4 +162,11 @@
   <text x="32" y="1194" class="note">[4] Voucher y comprobante llevan siempre la leyenda «Documento no fiscal».</text>
   <text x="32" y="1212" class="note">El selector de moneda USD/VES cambia lo que ve el cliente; el monto se calcula siempre en el servidor.</text>
   <text x="32" y="1230" class="note">Versión móvil de este flujo: checkout-movil.svg (mismas reglas, columna única).</text>
+  <text x="32" y="1248" class="note">[5] Foco visible en cada paso, etiquetas asociadas a los campos y contraste AA en textos, chips y botones.</text>
+
+  <!-- Textos es/en -->
+  <rect x="16" y="1298" width="1168" height="80" class="notes"/>
+  <text x="32" y="1322" class="notetitle">Textos es / en (mismas claves, sin cadenas fijas en componentes)</text>
+  <text x="32" y="1344" class="note">es: Viajero y resumen · Moneda del pago · Continuar al pago · Cupo retenido · Monto a pagar · Reportar pago · Pago en revisión</text>
+  <text x="32" y="1364" class="note">en: Traveler and summary · Payment currency · Continue to payment · Seat held · Amount due · Report payment · Payment under review</text>
 </svg>

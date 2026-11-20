@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 1010" width="830" height="1010" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="830" height="1010" fill="#ffffff"/>
+
+  <title id="wf-title">Detalle de producto — móvil</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad del detalle en móvil: galería, descripción, qué incluye y política en columna única; segunda pantalla con tarjeta de reserva, precio en USD y VES con fecha de tasa y tabla de disponibilidad por fecha.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 17px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 700; }
+    .lbl { font-size: 11px; fill: #555; }
+    .val { font-size: 11px; fill: #333; }
+    .price { font-size: 14px; font-weight: 700; }
+    .ves { font-size: 10px; fill: #555; }
+    .btn { font-size: 11px; font-weight: 600; fill: #333; }
+    .phone { fill: #fff; stroke: #666; stroke-width: 1.6; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .ph { fill: #f2f2f2; stroke: #bbb; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .mark { fill: #fff; stroke: #666; stroke-width: 1.2; }
+    .marktxt { font-size: 12px; font-weight: 700; }
+    .x { stroke: #ccc; stroke-width: 1; }
+    .sep { stroke: #ddd; stroke-width: 1; }
+    .dot { fill: #999; }
+    .bar { fill: #fff; stroke: #999; stroke-width: 1; }
+  </style>
+
+  <text x="16" y="28" class="cap">Caribe · Web — Detalle de producto · móvil · wireframe de baja fidelidad · es / en</text>
+
+  <!-- Teléfono 1: contenido del producto -->
+  <rect x="20" y="48" width="390" height="780" rx="24" class="phone"/>
+  <rect x="36" y="64" width="358" height="44" class="bar"/>
+  <text x="52" y="92" class="h1">Caribe</text>
+  <text x="380" y="92" class="lbl" text-anchor="end">ES | EN</text>
+
+  <text x="36" y="126" class="lbl">‹ Inicio › Los Roques › Tour Cayo de Agua</text>
+  <text x="36" y="158" class="h2">Tour Cayo de Agua</text>
+  <text x="36" y="178" class="lbl">Los Roques · Tour · 1 día · cupos: 8</text>
+
+  <rect x="36" y="192" width="358" height="200" class="ph"/>
+  <line x1="36" y1="192" x2="394" y2="392" class="x"/>
+  <line x1="394" y1="192" x2="36" y2="392" class="x"/>
+  <text x="215" y="296" class="lbl" text-anchor="middle">galería · foto principal</text>
+  <rect x="36" y="402" width="82" height="56" class="ph"/>
+  <rect x="126" y="402" width="82" height="56" class="ph"/>
+  <rect x="216" y="402" width="82" height="56" class="ph"/>
+  <rect x="306" y="402" width="82" height="56" class="ph"/>
+
+  <text x="36" y="492" class="h2">Descripción</text>
+  <rect x="36" y="502" width="330" height="8" class="line"/>
+  <rect x="36" y="518" width="290" height="8" class="line"/>
+
+  <text x="36" y="548" class="h2">Qué incluye</text>
+  <circle cx="42" cy="568" r="3" class="dot"/>
+  <text x="52" y="572" class="lbl">Traslado en lancha desde el muelle</text>
+  <circle cx="42" cy="588" r="3" class="dot"/>
+  <text x="52" y="592" class="lbl">Almuerzo y bebidas</text>
+  <circle cx="42" cy="608" r="3" class="dot"/>
+  <text x="52" y="612" class="lbl">Equipo de snorkel</text>
+  <circle cx="42" cy="628" r="3" class="dot"/>
+  <text x="52" y="632" class="lbl">Guía bilingüe</text>
+
+  <text x="36" y="664" class="h2">Política de cancelación</text>
+  <text x="36" y="686" class="note">Gratis hasta 48 h antes del inicio;</text>
+  <text x="36" y="704" class="note">después retiene el 50 %.</text>
+
+  <rect x="36" y="770" width="358" height="42" class="bar"/>
+  <text x="120" y="796" class="btn" text-anchor="middle">‹ Volver</text>
+  <text x="310" y="796" class="btn" text-anchor="middle">Reservar →</text>
+
+  <!-- Teléfono 2: reserva y disponibilidad -->
+  <rect x="440" y="48" width="390" height="780" rx="24" class="phone"/>
+  <rect x="456" y="64" width="358" height="44" class="bar"/>
+  <text x="472" y="92" class="h2">Reservar</text>
+  <text x="740" y="92" class="lbl" text-anchor="end">BCV 36,00 · 10/11</text>
+  <text x="800" y="92" class="lbl" text-anchor="end">ES | EN</text>
+
+  <rect x="456" y="120" width="358" height="356" class="panel"/>
+  <text x="472" y="152" class="price">$120 USD · por persona</text>
+  <text x="472" y="174" class="ves">≈ 4.320,00 Bs · tasa BCV 10/11/2026 (informativo)</text>
+  <line x1="472" y1="190" x2="798" y2="190" class="sep"/>
+  <text x="472" y="214" class="lbl">Fecha</text>
+  <rect x="472" y="222" width="326" height="34" class="field"/>
+  <text x="484" y="244" class="val">15/11/2026 · 8 cupos</text>
+  <text x="472" y="278" class="lbl">Personas</text>
+  <rect x="472" y="286" width="36" height="34" class="btnbox"/>
+  <text x="490" y="308" class="btn" text-anchor="middle">-</text>
+  <text x="560" y="308" class="val">2 adultos</text>
+  <rect x="690" y="286" width="36" height="34" class="btnbox"/>
+  <text x="708" y="308" class="btn" text-anchor="middle">+</text>
+  <line x1="472" y1="338" x2="798" y2="338" class="sep"/>
+  <text x="472" y="360" class="lbl">Total</text>
+  <text x="472" y="384" class="price">$240 USD</text>
+  <text x="472" y="404" class="ves">≈ 8.640,00 Bs · tasa BCV 10/11/2026</text>
+  <rect x="472" y="418" width="326" height="40" class="btnbox"/>
+  <text x="635" y="443" class="btn" text-anchor="middle">Reservar</text>
+  <text x="472" y="468" class="note">Cupo retenido 30 min: PENDING_PAYMENT.</text>
+
+  <text x="456" y="504" class="h2">Disponibilidad por fecha</text>
+  <rect x="456" y="516" width="358" height="220" class="box"/>
+  <rect x="456" y="516" width="358" height="28" class="panel"/>
+  <text x="468" y="535" class="lbl">Fecha</text>
+  <text x="596" y="535" class="lbl">Cupos</text>
+  <text x="660" y="535" class="lbl">USD</text>
+  <text x="740" y="535" class="lbl">VES</text>
+  <line x1="456" y1="544" x2="814" y2="544" class="sep"/>
+  <text x="468" y="566" class="val">15/11/2026</text>
+  <text x="596" y="566" class="val">8</text>
+  <text x="660" y="566" class="val">$120</text>
+  <text x="740" y="566" class="val">4.320,00</text>
+  <line x1="456" y1="578" x2="814" y2="578" class="sep"/>
+  <text x="468" y="598" class="val">16/11/2026</text>
+  <text x="596" y="598" class="val">6</text>
+  <text x="660" y="598" class="val">$120</text>
+  <text x="740" y="598" class="val">4.320,00</text>
+  <line x1="456" y1="610" x2="814" y2="610" class="sep"/>
+  <text x="468" y="630" class="val">22/11/2026</text>
+  <text x="596" y="630" class="val">12</text>
+  <text x="660" y="630" class="val">$135</text>
+  <text x="740" y="630" class="val">4.860,00</text>
+  <line x1="456" y1="642" x2="814" y2="642" class="sep"/>
+  <text x="468" y="662" class="val">23/11/2026</text>
+  <text x="596" y="662" class="val">10</text>
+  <text x="660" y="662" class="val">$120</text>
+  <text x="740" y="662" class="val">4.320,00</text>
+  <line x1="456" y1="674" x2="814" y2="674" class="sep"/>
+
+  <text x="456" y="756" class="note">El cupo se bloquea en una transacción; cero sobreventa.</text>
+
+  <rect x="456" y="770" width="358" height="42" class="bar"/>
+  <text x="540" y="796" class="btn" text-anchor="middle">‹ Detalle</text>
+  <text x="730" y="796" class="btn" text-anchor="middle">Continuar →</text>
+
+  <!-- Reglas y textos es/en -->
+  <rect x="20" y="850" width="810" height="140" class="notes"/>
+  <text x="36" y="878" class="notetitle">Reglas visibles + textos es / en</text>
+  <text x="36" y="902" class="note">[1] Precio en USD con equivalente VES informativo a la tasa BCV 10/11/2026.</text>
+  <text x="36" y="920" class="note">[2] Al reservar, el cupo queda retenido 30 min (PENDING_PAYMENT).</text>
+  <text x="36" y="938" class="note">[3] Disponibilidad por fecha; el cupo se bloquea en transacción.</text>
+  <text x="36" y="956" class="note">[4] Foco visible, etiquetas y contraste AA; zonas táctiles ≥ 44 × 44 px.</text>
+  <text x="36" y="974" class="note">es: Fecha · Personas · Total · Reservar · Qué incluye · Política de cancelación</text>
+  <text x="36" y="988" class="note">en: Date · Travelers · Total · Book · What's included · Cancellation policy</text>
+</svg>

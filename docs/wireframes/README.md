@@ -1,49 +1,38 @@
-# Wireframes de baja fidelidad
+# Wireframes de baja fidelidad — Caribe
 
-Bocetos en escala de grises de las pantallas clave del MVP (SDD §9). No son diseño visual:
-definen estructura, contenido y reglas de negocio visibles para el usuario. La tipografía y
-los colores son placeholders; los datos (Tour Cayo de Agua, María Pérez, PAG-0142…) son
-ejemplos coherentes entre sí: tasa BCV 36,00 del 10/11/2026 ($120 → 4.320,00 Bs;
-$240 → 8.640,00 Bs).
+Bocetos SVG de estructura, contenido y reglas visibles del MVP. Se conservan los flujos originales de búsqueda, detalle, checkout y panel de pagos, y se incorpora una nueva portada turística.
 
 ## Archivos
 
 | Archivo | Pantalla | App |
 | --- | --- | --- |
-| `busqueda.svg` | Inicio y buscador: filtros y resultados con precio en USD y equivalente en VES | Web · escritorio |
-| `busqueda-movil.svg` | Misma búsqueda en columna única, filtros como chips y navegación inferior | Web · móvil |
-| `detalle.svg` | Detalle de producto: galería, descripción, incluye, política, tarjeta de reserva y disponibilidad por fecha | Web · escritorio |
-| `checkout.svg` | Checkout en 3 pasos: viajero y resumen · pago con temporizador · confirmación con voucher | Web · escritorio |
-| `checkout-movil.svg` | Pasos 2 y 3 del checkout en columna única | Web · móvil |
-| `panel-pagos.svg` | Reservas y pagos: modo de aprobación, filtros, tabla de estados y acciones Aprobar/Rechazar | Admin · escritorio |
+| `inicio.svg` | Nueva portada: Hero fotográfico a pantalla completa (100vh); buscador después del primer scroll; destinos y experiencias | Web · escritorio |
+| `inicio-movil.svg` | Portada móvil: Hero de 100vh, buscador en columna y menú compacto | Web · móvil |
+| `busqueda.svg` | Resultados, filtros y menú superior con Tours, Hoteles, Paquetes, Destinos, Vuelos y Contacto | Web · escritorio |
+| `busqueda-movil.svg` | Resultados en columna, categorías como chips y navegación inferior | Web · móvil |
+| `detalle.svg` | Detalle del producto, galería, incluye, política, reserva y disponibilidad | Web · escritorio |
+| `detalle-movil.svg` | Detalle en columna única: contenido del producto y reserva con disponibilidad | Web · móvil |
+| `checkout.svg` | Checkout en tres pasos: viajero y resumen, pago con temporizador, confirmación | Web · escritorio |
+| `checkout-movil.svg` | Pasos de pago y confirmación en columna única | Web · móvil |
+| `panel-pagos.svg` | Panel de administración de reservas y pagos | Admin · escritorio |
 
-## Convención de marcadores
+## Decisiones del nuevo inicio
 
-Cada SVG lleva una caja punteada «Reglas visibles en esta pantalla» al final. Los marcadores
-circulares `[1]`, `[2]`… señalan en pantalla dónde se aplica cada regla y **se numeran de
-forma local a cada archivo** (el mismo número puede significar reglas distintas en otro
-archivo; la caja de notas de cada SVG es la fuente).
+- El Hero ocupa exactamente una altura de viewport: 900 px en el wireframe de escritorio y 844 px en el de móvil. La intención es implementarlo como `min-height: 100vh` (o equivalente), con imagen de fondo a sangre.
+- El buscador no se superpone al Hero. Aparece en la siguiente sección al hacer scroll.
+- Categorías superiores: Inicio, Tours, Hoteles, Paquetes, Destinos, Vuelos y Contacto. En móvil se accede desde menú compacto y se ofrecen chips de categoría en el buscador.
+- Campos de búsqueda: destino, fecha de ida, fecha de regreso, cantidad de adultos y cantidad de niños. Al seleccionar niños se solicitan sus edades.
+- Las secciones de destinos y experiencias destacadas sirven como accesos rápidos a las búsquedas y detalles existentes.
 
-## Reglas de negocio que deben verse (SDD §6, §12)
+## Reglas de negocio preservadas (SDD §6, §9, §12)
 
-1. **Precio USD con equivalente VES** y la tasa BCV con su fecha valor. En catálogo,
-   detalle y resumen el equivalente es informativo (SDD §6, reglas 1-4).
-2. **Tasa congelada al iniciar el pago:** al reportar el pago se registran la tasa del día
-   y `amount_ves`; ese par no se recalcula (SDD §6, regla 3). El panel de pagos muestra el
-   par original, nunca un recálculo.
-3. **Retención del cupo (30 min por defecto, `hold_minutes`):** el checkout muestra una
-   cuenta regresiva; al vencer, la reserva pasa a EXPIRED y el cupo se libera (SDD §6).
-4. **Estados del pago:** IN_REVIEW (en revisión), APPROVED (aprobado), REJECTED (rechazado)
-   (SDD §5). El panel de pagos filtra por estado y ofrece Aprobar/Rechazar.
-5. **Modo de aprobación por agencia (`payment_mode`):** AUTO aprueba al instante; MANUAL
-   requiere revisión de un administrador. El panel muestra el modo activo en un badge.
-6. **Voucher y comprobante no fiscales:** ambos PDF llevan siempre la leyenda
-   «Documento no fiscal» (SDD §12).
-7. **Selector de moneda USD/VES** en el checkout; el monto se calcula siempre en el
-   servidor, nunca con un valor enviado por el cliente.
+1. Precio en USD con equivalente informativo en VES y tasa BCV con fecha valor. La tasa del día se muestra en el header de las pantallas web para que el usuario entienda ese equivalente.
+2. Tasa congelada al iniciar el pago: el par tasa/`amount_ves` no se recalcula al revisar el pago.
+3. Retención de cupo (30 min por defecto, `hold_minutes`) y expiración de reserva al vencer.
+4. Estados de pago: `IN_REVIEW`, `APPROVED` y `REJECTED`.
+5. Modo de aprobación por agencia: `AUTO` o `MANUAL`.
+6. Voucher y comprobante PDF con la leyenda «Documento no fiscal».
+7. El monto del pago se calcula en el servidor; selector de moneda USD/VES en checkout.
+8. Textos visibles en `es`/`en` desde claves de mensajes (nunca cadenas fijas), con versión móvil en las pantallas web y accesibilidad básica: foco visible, etiquetas asociadas y contraste AA.
 
-## Relación con el SDD
-
-- §6 (Multimoneda y pagos): reglas de conversión, métodos simulados, modos y retención.
-- §9 (Diseño de la interfaz de usuario): pantallas clave de web y admin.
-- §12 (Voucher y comprobante de reserva): PDFs no fiscales y su leyenda.
+Los importes, nombres, fechas y tasa que aparecen en los wireframes son datos de ejemplo coherentes con el SDD original, no ofertas comerciales actuales.
