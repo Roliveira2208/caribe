@@ -50,8 +50,8 @@ en `docs/wireframes/busqueda*.svg` e `inicio*.svg`.
    (`limit=50`) y extrae los destinos únicos para el selector y los chips. No se crea un endpoint de
    destinos: no existe en F1 y ampliaría el contrato más allá de lo decidido.
 
-5. **Tipos visibles pero deshabilitados.** El selector ofrece Tour, Hotel, Paquete y Vuelo; los tres
-   primeros llevan `disabled` y la etiqueta «próximamente» desde mensajes es/en. Solo `hotel` se envía
+5. **Tipos visibles pero deshabilitados.** El selector ofrece Tour, Hotel, Paquete y Vuelo; los otros
+   tres (Tour, Paquete y Vuelo) llevan `disabled` y la etiqueta «próximamente» desde mensajes es/en. Solo `hotel` se envía
    a la API, evitando un 422 del esquema estricto.
 
 6. **UI con componentes existentes.** `Button`, `Input`, `Label` y `Card` de shadcn/ui; `<select>`
