@@ -5,7 +5,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
 
 ## 1. Contratos de API
 
-- [ ] T-PRF-1 Añadir primero los tests e2e de `GET /rates/today` (anónimo, feriado, override global,
+- [x] T-PRF-1 Añadir primero los tests e2e de `GET /rates/today` (anónimo, feriado, override global,
   override de agencia oculto, sin tasa, sin llamada al proveedor) y después el controlador público que
   reutiliza `globalRate()`; documentar el contrato en `.env.example` si hace falta.
   Prueba: exchange-rates › "Visitante sin sesión", "Feriado o fin de semana", "Override global",

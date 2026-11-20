@@ -956,6 +956,13 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
     reason:
       "Descarga autenticada: el dueño obtiene sus PDFs y el personal con booking:read los de su agencia (spec documents, 'Descarga autenticada').",
   },
+  {
+    method: "GET",
+    path: "rates/today",
+    justification: "public",
+    reason:
+      "Tasa BCV global del día para el header y los equivalentes VES del catálogo (spec exchange-rates, 'Lectura pública de la tasa vigente').",
+  },
 ];
 
 /**

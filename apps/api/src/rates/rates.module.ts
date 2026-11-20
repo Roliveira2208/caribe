@@ -4,6 +4,7 @@ import { CotizaveProvider } from "./cotizave.provider.js";
 import { EXCHANGE_RATE_PROVIDER, ExchangeRateService } from "./exchange-rate.service.js";
 import { ExchangeRatesController } from "./exchange-rates.controller.js";
 import { ExchangeRatesGuard } from "./exchange-rates.guard.js";
+import { PublicRatesController } from "./public-rates.controller.js";
 import { RateCache } from "./rate-cache.js";
 
 /**
@@ -17,7 +18,7 @@ import { RateCache } from "./rate-cache.js";
  */
 @Module({
   imports: [TenantModule],
-  controllers: [ExchangeRatesController],
+  controllers: [ExchangeRatesController, PublicRatesController],
   providers: [
     ExchangeRateService,
     ExchangeRatesGuard,

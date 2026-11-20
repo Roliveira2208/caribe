@@ -45,3 +45,15 @@ export interface ExchangeRateView {
   source: string;
   isOverride: boolean;
 }
+
+/**
+ * Lectura pública de la tasa global vigente (change
+ * public-rate-and-price-filters). Solo expone lo que la web necesita para
+ * mostrar USD y su equivalente VES con fecha valor; nunca el ámbito, la
+ * procedencia ni un override de agencia.
+ */
+export interface TodayRateView {
+  available: boolean;
+  rate: string | null;
+  valueDate: string | null;
+}
