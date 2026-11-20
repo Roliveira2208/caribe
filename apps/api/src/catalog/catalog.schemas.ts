@@ -24,6 +24,21 @@ export function addDays(date: string, days: number): string {
 }
 
 /**
+ * Límite de precio en USD: texto decimal positivo con hasta 14 enteros y 2
+ * decimales. Se conserva como texto para no perder precisión decimal.
+ */
+const usdLimitSchema = z
+  .string()
+  .regex(/^(?:0|[1-9]\d{0,13})(?:\.\d{1,2})?$/, "Debe ser un decimal positivo con hasta 2 decimales")
+  .refine((value) => Number(value) > 0, "Debe ser mayor que cero");
+
+/** Convierte el texto decimal a centavos exactos para comparar sin floats. */
+function usdCents(value: string): bigint {
+  const [whole = "", fraction = ""] = value.split(".");
+  return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
+}
+
+/**
  * Query de `GET /products`. `checkIn` y `checkOut` van juntos y se validan con
  * el mismo rango de estancia de la reserva: `checkOut > checkIn`, sin fechas
  * pasadas y con un máximo de 30 noches en `America/Caracas`.
@@ -38,6 +53,8 @@ export const catalogQuerySchema = z
     q: z.string().trim().min(1).max(100).optional(),
     limit: z.coerce.number().int().min(1).max(CATALOG_MAX_LIMIT).optional(),
     cursor: z.string().min(1).optional(),
+    minPriceUsd: usdLimitSchema.optional(),
+    maxPriceUsd: usdLimitSchema.optional(),
   })
   .superRefine((value, ctx) => {
     const hasCheckIn = value.checkIn !== undefined;
@@ -62,6 +79,17 @@ export const catalogQuerySchema = z
           ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
         }
       }
+    }
+    if (
+      value.minPriceUsd !== undefined &&
+      value.maxPriceUsd !== undefined &&
+      usdCents(value.minPriceUsd) > usdCents(value.maxPriceUsd)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maxPriceUsd"],
+        message: "maxPriceUsd debe ser mayor o igual que minPriceUsd",
+      });
     }
   });
 

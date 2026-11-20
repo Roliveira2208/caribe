@@ -10,7 +10,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
   reutiliza `globalRate()`; documentar el contrato en `.env.example` si hace falta.
   Prueba: exchange-rates › "Visitante sin sesión", "Feriado o fin de semana", "Override global",
   "Override de una agencia", "Sin tasa global" y "Consulta perezosa".
-- [ ] T-PRF-2 Añadir primero los tests e2e y unitarios del rango de precio (sin fechas, con fechas,
+- [x] T-PRF-2 Añadir primero los tests e2e y unitarios del rango de precio (sin fechas, con fechas,
   un solo extremo, límites inválidos, paginación y compatibilidad) y después extender
   `catalogQuerySchema` y `searchRows` con `minPriceUsd`/`maxPriceUsd` sobre `order_price`.
   Prueba: catalog › "Rango sin fechas", "Rango con fechas", "Un solo extremo", "Límites inválidos",

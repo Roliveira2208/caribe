@@ -30,6 +30,8 @@ describe("catalog", () => {
   const destA = randomUUID();
   const destB = randomUUID();
   const destNoEn = randomUUID();
+  const destPrice = randomUUID();
+  const codePrice = `pre-${suffix}`;
   const hotelKeyA = randomUUID();
   const hotelKeyB = randomUUID();
   const hotelKeyNoEn = randomUUID();
@@ -107,7 +109,8 @@ describe("catalog", () => {
       `INSERT INTO "destinations" (id, tenant_id, name, country, code, created_at, updated_at)
        VALUES ($1, $2, $3::jsonb, 'VE', $4, now(), now()),
               ($5, $6, $7::jsonb, 'VE', $8, now(), now()),
-              ($9, $2, $10::jsonb, 'VE', $11, now(), now())`,
+              ($9, $2, $10::jsonb, 'VE', $11, now(), now()),
+              ($12, $2, $13::jsonb, 'VE', $14, now(), now())`,
       [
         destA,
         orgA,
@@ -120,6 +123,9 @@ describe("catalog", () => {
         destNoEn,
         JSON.stringify(titleNoEn),
         codeNoEn,
+        destPrice,
+        JSON.stringify({ es: "Precios", en: "Prices" }),
+        codePrice,
       ],
     );
 
@@ -282,6 +288,26 @@ describe("catalog", () => {
       description: { es: "Habitación sin inglés" },
       attributes: attributes(2),
     });
+
+    // Treinta productos en un destino aparte para probar que el filtro de
+    // precio se aplica ANTES de la paginación por cursor. Los dos últimos
+    // reproducen el ejemplo del spec: 60, 95 y 120 USD con un rango 90-120.
+    const prices = [...Array.from({ length: 30 }, (_, i) => String(60 + i)), "95", "120"];
+    for (const [i, basePrice] of prices.entries()) {
+      await product({
+        id: randomUUID(),
+        tenantId: orgA,
+        providerId: providerA,
+        destinationId: destPrice,
+        hotelKey: hotelKeyA,
+        roomType: `price-${i}`,
+        status: "PUBLISHED",
+        basePrice,
+        title: titleA,
+        description: { es: "Precio de prueba", en: "Test price" },
+        attributes: attributes(2),
+      });
+    }
 
     const availability = async (
       productId: string,
@@ -519,6 +545,116 @@ describe("catalog", () => {
         expect(status).toBe(422);
         expect(body.code).toBe("VALIDATION_ERROR");
       }
+    });
+
+    it("Rango sin fechas", async () => {
+      const { status, body } = await getJson<PageBody>(
+        `/products?destinationId=${destPrice}&minPriceUsd=90&maxPriceUsd=120`,
+      );
+      expect(status).toBe(200);
+      expect(body.items.map((item) => item.basePriceUsd)).toEqual(["95.00", "120.00"]);
+      expect(body.nextCursor).toBeNull();
+    });
+
+    it("Rango con fechas", async () => {
+      const base = `/products?destinationId=${destA}&checkIn=${checkIn}&checkOut=${checkOut}`;
+
+      const included = await getJson<PageBody>(`${base}&minPriceUsd=250`);
+      expect(included.status).toBe(200);
+      expect(included.body.items.map((item) => item.id)).toEqual([aStd]);
+      expect(included.body.items[0]?.totalUsd).toBe("310.00");
+
+      const excluded = await getJson<PageBody>(`${base}&minPriceUsd=350`);
+      expect(excluded.status).toBe(200);
+      expect(excluded.body.items).toEqual([]);
+    });
+
+    it("Producto sin disponibilidad completa", async () => {
+      const rateId = randomUUID();
+      await owner.query(
+        `INSERT INTO "exchange_rates"
+           (id, tenant_id, source, rate, value_date, fetched_at, is_override, reason, created_by)
+         VALUES ($1, NULL, 'TEST', '900.0000', $2::date, now(), false, NULL, NULL)`,
+        [rateId, today],
+      );
+      try {
+        // aFull tiene precio base 120 (dentro del rango) pero una noche sin
+        // cupo; aSuite le falta una noche. Solo aStd debe volver, con su VES.
+        const { status, body } = await getJson<PageBody>(
+          `/products?destinationId=${destA}&checkIn=${checkIn}&checkOut=${checkOut}&minPriceUsd=100&maxPriceUsd=500`,
+        );
+        expect(status).toBe(200);
+        expect(body.items.map((item) => item.id)).toEqual([aStd]);
+        expect(body.items[0]).toMatchObject({
+          totalUsd: "310.00",
+          totalVes: "279000.00",
+          basePriceVes: "90000.00",
+        });
+      } finally {
+        await deleteUnreferencedGlobalRates();
+      }
+    });
+
+    it("Un solo extremo", async () => {
+      const max = await getJson<PageBody>(`/products?destinationId=${destA}&maxPriceUsd=110`);
+      expect(max.status).toBe(200);
+      expect(max.body.items.map((item) => item.id)).toEqual([aStd, aPagination]);
+
+      const min = await getJson<PageBody>(`/products?destinationId=${destA}&minPriceUsd=120`);
+      expect(min.status).toBe(200);
+      expect(min.body.items.map((item) => item.id)).toEqual([aFull, aSuite]);
+    });
+
+    it("Límites inválidos", async () => {
+      const cases = [
+        "minPriceUsd=120&maxPriceUsd=90",
+        "minPriceUsd=0",
+        "minPriceUsd=-1",
+        "minPriceUsd=1.234",
+        "maxPriceUsd=abc",
+      ];
+      for (const query of cases) {
+        const { status, body } = await getJson<ProblemBody>(`/products?${query}`);
+        expect(status, query).toBe(422);
+        expect(body.code, query).toBe("VALIDATION_ERROR");
+      }
+    });
+
+    it("Paginación dentro del filtro", async () => {
+      const path = `/products?destinationId=${destPrice}&minPriceUsd=65&maxPriceUsd=89&limit=20`;
+      const first = await getJson<PageBody>(path);
+      expect(first.status).toBe(200);
+      expect(first.body.items).toHaveLength(20);
+      expect(first.body.nextCursor).toBeTruthy();
+      expect(
+        first.body.items.every((item) => {
+          const price = Number(item.basePriceUsd);
+          return price >= 65 && price <= 89;
+        }),
+      ).toBe(true);
+
+      const second = await getJson<PageBody>(
+        `${path}&cursor=${encodeURIComponent(first.body.nextCursor ?? "")}`,
+      );
+      expect(second.status).toBe(200);
+      expect(second.body.items).toHaveLength(5);
+      expect(second.body.nextCursor).toBeNull();
+      expect(
+        second.body.items.every((item) => {
+          const price = Number(item.basePriceUsd);
+          return price >= 65 && price <= 89;
+        }),
+      ).toBe(true);
+      expect(new Set([...first.body.items, ...second.body.items].map((i) => i.id)).size).toBe(25);
+    });
+
+    it("Sin filtro de precio", async () => {
+      const { status, body } = await getJson<PageBody>(`/products?destinationId=${destPrice}`);
+      expect(status).toBe(200);
+      expect(body.items).toHaveLength(20);
+      expect(body.items[0]?.basePriceUsd).toBe("60.00");
+      expect(body.items.at(-1)?.basePriceUsd).toBe("79.00");
+      expect(body.nextCursor).toBeTruthy();
     });
   });
 

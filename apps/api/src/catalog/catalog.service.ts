@@ -267,11 +267,23 @@ export class CatalogService {
       : Prisma.sql`p."base_price_usd"`;
     const stayTotal = range ? orderPrice : Prisma.sql`NULL::numeric`;
 
-    const cursorCondition = cursor
-      ? Prisma.sql`WHERE (
-          s.order_price > ${cursor.price}::numeric
-          OR (s.order_price = ${cursor.price}::numeric AND s.id > ${cursor.id})
-        )`
+    // El rango se aplica sobre el precio visible (order_price) en la consulta
+    // exterior, antes del cursor, para que la paginación no se salte filas.
+    const outerConditions: Prisma.Sql[] = [];
+    if (query.minPriceUsd !== undefined) {
+      outerConditions.push(Prisma.sql`s.order_price >= ${query.minPriceUsd}::numeric`);
+    }
+    if (query.maxPriceUsd !== undefined) {
+      outerConditions.push(Prisma.sql`s.order_price <= ${query.maxPriceUsd}::numeric`);
+    }
+    if (cursor) {
+      outerConditions.push(Prisma.sql`(
+        s.order_price > ${cursor.price}::numeric
+        OR (s.order_price = ${cursor.price}::numeric AND s.id > ${cursor.id})
+      )`);
+    }
+    const outerWhere = outerConditions.length
+      ? Prisma.sql`WHERE ${Prisma.join(outerConditions, " AND ")}`
       : Prisma.empty;
 
     return tx.$queryRaw<OfferRow[]>(Prisma.sql`
@@ -306,7 +318,7 @@ export class CatalogService {
             JOIN "destinations" d ON d."id" = p."destination_id"
            WHERE ${Prisma.join(conditions, " AND ")}
         ) s
-        ${cursorCondition}
+        ${outerWhere}
        ORDER BY s.order_price ASC, s.id ASC
        LIMIT ${limit + 1}
     `);
