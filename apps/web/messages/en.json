@@ -9,6 +9,12 @@
     "spanish": "Español",
     "english": "English"
   },
+  "todayRate": {
+    "label": "BCV rate",
+    "unit": "VES/USD",
+    "unavailable": "Rate unavailable",
+    "loading": "BCV rate…"
+  },
   "metadata": {
     "title": "Caribe · Travel across Venezuela",
     "titleTemplate": "%s · Caribe",

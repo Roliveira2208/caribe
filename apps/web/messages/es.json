@@ -9,6 +9,12 @@
     "spanish": "Español",
     "english": "English"
   },
+  "todayRate": {
+    "label": "Tasa BCV",
+    "unit": "Bs/$",
+    "unavailable": "Tasa no disponible",
+    "loading": "Tasa BCV…"
+  },
   "metadata": {
     "title": "Caribe · Viajes por Venezuela",
     "titleTemplate": "%s · Caribe",
