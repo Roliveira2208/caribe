@@ -25,7 +25,27 @@
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "DATABASE_URL",
+        "BETTER_AUTH_URL",
+        "BETTER_AUTH_SECRET",
+        "TRUSTED_ORIGINS",
+        "REDIS_URL",
+        "API_URL",
+        "WEB_URL",
+        "ADMIN_URL",
+        "ALLOWED_IMAGE_HOSTS",
+        "COTIZAVE_API_URL",
+        "COTIZAVE_API_KEY",
+        "DOCUMENTS_DIR",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASSWORD",
+        "SMTP_FROM",
+        "PENDING_RECOVERY_MINUTES"
+      ]
     }
   }
 }

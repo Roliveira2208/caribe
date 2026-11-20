@@ -11,7 +11,8 @@ comportamiento: `openspec/specs/`. Si el código contradice una spec, el código
 - Idiomas: es (por defecto) y en, con `next-intl`.
 
 ## Comandos (ajusta aquí cuando existan)
-- `pnpm install` · `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm test:e2e`
+- Antes del primer arranque: `cp .env.example .env` y ajusta los valores; después `pnpm db:up`.
+- `pnpm install` · `pnpm dev` (Turbo: API :3002, web :3000, admin :3001) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm test:e2e`
 - `pnpm db:up` · `pnpm db:down` (PostgreSQL y Redis locales vía Docker Compose)
 - `pnpm db:generate` · `pnpm db:migrate:dev` · `pnpm db:migrate:deploy` (Prisma en `apps/api`;
   migraciones SQL versionadas, nunca `db push`)

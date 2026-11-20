@@ -37,6 +37,14 @@ El puerto SMTP es `1025` y el de la interfaz web `8025` (configurable con `MAILP
 choca con PostgreSQL (5433) ni Redis (6380). En tests no se usa SMTP real: el proveedor de
 notificaciones se dobla, así que no hace falta Mailpit para correr `pnpm test`.
 
+## Arranque local
+
+Copia la plantilla con `cp .env.example .env` y ajusta los valores (al menos la contraseña de Better
+Auth). Después, `pnpm db:up` levanta PostgreSQL, Redis y Mailpit. Con `pnpm dev`, Turbo compila y
+arranca la API en `http://localhost:3002`, la web en `http://localhost:3000` y el panel en
+`http://localhost:3001`. La API no recarga sola: reinicia `pnpm dev` tras cambiar TypeScript en
+`apps/api`.
+
 ## Demo local (F1)
 
 1. `pnpm db:up` y `pnpm db:migrate:deploy` (o `pnpm db:migrate:dev` si estás creando migraciones).
@@ -45,8 +53,9 @@ notificaciones se dobla, así que no hace falta Mailpit para correr `pnpm test`.
    publicado con 60 noches de disponibilidad desde hoy en `America/Caracas`, la tasa global del día y
    los ajustes de la agencia en modo de pago `MANUAL`. Es idempotente: la segunda corrida no crea ni
    pisa nada, e imprime al terminar qué creó y las credenciales.
-3. `pnpm dev` y abre la web en `http://localhost:3000` y el panel en `http://localhost:3001`. Para el
-   panel usa `owner@caribe-demo.example.com`; para reservar, `cliente@caribe-demo.example.com`.
+3. `pnpm dev` y abre la web en `http://localhost:3000` y el panel en `http://localhost:3001` (la API
+   queda en `http://localhost:3002`). Para el panel usa `owner@caribe-demo.example.com`; para reservar,
+   `cliente@caribe-demo.example.com`.
 
 La tasa global se crea solo si no existe una para hoy (el trabajo de tasas puede haberla escrito
 antes); el resto del inventario se busca por clave natural y se deja intacto si ya existe.
