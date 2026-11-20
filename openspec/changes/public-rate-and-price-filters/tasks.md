@@ -18,7 +18,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
 
 ## 2. Web
 
-- [ ] T-PRF-3 Helpers puros de la web (`buildCatalogQuery`, formato USD/VES con fecha valor y
+- [x] T-PRF-3 Helpers puros de la web (`buildCatalogQuery`, formato USD/VES con fecha valor y
   resolución de texto localizado) con tests unitarios primero, sin dependencias nuevas.
   Prueba: catalog › "Rango sin fechas" y exchange-rates › "Visitante sin sesión" (presentación).
 - [ ] T-PRF-4 `TodayRateBadge` en `SiteHeader`, con claves es/en y test de render para tasa disponible
