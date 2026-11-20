@@ -211,7 +211,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   huérfanas si el proceso cae entre el commit y el encolado, sin tocar agencias que fallen.
   Prueba: `pending-recovery` (simulación de caída, umbral, entregas duplicadas, fallo por agencia) y
   `jobs` (calendario y despacho del barrido).
-- [ ] T-F1-13a Web: buscador y resultados. Wireframe aprobado antes de construir.
+- [x] T-F1-13a Web: buscador y resultados. Wireframe aprobado antes de construir.
   Prueba: catalog › "Búsqueda y filtros".
 - [ ] T-F1-13b Web: detalle del hotel. Wireframe aprobado antes de construir.
   Prueba: catalog › "Detalle y disponibilidad públicos".

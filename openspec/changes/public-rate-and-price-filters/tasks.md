@@ -24,7 +24,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
 - [x] T-PRF-4 `TodayRateBadge` en `SiteHeader`, con claves es/en y test de render para tasa disponible
   y no disponible. Revisar foco, etiquetas y contraste del badge.
   Prueba: exchange-rates › "Visitante sin sesión" y "Sin tasa global".
-- [ ] T-PRF-5 Página `/[locale]/buscar` con buscador, filtros de destino/tipo/precio, resultados
+- [x] T-PRF-5 Página `/[locale]/buscar` con buscador, filtros de destino/tipo/precio, resultados
   USD+VES, estados vacíos y tipos futuros deshabilitados; actualizar los wireframes de búsqueda con
   esa nota y marcar T-F1-13a como terminada. Textos es/en y accesibilidad de teclado.
   Prueba: catalog › "Rango sin fechas", "Sin filtro de precio" y "Sin resultados" (spec base).
