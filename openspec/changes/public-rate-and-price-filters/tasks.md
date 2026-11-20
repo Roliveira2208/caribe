@@ -31,7 +31,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
 
 ## 3. Verificación
 
-- [ ] T-PRF-6 Verificación integral: `node scripts/check-specs.mjs`, `pnpm lint`, `pnpm typecheck`,
+- [x] T-PRF-6 Verificación integral: `node scripts/check-specs.mjs`, `pnpm lint`, `pnpm typecheck`,
   `pnpm test` y comprobación manual de la ruta `/es/buscar` con la agencia demo sembrada.
   Prueba: salida en verde de los cuatro comandos y resultados visibles con los filtros aplicados.
 
