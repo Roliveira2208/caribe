@@ -9,9 +9,9 @@ agencia. Cuando no exista tasa global SHALL responder 200 indicando que no hay t
 de 503, para que la web pueda mostrar solo USD.
 
 #### Scenario: Visitante sin sesión
-- GIVEN una tasa global vigente de 36,0000 con fecha valor 10/11/2026
+- GIVEN una tasa global vigente de 36.0000 con fecha valor 10/11/2026
 - WHEN un visitante sin sesión pide la tasa del día
-- THEN responde 200 con `rate` "36,0000" y `valueDate` "2026-11-10", sin datos de agencia
+- THEN responde 200 con `rate` "36.0000" y `valueDate` "2026-11-10", sin datos de agencia
 
 #### Scenario: Feriado o fin de semana
 - GIVEN la última tasa global publicada es del viernes y hoy es sábado

@@ -60,12 +60,14 @@ en `docs/wireframes/busqueda*.svg` e `inicio*.svg`.
    Las tarjetas usan un placeholder decorativo en vez de `next/image`, para no introducir configuración
    de dominios remotos en esta change.
 
-7. **Dónde vive la tasa en la web.** `SiteHeader` incluye un componente cliente `TodayRateBadge` que
-   pide `/api/rates/today` con URL relativa (rewrite de primera parte) y muestra
-   `Tasa BCV 36,00 Bs/$ · 10/11/2026` con `Intl.NumberFormat` e `Intl.DateTimeFormat` según el locale.
-   Con `available: false` no renderiza el badge. La página `/[locale]/buscar` es cliente y consulta
-   `/api/products` con la query construida por helpers puros; así las pruebas pueden renderizar con
-   `react-dom/server` sin jsdom.
+7. **Dónde vive la tasa en la web.** `SiteHeader` incluye el componente cliente `TodayRateBadge`, que
+   pide `/api/v1/rates/today` con URL relativa (el rewrite `/api/:path*` coincide con el prefijo real
+   de NestJS) y muestra `Tasa BCV 36,00 Bs/$ · 10/11/2026` con `Intl.NumberFormat` e
+   `Intl.DateTimeFormat` según el locale. El cuerpo se valida con `parseTodayRateView` antes de
+   formatearlo. Con `available: false`, o si la petición falla, muestra un badge discreto «Tasa no
+   disponible» en lugar de ocultarlo; mientras carga muestra solo «Tasa BCV…». La parte presentacional
+   es pura y se prueba con `react-dom/server` sin jsdom. La página `/[locale]/buscar` es cliente y
+   consulta `/api/v1/products` con la query construida por helpers puros.
 
 8. **Textos y accesibilidad.** Toda cadena visible sale de `messages/es.json` y `messages/en.json` con
    las mismas claves. Cada campo lleva `<label htmlFor>`; los resultados y el estado vacío usan
@@ -74,8 +76,8 @@ en `docs/wireframes/busqueda*.svg` e `inicio*.svg`.
 
 ## Risks / Trade-offs
 
-- [La tasa global no existe todavía] → el badge se oculta y las tarjetas muestran solo USD; cubierto por
-  un escenario de la spec.
+- [La tasa global no existe todavía] → el badge muestra «Tasa no disponible» y las tarjetas muestran
+  solo USD; cubierto por un escenario de la spec.
 - [Rangos de precio inválidos desde la URL] → el esquema estricto responde 422 y la web no envía
   valores que no haya validado; se prueba el caso inválido en la API.
 - [El cursor podría filtrar de más] → la condición de precio entra en el mismo `WHERE` que el cursor;
