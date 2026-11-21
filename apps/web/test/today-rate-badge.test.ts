@@ -111,12 +111,12 @@ describe("TodayRateBadge", () => {
 
   it("usa pares de texto y fondo con contraste WCAG AA", () => {
     const available = renderBadge(AVAILABLE_RATE, "es");
-    expect(available).toContain("bg-ink/40");
+    expect(available).toContain("bg-ink/70");
     expect(available).toContain("text-amber");
     expect(contrast(brandToken("amber"), brandToken("ink"))).toBeGreaterThanOrEqual(4.5);
 
     const unavailable = renderBadge(UNAVAILABLE_RATE, "es");
-    expect(unavailable).toContain("bg-ink/40");
+    expect(unavailable).toContain("bg-ink/70");
     expect(unavailable).toContain("text-bone");
     expect(contrast(brandToken("bone"), brandToken("ink"))).toBeGreaterThanOrEqual(4.5);
   });

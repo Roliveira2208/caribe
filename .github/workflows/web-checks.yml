@@ -1,0 +1,128 @@
+name: web-checks
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "packages/**"
+      - "openspec/**"
+      - "scripts/**"
+      - ".github/workflows/web-checks.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "packages/**"
+      - "openspec/**"
+      - "scripts/**"
+      - ".github/workflows/web-checks.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: caribe_dev
+      POSTGRES_PASSWORD: caribe_dev_password
+      POSTGRES_DB: caribe_dev
+      POSTGRES_PORT: 5433
+      DATABASE_URL: postgresql://caribe_dev:caribe_dev_password@localhost:5433/caribe_dev?schema=public
+      SHADOW_DATABASE_URL: postgresql://caribe_dev:caribe_dev_password@localhost:5433/caribe_shadow?schema=public
+      CARIBE_APP_DB_PASSWORD: ci-app-password
+      REDIS_PORT: 6380
+      REDIS_URL: redis://localhost:6380
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production
+      BETTER_AUTH_URL: http://localhost:3002
+      TRUSTED_ORIGINS: http://localhost:3000,http://localhost:3001
+      WEB_URL: http://localhost:3000
+      ADMIN_URL: http://localhost:3001
+      API_URL: http://localhost:3002
+      ALLOWED_IMAGE_HOSTS: images.caribe.test
+      COTIZAVE_API_URL: https://api.cotizave.com/v2/fx/VE/rates
+      COTIZAVE_API_KEY: ""
+      DOCUMENTS_DIR: /tmp/caribe-documents
+      SMTP_PORT: 1025
+      MAILPIT_UI_PORT: 8025
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.18.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Especificaciones
+        run: node scripts/check-specs.mjs
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Levantar PostgreSQL, Redis y Mailpit
+        run: |
+          cp .env.example .env
+          pnpm db:up
+          docker compose exec -T postgres psql -U caribe_dev -d caribe_dev \
+            -c "CREATE DATABASE caribe_shadow;"
+
+      - name: Preparar bases de desarrollo y de pruebas
+        run: |
+          pnpm db:migrate:deploy
+          pnpm db:app-password
+          pnpm db:test:prepare
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Preparar datos de demostración
+        run: pnpm db:seed
+
+      - name: Compilar aplicaciones
+        run: |
+          pnpm --filter @caribe/api build
+          pnpm --filter @caribe/web build
+
+      - name: Instalar Chromium para Playwright
+        run: pnpm --filter @caribe/web exec playwright install --with-deps chromium
+
+      - name: Arrancar API y web
+        run: |
+          pnpm --filter @caribe/api start > /tmp/caribe-api.log 2>&1 &
+          pnpm --filter @caribe/web start > /tmp/caribe-web.log 2>&1 &
+          for url in http://localhost:3002/api/v1/products http://localhost:3000/es; do
+            for attempt in $(seq 1 60); do
+              if curl -fsS "$url" > /dev/null; then break; fi
+              if [ "$attempt" -eq 60 ]; then
+                echo "No respondió $url"
+                exit 1
+              fi
+              sleep 2
+            done
+          done
+
+      - name: Verificar navegación
+        run: pnpm --filter @caribe/web verify:navigation
+
+      - name: Verificar contraste AA
+        run: pnpm --filter @caribe/web verify:contrast
+
+      - name: Logs de las aplicaciones si falla algo
+        if: failure()
+        run: |
+          cat /tmp/caribe-api.log || true
+          cat /tmp/caribe-web.log || true

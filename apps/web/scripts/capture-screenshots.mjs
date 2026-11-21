@@ -8,6 +8,8 @@ import { chromium } from "@playwright/test";
  * No se importa desde src/ y no forma parte del build de produccion.
  */
 const baseUrl = process.env.CARIBE_WEB_URL ?? "http://localhost:3000";
+const colorScheme = process.env.CARIBE_CAPTURE_THEME === "dark" ? "dark" : "light";
+const themeSuffix = colorScheme === "dark" ? "-dark" : "";
 const outputRoot = join(
   process.cwd(),
   "..",
@@ -222,6 +224,7 @@ for (const viewport of viewports) {
   const context = await browser.newContext({
     viewport: { width: viewport.width, height: viewport.height },
     reducedMotion: "no-preference",
+    colorScheme,
   });
   const page = await context.newPage();
   await page.route("**/_next/image**", (route) =>
@@ -247,7 +250,7 @@ for (const viewport of viewports) {
     await load(page, screen.path);
     await waitForReadyContent(page, screen);
     await page.screenshot({
-      path: join(outputRoot, `${screen.name}-${viewport.name}.png`),
+      path: join(outputRoot, `${screen.name}${themeSuffix}-${viewport.name}.png`),
     });
 
     if (screen.name === "checkout") {
@@ -257,7 +260,7 @@ for (const viewport of viewports) {
       await page.locator('[data-checkout-status="success"]').waitFor();
       assertLastBookingRequest();
       await page.screenshot({
-        path: join(outputRoot, `${screen.name}-success-${viewport.name}.png`),
+        path: join(outputRoot, `${screen.name}${themeSuffix}-success-${viewport.name}.png`),
       });
     }
 
@@ -268,7 +271,7 @@ for (const viewport of viewports) {
       );
       await page.waitForTimeout(800);
       await page.screenshot({
-        path: join(outputRoot, `${screen.name}-search-${viewport.name}.png`),
+        path: join(outputRoot, `${screen.name}${themeSuffix}-search-${viewport.name}.png`),
       });
     }
   }
@@ -279,6 +282,7 @@ if (selected.some((screen) => screen.name === "home")) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     reducedMotion: "reduce",
+    colorScheme,
   });
   const page = await context.newPage();
   await load(page, "/es");
@@ -296,7 +300,9 @@ if (selected.some((screen) => screen.name === "home")) {
   if (styles.opacity !== "1" || !noClip || !noTransform) {
     throw new Error(`Movimiento reducido incorrecto: ${JSON.stringify(styles)}`);
   }
-  await page.screenshot({ path: join(outputRoot, "home-reduced-motion-desktop.png") });
+  await page.screenshot({
+    path: join(outputRoot, `home${themeSuffix}-reduced-motion-desktop.png`),
+  });
   await context.close();
 }
 

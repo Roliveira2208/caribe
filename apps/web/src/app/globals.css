@@ -54,6 +54,13 @@
     --color-coral-ink: #ffa0a0;
     --color-teal-ink: #7adbd5;
   }
+
+  /* Los tokens *-ink son claros para texto sobre ink. En la web publica ese
+   * texto vive sobre bone: se usa ink (token aprobado) para mantener AA. */
+  .text-teal-ink,
+  .text-coral-ink {
+    color: var(--color-ink);
+  }
 }
 
 /* Ritmo compartido de la portada: una sola curva y duraciones moderadas. */

@@ -69,6 +69,13 @@ describe("identidad visual Caribe", () => {
     expect(css).toContain("::view-transition-group(*)");
   });
 
+  it("mantiene el texto de acento legible sobre bone en modo oscuro", () => {
+    const css = read("src/app/globals.css");
+    expect(css).toMatch(
+      /@media \(prefers-color-scheme: dark\) \{[\s\S]*?\.text-teal-ink,\s*\.text-coral-ink \{\s*color: var\(--color-ink\);/,
+    );
+  });
+
   it("auto-aloja las dos fuentes aprobadas", () => {
     const layout = read("src/app/[locale]/layout.tsx");
     expect(layout).toContain("next/font/local");

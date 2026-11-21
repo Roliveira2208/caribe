@@ -80,7 +80,7 @@ export function LoginForm({ locale, redirectTo }: LoginFormProps) {
             />
           </div>
           {error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-coral-ink">
               {error}
             </p>
           ) : null}

@@ -20,8 +20,8 @@ interface BadgeProps {
 
 const BASE_CLASSES =
   "inline-flex items-center rounded border px-2 py-1 text-xs leading-5 min-h-8 whitespace-nowrap";
-const AVAILABLE_CLASSES = `${BASE_CLASSES} border-amber/40 bg-ink/40 font-medium text-amber`;
-const MUTED_CLASSES = `${BASE_CLASSES} border-bone/20 bg-ink/40 text-bone`;
+const AVAILABLE_CLASSES = `${BASE_CLASSES} border-amber/40 bg-ink/70 font-medium text-amber`;
+const MUTED_CLASSES = `${BASE_CLASSES} border-bone/20 bg-ink/70 text-bone`;
 
 /**
  * Parte presentacional del badge. Es pura y se renderiza en el servidor en los

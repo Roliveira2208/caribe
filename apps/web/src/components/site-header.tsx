@@ -44,7 +44,7 @@ export async function SiteHeader() {
             <Link
               key={type}
               href={{ pathname: "/search", query: { type } }}
-              className="inline-flex min-h-9 items-center rounded-full px-3 text-sm text-bone/80 transition-colors duration-300 hover:bg-bone/10 hover:text-bone"
+              className="inline-flex min-h-9 items-center rounded-full px-3 text-sm text-bone transition-colors duration-300 hover:bg-bone/10 hover:text-bone"
             >
               {t(key)}
             </Link>

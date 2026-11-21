@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
-    "verify:navigation": "node scripts/verify-navigation.mjs"
+    "verify:navigation": "node scripts/verify-navigation.mjs",
+    "verify:contrast": "node scripts/verify-contrast.mjs"
   },
   "dependencies": {
     "@caribe/shared": "workspace:*",

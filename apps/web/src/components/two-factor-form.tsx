@@ -180,7 +180,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {step === "loading" ? <p className="text-sm text-slate-500">{t("loading")}</p> : null}
+        {step === "loading" ? <p className="text-sm text-ink">{t("loading")}</p> : null}
 
         {step === "verify" ? (
           <form className="space-y-4" onSubmit={onVerify}>
@@ -198,7 +198,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
               />
             </div>
             {error ? (
-              <div role="alert" className="space-y-1 text-sm text-red-600">
+              <div role="alert" className="space-y-1 text-sm text-coral-ink">
                 <p>{error}</p>
                 {error === t("expired") ? (
                   <Link className="underline" href="/login">
@@ -227,7 +227,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
               />
             </div>
             {error ? (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-coral-ink">
                 {error}
               </p>
             ) : null}
@@ -245,14 +245,14 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
               </div>
             ) : null}
             <div className="space-y-1 rounded-md bg-slate-100 p-3">
-              <p className="text-xs font-medium text-slate-500">{t("manualKeyTitle")}</p>
+              <p className="text-xs font-medium text-ink">{t("manualKeyTitle")}</p>
               {parsed?.account ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-ink">
                   {t("accountLabel")}: {parsed.account}
                 </p>
               ) : null}
               {parsed?.issuer ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-ink">
                   {t("issuerLabel")}: {parsed.issuer}
                 </p>
               ) : null}
@@ -283,7 +283,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
                 />
               </div>
               {error ? (
-                <div role="alert" className="space-y-1 text-sm text-red-600">
+                <div role="alert" className="space-y-1 text-sm text-coral-ink">
                   <p>{error}</p>
                   {error === t("expired") ? (
                     <Link className="underline" href="/login">
@@ -301,7 +301,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
 
         {step === "backupCodes" ? (
           <div className="space-y-4">
-            <p role="alert" className="rounded-md bg-coral-500/10 p-3 text-sm text-coral-600">
+            <p role="alert" className="rounded-md bg-coral-500/10 p-3 text-sm text-coral-ink">
               {t("backupCodesWarning")}
             </p>
             {backupCodes.length > 0 ? (
@@ -321,7 +321,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
                 </Button>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">{t("backupCodesEmpty")}</p>
+              <p className="text-sm text-ink">{t("backupCodesEmpty")}</p>
             )}
             <form className="space-y-2" onSubmit={onRegenerate}>
               <Label htmlFor="regen-password">{t("regenerateDescription")}</Label>
@@ -339,7 +339,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
               </div>
             </form>
             {error ? (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-coral-ink">
                 {error}
               </p>
             ) : null}
