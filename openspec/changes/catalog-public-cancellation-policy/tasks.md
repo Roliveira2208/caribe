@@ -11,7 +11,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
 
 ## 2. API
 
-- [ ] T-CANC-1 Añadir la función SQL `public_cancellation_policy` con `SECURITY DEFINER`,
+- [x] T-CANC-1 Añadir la función SQL `public_cancellation_policy` con `SECURITY DEFINER`,
   `search_path` fijo, revoke a `PUBLIC` y grant a `caribe_app`; comprobarlo en
   `database.test.ts` sin relajar el RLS directo de `cancellation_policies`.
   Prueba: «Lectura pública de la política» y «Sin acceso directo a la tabla».

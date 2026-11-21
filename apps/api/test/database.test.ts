@@ -356,6 +356,35 @@ describe("catálogo y disponibilidad (T-F1-1b)", () => {
   });
 });
 
+describe("política de cancelación pública (catalog-public-cancellation-policy)", () => {
+  function policyMigration(): Migration | undefined {
+    return readMigrations().find(({ sql }) =>
+      sql.includes('CREATE FUNCTION "public_cancellation_policy"'),
+    );
+  }
+
+  it("define una función de solo lectura para el detalle público", () => {
+    const sql = stripSqlComments(policyMigration()?.sql ?? "");
+    expect(sql).toContain('CREATE FUNCTION "public_cancellation_policy"');
+    expect(sql).toMatch(/name\s+TEXT/);
+    expect(sql).toMatch(/rules\s+JSONB/);
+    expect(sql).toContain("SECURITY DEFINER");
+    expect(sql).toContain("STABLE");
+    expect(sql).toContain("SET search_path = public, pg_temp");
+    expect(sql).toContain("p.\"status\" = 'PUBLISHED'");
+    expect(sql).toContain("p.\"deleted_at\" IS NULL");
+    expect(sql).toContain('REVOKE ALL ON FUNCTION "public_cancellation_policy"(text) FROM PUBLIC');
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION "public_cancellation_policy"(text) TO caribe_app');
+  });
+
+  it("no añade acceso directo a la tabla desde el contexto público", () => {
+    const sql = stripSqlComments(policyMigration()?.sql ?? "");
+    expect(sql).not.toContain('CREATE POLICY "cancellation_policies_public"');
+    expect(sql).not.toContain("ALTER TABLE \"cancellation_policies\"");
+    expect(sql).toContain('JOIN "products" p ON p."cancellation_policy_id" = cp."id"');
+  });
+});
+
 describe("reservas, pagos y documentos (T-F1-1c)", () => {
   function transactionsSchema(): string {
     return readFileSync(schemaPath, "utf-8");
