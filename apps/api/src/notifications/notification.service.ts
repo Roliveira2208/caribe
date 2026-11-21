@@ -46,6 +46,18 @@ export interface SendResult {
   error: string | null;
 }
 
+/** Instantánea leída bajo RLS; distingue "ya enviado" de "sin reserva que enviar". */
+type FrozenNotification =
+  | { alreadySent: true; recipient: string }
+  | { alreadySent: false; bookingMissing: true }
+  | {
+      alreadySent: false;
+      bookingMissing?: false;
+      recipient: string;
+      subject: string;
+      body: string;
+    };
+
 /** Opciones para ejecutar reintentos sin dormir de verdad en las pruebas. */
 export interface NotificationRetryOptions {
   attempts?: number;
@@ -137,6 +149,12 @@ export class NotificationService {
     if (snapshot.alreadySent) {
       return { status: "SENT", attempts: 0, sent: false, error: null };
     }
+    // Sin reserva no hay nada que congelar ni enviar: fallo terminal, sin reintentos.
+    if (snapshot.bookingMissing) {
+      const error = "La reserva del aviso ya no existe";
+      await this.recordFailure(notificationId, tenantId, error, true);
+      return { status: "FAILED", attempts: 1, sent: false, error };
+    }
     // Correo inválido: fallo definitivo, sin llamar al proveedor ni reintentar.
     if (!isEmail(snapshot.recipient)) {
       const error = "El destinatario no tiene un correo válido";
@@ -168,19 +186,17 @@ export class NotificationService {
     tx: Prisma.TransactionClient,
     notificationId: string,
     tenantId: string,
-  ): Promise<
-    | { alreadySent: true; recipient: string }
-    | { alreadySent: false; recipient: string; subject: string; body: string }
-  > {
+  ): Promise<FrozenNotification> {
     const log = await tx.notificationLog.findUniqueOrThrow({ where: { id: notificationId } });
     if (log.tenantId !== tenantId) throw new Error("El aviso pertenece a otra agencia");
     if (log.status === "SENT") return { alreadySent: true, recipient: log.recipient };
 
     const bookingId = log.dedupeKey.slice(log.dedupeKey.indexOf(":") + 1);
-    const booking = await tx.booking.findFirstOrThrow({
+    const booking = await tx.booking.findFirst({
       where: { id: bookingId, tenantId },
       select: { code: true, totalUsd: true },
     });
+    if (!booking) return { alreadySent: false, bookingMissing: true };
     const item = await tx.bookingItem.findFirst({
       where: { bookingId, tenantId },
       orderBy: [{ id: "asc" }],

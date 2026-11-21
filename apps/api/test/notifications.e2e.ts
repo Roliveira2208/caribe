@@ -6,6 +6,7 @@ import { generateBookingCode } from "../src/bookings/booking-code.js";
 import { createApp, type ApiApplication } from "../src/bootstrap.js";
 import { BookingExpirationService } from "../src/jobs/booking-expiration.service.js";
 import { JobsScheduler } from "../src/jobs/jobs.scheduler.js";
+import { PendingRecoveryService } from "../src/jobs/pending-recovery.service.js";
 import {
   NOTIFICATION_PROVIDER,
   type NotificationProvider,
@@ -36,6 +37,7 @@ describe("notificaciones de confirmación", () => {
   let provider: NotificationProvider;
   let notifications: NotificationService;
   let expiration: BookingExpirationService;
+  let recovery: PendingRecoveryService;
   let rates: ExchangeRateService;
 
   let manualTenant: string;
@@ -80,6 +82,7 @@ describe("notificaciones de confirmación", () => {
     provider = app.get(NOTIFICATION_PROVIDER);
     notifications = app.get(NotificationService);
     expiration = app.get(BookingExpirationService);
+    recovery = app.get(PendingRecoveryService);
     rates = app.get(ExchangeRateService);
 
     const admin = await userWithTotp(baseUrl, `notif-admin-${suffix}@example.com`);
@@ -415,6 +418,75 @@ describe("notificaciones de confirmación", () => {
       bookingId,
     ]);
     expect(stored.rows[0]?.status).toBe("CONFIRMED");
+  });
+
+  it("si la reserva desaparece, el aviso queda FAILED sin llamar al proveedor", async () => {
+    // La limpieza de un e2e ya borró la reserva, pero el aviso quedó PENDING.
+    const bookingId = randomUUID();
+    await db.query(
+      `INSERT INTO "notification_logs"
+         (id, tenant_id, dedupe_key, template, recipient, locale, status, attempts, created_at)
+       VALUES ($1, $2, $3, 'BOOKING_CONFIRMED', $4, 'es', 'PENDING', 0, now())`,
+      [randomUUID(), manualTenant, dedupeKey(bookingId), emailEs],
+    );
+    const log = await logFor(bookingId);
+    expect(log?.status).toBe("PENDING");
+
+    let slept = false;
+    const result = await notifications.sendWithRetries(log!.id, manualTenant, {
+      sleep: async () => {
+        slept = true;
+      },
+    });
+
+    expect(result).toMatchObject({ status: "FAILED", attempts: 1, sent: false });
+    expect(result.error).toContain("reserva");
+    expect(provider.send).not.toHaveBeenCalled();
+    expect(slept).toBe(false);
+    expect(await logFor(bookingId)).toMatchObject({
+      status: "FAILED",
+      attempts: 1,
+      last_error: result.error,
+    });
+  });
+
+  it("el barrido no reencola un aviso huérfano ya marcado FAILED", async () => {
+    const failedBooking = randomUUID();
+    const pendingBooking = randomUUID();
+    await db.query(
+      `INSERT INTO "notification_logs"
+         (id, tenant_id, dedupe_key, template, recipient, locale, status, attempts, created_at)
+       VALUES ($1, $2, $3, 'BOOKING_CONFIRMED', $4, 'es', 'PENDING', 0, now() - interval '10 minutes'),
+              ($5, $2, $6, 'BOOKING_CONFIRMED', $4, 'es', 'PENDING', 0, now() - interval '10 minutes')`,
+      [
+        randomUUID(),
+        manualTenant,
+        dedupeKey(failedBooking),
+        emailEs,
+        randomUUID(),
+        dedupeKey(pendingBooking),
+      ],
+    );
+    const failedLog = await logFor(failedBooking);
+    expect((await notifications.sendWithRetries(failedLog!.id, manualTenant, { sleep: noSleep })).status).toBe(
+      "FAILED",
+    );
+
+    const reencolados: string[] = [];
+    const summary = await recovery.recoverStalePending(
+      {
+        document: async () => undefined,
+        notification: async (payload) => {
+          reencolados.push(payload.notificationId);
+        },
+      },
+      new Date(),
+      [manualTenant],
+      5,
+    );
+
+    expect(summary.notifications).toBe(1);
+    expect(reencolados).toEqual([(await logFor(pendingBooking))?.id]);
   });
 
   it("no se envían avisos de rechazo, cancelación ni expiración en F1", async () => {
