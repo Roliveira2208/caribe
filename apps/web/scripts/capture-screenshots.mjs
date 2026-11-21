@@ -94,6 +94,7 @@ const mockBooking = {
 
 const screens = [
   { name: "home", path: "/es" },
+  { name: "featured", path: "/es" },
   { name: "search", path: "/es/search" },
   { name: "detail", path: `/es/hotels/${productId}` },
   {
@@ -177,6 +178,11 @@ function assertLastBookingRequest() {
 }
 
 async function waitForReadyContent(page, screen) {
+  if (screen.name === "featured") {
+    await page.locator('[data-featured-status="ready"]').waitFor();
+    await page.locator("#destacados").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+  }
   if (screen.name === "search") {
     // El catálogo llega por API: esperar a una tarjeta o al error evita
     // documentar el estado de carga como si fuera la pantalla final.

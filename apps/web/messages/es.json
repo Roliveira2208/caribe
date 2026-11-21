@@ -126,7 +126,18 @@
     "featureRatesTitle": "Dólares y bolívares",
     "featureRatesDescription": "Cada precio muestra su equivalente en bolívares a la tasa del día.",
     "featureOfflineTitle": "Reservas a mano",
-    "featureOfflineDescription": "Consulta el detalle de cada reserva desde tu teléfono."
+    "featureOfflineDescription": "Consulta el detalle de cada reserva desde tu teléfono.",
+    "scrollToFeatured": "Ir a los alojamientos destacados",
+    "featuredTitle": "Alojamientos destacados",
+    "featuredSubtitle": "Publicados por agencias venezolanas, con el precio que ellas mismas publican.",
+    "featuredLoading": "Cargando alojamientos destacados…",
+    "featuredEmpty": "Todavía no hay alojamientos publicados. Vuelve a consultar pronto.",
+    "featuredViewDetail": "Ver alojamiento",
+    "featuredRateLabel": "Equivalente BCV",
+    "featuredTour": "Tours",
+    "featuredPackage": "Paquetes",
+    "featuredFlight": "Vuelos",
+    "featuredComingSoon": "Próximamente"
   },
   "login": {
     "title": "Iniciar sesión",

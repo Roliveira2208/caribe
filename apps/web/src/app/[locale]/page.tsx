@@ -4,6 +4,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@caribe/shared";
 import { Link } from "@/i18n/navigation";
 import { alternateLinks } from "@/i18n/metadata";
 import { HomeSearchPanel } from "@/components/home-search-panel";
+import { FeaturedStaysPanel } from "@/components/featured-stays";
 import { KineticComposition } from "@/components/kinetic-composition";
 import { ScrollCue } from "@/components/scroll-cue";
 import { SearchReveal } from "@/components/search-reveal";
@@ -59,7 +60,7 @@ export default async function HomePage({ params }: HomePageProps) {
         <ScrollCue targetId="search" label={t("scrollToSearch")} />
       </section>
 
-      <section id="search" className="search-stage scroll-target py-16">
+      <section id="search" className="search-stage scroll-target relative py-16">
         <noscript>
           <style>{`.search-reveal[data-reveal="pending"]{opacity:1;clip-path:none;transform:none}.search-reveal .reveal-field{opacity:1;transform:none}`}</style>
         </noscript>
@@ -71,13 +72,16 @@ export default async function HomePage({ params }: HomePageProps) {
             </div>
           </div>
         </SearchReveal>
+        <ScrollCue targetId="destacados" label={t("scrollToFeatured")} tone="on-light" />
       </section>
+
+      <FeaturedStaysPanel locale={locale} />
 
       <section className="border-t border-ink/10 bg-bone py-14">
         <div className="mx-auto max-w-6xl px-5 lg:px-10">
           <ul className="grid gap-6 sm:grid-cols-3">
             {features.map((feature) => (
-              <li key={feature.title} className="space-y-2 border-t-4 border-teal pt-4">
+              <li key={feature.title} className="scroll-rise space-y-2 border-t-4 border-teal pt-4">
                 <h3 className="font-display text-h4 text-ink">{feature.title}</h3>
                 <p className="text-sm text-ink/70">{feature.description}</p>
               </li>

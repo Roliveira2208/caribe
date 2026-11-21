@@ -195,11 +195,44 @@ try {
   });
   await cue.waitFor({ state: "hidden" });
   console.log("OK   /es: flecha se retira al salir del hero");
+
+  // Segunda flecha a destacados y tarjetas con datos de la API.
+  await home.goto(`${baseUrl}/es`, { waitUntil: "load" });
+  await home.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    document.querySelector("#search")?.scrollIntoView();
+  });
+  // La sección crece al cargar los productos: esperar evita que el ancla se
+  // quede cortada por la altura previa del documento.
+  await home.locator('[data-featured-status="ready"]').waitFor();
+  const featuredCue = home.locator('a[href="#destacados"]');
+  await featuredCue.waitFor({ state: "visible" });
+  await featuredCue.click();
+  await home.waitForFunction(() => location.hash === "#destacados");
+  const featuredTop = await home.locator("#destacados").evaluate((node) => node.getBoundingClientRect().top);
+  if (Math.abs(featuredTop) > 120) {
+    failures.push(`/es: la flecha a destacados no llegó a la sección (top=${featuredTop})`);
+  } else {
+    console.log("OK   /es: flecha a destacados");
+  }
+  await home.locator('[data-featured-status="ready"]').waitFor();
+  const cards = home.locator("#destacados article");
+  const cardCount = await cards.count();
+  const firstTitle = cardCount > 0 ? (await cards.first().locator("h3").innerText()).trim() : "";
+  if (cardCount === 0 || firstTitle.length === 0) {
+    failures.push("/es: no hay destacados con datos reales");
+  } else {
+    console.log(`OK   /es: ${cardCount} destacados reales (${firstTitle})`);
+  }
+  const soonCount = await home.locator("#destacados").getByText("Próximamente", { exact: true }).count();
+  if (soonCount !== 3) failures.push(`/es: ${soonCount} etiquetas Próximamente (esperadas 3)`);
+  else console.log("OK   /es: Tours, Paquetes y Vuelos marcados como próximamente");
 } finally {
   await browser.close();
 }
 
 if (failures.length > 0) {
+  for (const failure of failures) console.error(`FAIL ${failure}`);
   console.error(`\n${failures.length} ruta(s) fallaron.`);
   process.exit(1);
 }

@@ -126,7 +126,18 @@
     "featureRatesTitle": "Dollars and bolívars",
     "featureRatesDescription": "Every price shows its bolívar equivalent at today's rate.",
     "featureOfflineTitle": "Bookings at hand",
-    "featureOfflineDescription": "Check the details of each booking from your phone."
+    "featureOfflineDescription": "Check the details of each booking from your phone.",
+    "scrollToFeatured": "Go to featured stays",
+    "featuredTitle": "Featured stays",
+    "featuredSubtitle": "Published by Venezuelan agencies, at the price they publish.",
+    "featuredLoading": "Loading featured stays…",
+    "featuredEmpty": "There are no published stays yet. Check back soon.",
+    "featuredViewDetail": "View stay",
+    "featuredRateLabel": "BCV equivalent",
+    "featuredTour": "Tours",
+    "featuredPackage": "Packages",
+    "featuredFlight": "Flights",
+    "featuredComingSoon": "Coming soon"
   },
   "login": {
     "title": "Sign in",
