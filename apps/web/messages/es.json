@@ -43,6 +43,26 @@
     "viewDetail": "Ver detalle",
     "rateLabel": "Tasa BCV"
   },
+  "detail": {
+    "metaTitle": "Detalle del alojamiento",
+    "metaDescription": "Consulta la disponibilidad, los precios y la política de cancelación de cada alojamiento en Caribe.",
+    "loading": "Cargando el detalle…",
+    "error": "No pudimos cargar el detalle. Intenta de nuevo.",
+    "notFound": "Este alojamiento ya no está disponible.",
+    "backToSearch": "Volver a la búsqueda",
+    "noPhotos": "Sin fotos disponibles",
+    "basePrice": "Precio base por noche",
+    "vesLabel": "Equivalente BCV",
+    "amenitiesTitle": "Servicios del alojamiento",
+    "availabilityTitle": "Disponibilidad por noche",
+    "availabilityEmpty": "No hay noches disponibles en este rango.",
+    "remaining": "habitaciones libres",
+    "cancellationTitle": "Política de cancelación",
+    "ruleTemplate": "{hours} horas antes, {percent} % de devolución",
+    "cancellationNone": "Este alojamiento no publica una política de cancelación.",
+    "reserve": "Reservar",
+    "unavailable": "Sin cupo para reservar"
+  },
   "metadata": {
     "title": "Caribe: viajes por Venezuela",
     "titleTemplate": "%s | Caribe",

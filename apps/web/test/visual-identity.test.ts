@@ -104,7 +104,7 @@ describe("copy sin decoradores", () => {
   it("no usa punto medio, guion largo ni flecha de relleno en las pantallas F1", () => {
     for (const locale of ["es", "en"] as const) {
       const messages = JSON.parse(read(`messages/${locale}.json`)) as Record<string, unknown>;
-      for (const key of ["nav", "todayRate", "search", "metadata", "home"]) {
+      for (const key of ["nav", "todayRate", "search", "detail", "metadata", "home"]) {
         const section = messages[key];
         const text = JSON.stringify(section);
         expect(text, `${locale}.${key}`).not.toContain("·");

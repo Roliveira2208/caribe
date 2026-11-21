@@ -9,11 +9,73 @@ import { chromium } from "@playwright/test";
  */
 const baseUrl = process.env.CARIBE_WEB_URL ?? "http://localhost:3000";
 const outputRoot = join(process.cwd(), "..", "..", "docs", "plans", "screenshots", "f1-visual-identity");
+
+async function fetchJson(path) {
+  const response = await fetch(`${baseUrl}${path}`);
+  if (!response.ok) throw new Error(`No se pudo consultar ${path}: HTTP ${response.status}`);
+  return response.json();
+}
+
+function nextDay(night) {
+  const date = new Date(`${night}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+async function firstOpenNight(productId) {
+  const availability = await fetchJson(
+    `/api/v1/products/${encodeURIComponent(productId)}/availability`,
+  );
+  const night = availability.nights?.find((item) => Number(item.remaining) > 0)?.night;
+  return typeof night === "string" ? night : null;
+}
+
+/**
+ * Resuelve un producto publicado real con cupo, priorizando el que tiene fotos.
+ * Los IDs y las fechas del seed cambian entre corridas: fijarlos haría capturas
+ * engañosas o pantallas sin CTA.
+ */
+async function resolveProduct() {
+  const catalog = await fetchJson("/api/v1/products?limit=50");
+  const candidates = [];
+  for (const item of Array.isArray(catalog.items) ? catalog.items : []) {
+    if (typeof item.id !== "string") continue;
+    const night = await firstOpenNight(item.id);
+    if (night) {
+      candidates.push({
+        id: item.id,
+        night,
+        images: Array.isArray(item.attributes?.images) ? item.attributes.images.length : 0,
+      });
+    }
+  }
+  if (candidates.length === 0) throw new Error("No hay productos públicos con cupo para capturar");
+  candidates.sort((a, b) => b.images - a.images);
+  return candidates[0];
+}
+
+const overrideId = process.env.CARIBE_CAPTURE_PRODUCT_ID;
+const resolved = overrideId
+  ? { id: overrideId, night: await firstOpenNight(overrideId), images: 0 }
+  : await resolveProduct();
+if (!resolved.night) throw new Error(`El producto ${resolved.id} no tiene noches con cupo`);
+
+const checkIn = resolved.night;
+const checkOut = nextDay(checkIn);
+const productId = resolved.id;
+
+// Las imágenes del seed apuntan a un host de ejemplo. Se intercepta el
+// optimizador local para documentar la galería sin depender de ese host.
+const mockImage = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="#0e2a3d"/><rect width="420" height="900" fill="#f4a300"/><rect x="780" width="420" height="900" fill="#1fa6a0"/><circle cx="600" cy="450" r="210" fill="#fbf7ef"/></svg>`;
+
 const screens = [
   { name: "home", path: "/es" },
   { name: "search", path: "/es/buscar" },
-  { name: "detail", path: "/es/hoteles/offer-1" },
-  { name: "checkout", path: "/es/checkout/offer-1" },
+  { name: "detail", path: `/es/hoteles/${productId}` },
+  {
+    name: "checkout",
+    path: `/es/checkout/${productId}?checkIn=${checkIn}&checkOut=${checkOut}&guests=1`,
+  },
 ];
 const viewports = [
   { name: "desktop", width: 1440, height: 900 },
@@ -38,9 +100,23 @@ async function load(page, path) {
 
 async function waitForReadyContent(page, screen) {
   if (screen.name === "search") {
-    // El catalogo llega por API: esperar a una tarjeta o al error evita
+    // El catálogo llega por API: esperar a una tarjeta o al error evita
     // documentar el estado de carga como si fuera la pantalla final.
     await page.locator("article, [role='alert']").first().waitFor();
+  }
+  if (screen.name === "detail") {
+    // El marcador lo emite la vista, no el Suspense: `form` también aparece en
+    // el header y provocaría una captura prematura.
+    await page
+      .locator('[data-detail-status="ready"], [data-detail-status="error"], [data-detail-status="not-found"]')
+      .first()
+      .waitFor();
+  }
+  if (screen.name === "checkout") {
+    await page
+      .locator('[data-checkout-status="ready"], [data-checkout-status="error"], [data-checkout-status="success"]')
+      .first()
+      .waitFor();
   }
 }
 
@@ -50,6 +126,9 @@ for (const viewport of viewports) {
     reducedMotion: "no-preference",
   });
   const page = await context.newPage();
+  await page.route("**/_next/image**", (route) =>
+    route.fulfill({ status: 200, contentType: "image/svg+xml", body: mockImage }),
+  );
 
   for (const screen of selected) {
     await load(page, screen.path);

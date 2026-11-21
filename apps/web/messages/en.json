@@ -43,6 +43,26 @@
     "viewDetail": "View detail",
     "rateLabel": "BCV rate"
   },
+  "detail": {
+    "metaTitle": "Stay details",
+    "metaDescription": "Check availability, prices and the cancellation policy for every stay on Caribe.",
+    "loading": "Loading details…",
+    "error": "We couldn't load the details. Try again.",
+    "notFound": "This stay is no longer available.",
+    "backToSearch": "Back to search",
+    "noPhotos": "No photos available",
+    "basePrice": "Base price per night",
+    "vesLabel": "BCV equivalent",
+    "amenitiesTitle": "Stay amenities",
+    "availabilityTitle": "Nightly availability",
+    "availabilityEmpty": "No nights available for this range.",
+    "remaining": "rooms left",
+    "cancellationTitle": "Cancellation policy",
+    "ruleTemplate": "{hours} hours before, {percent}% refund",
+    "cancellationNone": "This stay does not publish a cancellation policy.",
+    "reserve": "Reserve",
+    "unavailable": "No rooms left to book"
+  },
   "metadata": {
     "title": "Caribe: travel across Venezuela",
     "titleTemplate": "%s | Caribe",
