@@ -13,8 +13,6 @@
   },
   "todayRate": {
     "label": "BCV rate",
-    "unit": "VES/USD",
-    "datePrefix": "on",
     "unavailable": "Rate unavailable",
     "loading": "BCV rate…"
   },

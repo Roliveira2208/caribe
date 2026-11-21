@@ -19,16 +19,12 @@ const appRoot = fileURLToPath(new URL("..", import.meta.url));
 
 const labels: TodayRateBadgeLabels = {
   label: "Tasa BCV",
-  unit: "Bs/$",
-  datePrefix: "del",
   unavailable: "Tasa no disponible",
   loading: "Tasa BCV…",
 };
 
 const enLabels: TodayRateBadgeLabels = {
   label: "BCV rate",
-  unit: "VES/USD",
-  datePrefix: "on",
   unavailable: "Rate unavailable",
   loading: "BCV rate…",
 };
@@ -73,20 +69,23 @@ function brandToken(name: string): string {
 }
 
 describe("TodayRateBadge", () => {
-  it("muestra la tasa y la fecha valor corta en espanol", () => {
+  it("muestra solo BCV y el monto en espanol", () => {
     const html = renderBadge(AVAILABLE_RATE, "es");
     expect(html).toContain(labels.label);
     expect(html).toContain("36,00");
-    expect(html).toContain(labels.unit);
-    expect(html).toContain("del 10 nov");
+    expect(html).not.toContain("Bs/$");
+    expect(html).not.toContain("del");
+    expect(html).not.toContain("10 nov");
     expect(html).not.toContain("·");
     expect(html).not.toContain(labels.unavailable);
   });
 
-  it("usa el formato del locale en ingles", () => {
+  it("usa el formato del locale en ingles sin fecha valor", () => {
     const html = renderBadge(AVAILABLE_RATE, "en", enLabels);
     expect(html).toContain("36.00");
-    expect(html).toContain("on Nov 10");
+    expect(html).not.toContain("VES/USD");
+    expect(html).not.toContain("Nov 10");
+    expect(html).not.toContain(" on ");
     expect(html).not.toContain("·");
   });
 
@@ -95,6 +94,7 @@ describe("TodayRateBadge", () => {
     expect(html).toContain(labels.unavailable);
     expect(html).not.toContain("36,00");
     expect(html).not.toContain("10 nov");
+    expect(html).not.toContain("Bs/$");
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
   });

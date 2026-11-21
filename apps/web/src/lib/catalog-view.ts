@@ -105,19 +105,3 @@ export function formatValueDate(value: string, locale: Locale): string {
     year: "numeric",
   }).format(new Date(`${value}T00:00:00.000Z`));
 }
-
-/**
- * Fecha valor corta para el badge del header: "21 nov" en es, "Nov 21" en en.
- * Se ensambla con las partes del formateador porque es-VE anade guion y punto
- * al mes abreviado ("21-nov."), decoradores que la identidad no permite.
- */
-export function formatShortValueDate(value: string, locale: Locale): string {
-  const parts = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-    timeZone: "UTC",
-    day: "2-digit",
-    month: "short",
-  }).formatToParts(new Date(`${value}T00:00:00.000Z`));
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const month = (parts.find((part) => part.type === "month")?.value ?? "").replace(/[.-]/g, "");
-  return locale === "es" ? `${day} ${month}` : `${month} ${day}`;
-}

@@ -93,6 +93,7 @@ const mockBooking = {
 };
 
 const screens = [
+  { name: "header", path: "/es" },
   { name: "home", path: "/es" },
   { name: "featured", path: "/es" },
   { name: "search", path: "/es/search" },
@@ -178,6 +179,16 @@ function assertLastBookingRequest() {
 }
 
 async function waitForReadyContent(page, screen) {
+  if (screen.name === "header") {
+    // En movil las herramientas estan plegadas: abrir el menu documenta el
+    // badge y el selector de idioma ademas del wordmark.
+    const menu = page.locator('.site-header button[aria-controls="site-tools"]');
+    if (await menu.isVisible()) {
+      await menu.click();
+      await page.locator("#site-tools").waitFor({ state: "visible" });
+    }
+    await page.locator('.site-header [role="status"]').first().waitFor();
+  }
   if (screen.name === "featured") {
     await page.locator('[data-featured-status="ready"]').waitFor();
     await page.locator("#destacados").scrollIntoViewIfNeeded();

@@ -84,6 +84,38 @@ try {
     await context.close();
   }
 
+  // Badge compacto: solo BCV y el monto; la fecha valor sigue en el detalle.
+  for (const locale of locales) {
+    const page = await browser.newPage();
+    await page.goto(`${baseUrl}/${locale}`, { waitUntil: "domcontentloaded" });
+    const badge = page.locator('.site-header [role="status"]').first();
+    await badge.waitFor();
+    // La tasa llega por fetch: el texto provisional termina en elipsis.
+    await page
+      .waitForFunction(
+        () => {
+          const node = document.querySelector('.site-header [role="status"]');
+          return Boolean(node) && !/…|\.\.\.$/.test(node.textContent ?? "");
+        },
+        null,
+        { timeout: 8000 },
+      )
+      .catch(() => {});
+    const text = (await badge.innerText()).trim();
+    const label = locale === "es" ? "Tasa BCV" : "BCV rate";
+    const hasDateOrUnit = /(?:Bs\/\$|VES\/USD|\bdel\b|\bon\b|\b\d{1,2}\s+[a-z]{3}\b)/i.test(text);
+    const idle = /(?:no disponible|unavailable|…)$/.test(text);
+    const amount = text.startsWith(label) ? text.slice(label.length).trim() : "";
+    const compact = idle || /^\d+[.,]\d{2}$/.test(amount);
+    if (hasDateOrUnit || !compact) {
+      failures.push(`/${locale}: badge no compacto (${text})`);
+      console.error(`FAIL /${locale}: badge no compacto (${text})`);
+    } else {
+      console.log(`OK   /${locale}: badge compacto (${text})`);
+    }
+    await page.close();
+  }
+
   // Escena del buscador: fondo local, 100vh y mismo formulario que /search.
   const stagePage = await browser.newPage();
   await stagePage.goto(`${baseUrl}/es`, { waitUntil: "load" });

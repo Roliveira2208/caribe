@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { Locale } from "@caribe/shared";
-import { formatRate, formatShortValueDate } from "@/lib/catalog-view";
+import { formatRate } from "@/lib/catalog-view";
 import { parseTodayRateView, UNAVAILABLE_RATE, type TodayRateView } from "@/lib/today-rate";
 
 /** Textos visibles del badge, ya traducidos por el servidor. */
 export interface TodayRateBadgeLabels {
   label: string;
-  unit: string;
-  datePrefix: string;
   unavailable: string;
   loading: string;
 }
@@ -30,8 +28,9 @@ const MUTED_CLASSES = `${BASE_CLASSES} border-bone/20 bg-ink/40 text-bone`;
  * tests con `react-dom/server`: no consulta el DOM ni usa hooks.
  */
 export function TodayRateBadgeContent({ view, locale, labels }: BadgeProps) {
-  if (view?.available && view.rate !== null && view.valueDate !== null) {
-    const text = `${labels.label} ${formatRate(view.rate, locale)} ${labels.unit} ${labels.datePrefix} ${formatShortValueDate(view.valueDate, locale)}`;
+  // Solo BCV y el monto: la fecha valor pertenece al detalle, no a la cabecera.
+  if (view?.available && view.rate !== null) {
+    const text = `${labels.label} ${formatRate(view.rate, locale)}`;
     return (
       <p role="status" aria-live="polite" className={AVAILABLE_CLASSES}>
         {text}

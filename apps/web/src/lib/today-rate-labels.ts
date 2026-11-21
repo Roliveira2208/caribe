@@ -11,8 +11,6 @@ export async function loadTodayRateLabels(): Promise<TodayRateBadgeLabels> {
   const t = await getTranslations("todayRate");
   return {
     label: t("label"),
-    unit: t("unit"),
-    datePrefix: t("datePrefix"),
     unavailable: t("unavailable"),
     loading: t("loading"),
   };

@@ -13,8 +13,6 @@
   },
   "todayRate": {
     "label": "Tasa BCV",
-    "unit": "Bs/$",
-    "datePrefix": "del",
     "unavailable": "Tasa no disponible",
     "loading": "Tasa BCV…"
   },
