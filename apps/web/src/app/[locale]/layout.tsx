@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
@@ -6,6 +7,29 @@ import { routing } from "@/i18n/routing";
 import { alternateLinks, siteUrl } from "@/i18n/metadata";
 import { SiteHeader } from "@/components/site-header";
 import "../globals.css";
+
+const clashDisplay = localFont({
+  src: [
+    { path: "../../../public/fonts/clash-display-500.woff2", weight: "500" },
+    { path: "../../../public/fonts/clash-display-600.woff2", weight: "600" },
+    { path: "../../../public/fonts/clash-display-700.woff2", weight: "700" },
+  ],
+  variable: "--font-clash-display",
+  display: "swap",
+  fallback: ["sans-serif"],
+});
+
+const generalSans = localFont({
+  src: [
+    { path: "../../../public/fonts/general-sans-400.woff2", weight: "400" },
+    { path: "../../../public/fonts/general-sans-500.woff2", weight: "500" },
+    { path: "../../../public/fonts/general-sans-600.woff2", weight: "600" },
+    { path: "../../../public/fonts/general-sans-700.woff2", weight: "700" },
+  ],
+  variable: "--font-general-sans",
+  display: "swap",
+  fallback: ["sans-serif"],
+});
 
 interface LocaleLayoutProps {
   children: React.ReactNode;
@@ -40,11 +64,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   const messages = await getMessages();
   return (
-    <html lang={locale}>
+    <html lang={locale} className={`${clashDisplay.variable} ${generalSans.variable}`}>
       <body className="flex min-h-dvh flex-col">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <SiteHeader />
-          <main className="flex flex-1 flex-col items-center px-4 py-10">{children}</main>
+          <main className="flex flex-1 flex-col">{children}</main>
         </NextIntlClientProvider>
       </body>
     </html>

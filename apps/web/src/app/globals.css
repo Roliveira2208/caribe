@@ -1,24 +1,147 @@
 @import "tailwindcss";
 
 /*
- * Tokens de marca (Tailwind v4 @theme): paleta caribe (aguas turquesas) para
- * la web publica. Los componentes ui/* consumen estas variables.
+ * Identidad Caribe (change f1-visual-identity). El color ordena: azul profundo
+ * como base, ambar como acento, teal como apoyo y hueso como fondo claro.
+ * La escala tipografica usa las fuentes auto-alojadas del layout.
  */
 @theme {
-  --color-brand-50: #ecfeff;
-  --color-brand-100: #cffafe;
-  --color-brand-200: #a5f3fc;
-  --color-brand-300: #67e8f9;
-  --color-brand-400: #22d3ee;
-  --color-brand-500: #06b6d4;
-  --color-brand-600: #0891b2;
-  --color-brand-700: #0e7490;
-  --color-brand-800: #155e75;
-  --color-brand-900: #164e63;
-  --color-coral-500: #f97316;
-  --color-coral-600: #ea580c;
+  --font-display: var(--font-clash-display), "Clash Display", sans-serif;
+  --font-body: var(--font-general-sans), "General Sans", sans-serif;
+
+  --color-ink: #0e2a3d;
+  --color-amber: #f4a300;
+  --color-teal: #1fa6a0;
+  --color-bone: #fbf7ef;
+  --color-coral: #d64545;
+  --color-coral-ink: #a82f2f;
+  --color-teal-ink: #126f6b;
+
+  --text-display: clamp(3.25rem, 7vw, 5.5rem);
+  --text-display--line-height: 0.98;
+  --text-display--letter-spacing: -0.04em;
+  --text-h1: clamp(2.5rem, 5vw, 4rem);
+  --text-h1--line-height: 1.02;
+  --text-h1--letter-spacing: -0.035em;
+  --text-h2: clamp(2rem, 3.5vw, 3rem);
+  --text-h2--line-height: 1.08;
+  --text-h2--letter-spacing: -0.025em;
+  --text-h3: clamp(1.5rem, 2.4vw, 2rem);
+  --text-h3--line-height: 1.15;
+  --text-h3--letter-spacing: -0.02em;
+  --text-h4: 1.25rem;
+  --text-h4--line-height: 1.25;
+  --text-h4--letter-spacing: -0.01em;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.6;
+  --text-body-lg--letter-spacing: -0.01em;
+  --text-note: 0.75rem;
+  --text-note--line-height: 1.4;
+  --text-note--letter-spacing: 0.02em;
+
+  --radius-panel: 0.75rem;
+  --shadow-brand: 0 18px 40px -24px rgb(14 42 61 / 0.55);
+}
+
+/* Tokens dark definidos, sin selector ni interruptor visible en F1. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #071c29;
+    --color-amber: #ffb62e;
+    --color-teal: #45c2bc;
+    --color-bone: #f3eee4;
+    --color-coral: #ff8585;
+    --color-coral-ink: #ffa0a0;
+    --color-teal-ink: #7adbd5;
+  }
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-bone font-body text-ink antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+}
+
+/* Cabecera flotante: el azul solido es la degradacion antes del @supports. */
+.site-header {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 50;
+  background-color: var(--color-ink);
+  border-block-end: 1px solid color-mix(in srgb, var(--color-bone) 18%, transparent);
+  box-shadow: 0 10px 30px -12px rgb(14 42 61 / 0.45);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header[data-scrolled="false"] {
+    background-color: color-mix(in srgb, var(--color-ink) 72%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+}
+
+.site-header[data-scrolled="true"] {
+  background-color: var(--color-ink);
+  box-shadow: 0 6px 18px -12px rgb(14 42 61 / 0.6);
+}
+
+@media (max-width: 767px) {
+  .site-tools {
+    display: none;
+    order: 3;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .site-tools[data-open="true"] {
+    display: flex;
+  }
+}
+
+/* Un solo gesto: clip-path y translate del panel, stagger corto de campos. */
+.search-reveal {
+  transition:
+    opacity 500ms ease,
+    clip-path 650ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 650ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  clip-path: inset(0 0 0 0);
+}
+
+.search-reveal[data-reveal="pending"] {
+  opacity: 0;
+  clip-path: inset(0 0 100% 0);
+  transform: translateY(28px);
+}
+
+.search-reveal[data-reveal="pending"] .reveal-field {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.search-reveal .reveal-field {
+  transition:
+    opacity 400ms ease,
+    transform 400ms ease;
+}
+
+.search-reveal[data-reveal="visible"] .reveal-field:nth-child(2) { transition-delay: 60ms; }
+.search-reveal[data-reveal="visible"] .reveal-field:nth-child(3) { transition-delay: 120ms; }
+.search-reveal[data-reveal="visible"] .reveal-field:nth-child(4) { transition-delay: 180ms; }
+.search-reveal[data-reveal="visible"] .reveal-field:nth-child(5) { transition-delay: 240ms; }
+.search-reveal[data-reveal="visible"] .reveal-field:nth-child(6) { transition-delay: 300ms; }
+.search-reveal[data-reveal="visible"] .reveal-field:nth-child(7) { transition-delay: 360ms; }
+.search-reveal[data-reveal="visible"] .reveal-field:nth-child(8) { transition-delay: 420ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .search-reveal,
+  .search-reveal .reveal-field {
+    transition: none !important;
+    opacity: 1 !important;
+    clip-path: none !important;
+    transform: none !important;
+  }
 }

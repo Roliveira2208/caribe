@@ -1,11 +1,13 @@
 import { DEFAULT_LOCALE, isLocale } from "@caribe/shared";
 import { getLocale, getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { loadTodayRateLabels } from "@/lib/today-rate-labels";
+import { HeaderFrame } from "./header-frame";
 import { LanguageSwitcher } from "./language-switcher";
 import { SessionNav } from "./session-nav";
 import { TodayRateBadge } from "./today-rate-badge";
 
-/** Cabecera del shell de la web: marca, tasa del día, sesion e idioma. */
+/** Cabecera de la web: wordmark de texto, tasa, idioma y sesion. */
 export async function SiteHeader() {
   const [t, labels, requestedLocale] = await Promise.all([
     getTranslations("nav"),
@@ -15,18 +17,26 @@ export async function SiteHeader() {
   const locale = isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE;
 
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <div>
-          <p className="text-lg font-bold text-brand-700">{t("appName")}</p>
-          <p className="text-xs text-slate-500">{t("tagline")}</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+    <HeaderFrame
+      menuLabel={t("menu")}
+      brand={
+        <Link
+          href={`/${locale}`}
+          className="inline-flex min-h-11 items-center gap-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+        >
+          <span className="size-2 bg-amber" aria-hidden="true" />
+          <span className="font-display text-2xl font-semibold tracking-tight text-bone">
+            {t("appName")}
+          </span>
+        </Link>
+      }
+      tools={
+        <>
           <TodayRateBadge locale={locale} labels={labels} />
           <LanguageSwitcher />
           <SessionNav />
-        </div>
-      </div>
-    </header>
+        </>
+      }
+    />
   );
 }

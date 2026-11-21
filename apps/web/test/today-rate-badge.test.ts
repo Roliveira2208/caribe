@@ -20,8 +20,17 @@ const appRoot = fileURLToPath(new URL("..", import.meta.url));
 const labels: TodayRateBadgeLabels = {
   label: "Tasa BCV",
   unit: "Bs/$",
+  datePrefix: "del",
   unavailable: "Tasa no disponible",
   loading: "Tasa BCV…",
+};
+
+const enLabels: TodayRateBadgeLabels = {
+  label: "BCV rate",
+  unit: "VES/USD",
+  datePrefix: "on",
+  unavailable: "Rate unavailable",
+  loading: "BCV rate…",
 };
 
 const AVAILABLE_RATE: TodayRateView = {
@@ -30,8 +39,14 @@ const AVAILABLE_RATE: TodayRateView = {
   valueDate: "2026-11-10",
 };
 
-function renderBadge(view: TodayRateView | null, locale: Locale): string {
-  return renderToStaticMarkup(createElement(TodayRateBadgeContent, { view, locale, labels }));
+function renderBadge(
+  view: TodayRateView | null,
+  locale: Locale,
+  badgeLabels: TodayRateBadgeLabels = labels,
+): string {
+  return renderToStaticMarkup(
+    createElement(TodayRateBadgeContent, { view, locale, labels: badgeLabels }),
+  );
 }
 
 /** Contraste WCAG 2.1 de dos colores hexadecimales opacos. */
@@ -51,33 +66,35 @@ function contrast(foreground: string, background: string): number {
 
 function brandToken(name: string): string {
   const css = readFileSync(join(appRoot, "src/app/globals.css"), "utf8");
-  const match = css.match(new RegExp(`--color-brand-${name}:\\s*(#[0-9a-f]{6})`, "i"));
+  const match = css.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6})`, "i"));
   const color = match?.[1];
-  if (!color) throw new Error(`Falta --color-brand-${name} en globals.css`);
+  if (!color) throw new Error(`Falta --color-${name} en globals.css`);
   return color;
 }
 
 describe("TodayRateBadge", () => {
-  it("muestra la tasa y la fecha valor con formato español", () => {
+  it("muestra la tasa y la fecha valor corta en espanol", () => {
     const html = renderBadge(AVAILABLE_RATE, "es");
     expect(html).toContain(labels.label);
     expect(html).toContain("36,00");
     expect(html).toContain(labels.unit);
-    expect(html).toContain("10/11/2026");
+    expect(html).toContain("del 10 nov");
+    expect(html).not.toContain("·");
     expect(html).not.toContain(labels.unavailable);
   });
 
-  it("usa el formato del locale en inglés", () => {
-    const html = renderBadge(AVAILABLE_RATE, "en");
+  it("usa el formato del locale en ingles", () => {
+    const html = renderBadge(AVAILABLE_RATE, "en", enLabels);
     expect(html).toContain("36.00");
-    expect(html).toContain("11/10/2026");
+    expect(html).toContain("on Nov 10");
+    expect(html).not.toContain("·");
   });
 
   it("sin tasa global muestra un estado discreto y anunciable", () => {
     const html = renderBadge(UNAVAILABLE_RATE, "es");
     expect(html).toContain(labels.unavailable);
     expect(html).not.toContain("36,00");
-    expect(html).not.toContain("10/11/2026");
+    expect(html).not.toContain("10 nov");
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
   });
@@ -94,15 +111,14 @@ describe("TodayRateBadge", () => {
 
   it("usa pares de texto y fondo con contraste WCAG AA", () => {
     const available = renderBadge(AVAILABLE_RATE, "es");
-    expect(available).toContain("bg-brand-50");
-    expect(available).toContain("text-brand-800");
-    expect(contrast(brandToken("800"), brandToken("50"))).toBeGreaterThanOrEqual(4.5);
+    expect(available).toContain("bg-ink/40");
+    expect(available).toContain("text-amber");
+    expect(contrast(brandToken("amber"), brandToken("ink"))).toBeGreaterThanOrEqual(4.5);
 
-    // Tokens por defecto de Tailwind v4 para slate-100 / slate-700.
     const unavailable = renderBadge(UNAVAILABLE_RATE, "es");
-    expect(unavailable).toContain("bg-slate-100");
-    expect(unavailable).toContain("text-slate-700");
-    expect(contrast("#334155", "#f1f5f9")).toBeGreaterThanOrEqual(4.5);
+    expect(unavailable).toContain("bg-ink/40");
+    expect(unavailable).toContain("text-bone");
+    expect(contrast(brandToken("bone"), brandToken("ink"))).toBeGreaterThanOrEqual(4.5);
   });
 });
 

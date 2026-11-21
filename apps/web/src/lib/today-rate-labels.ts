@@ -12,6 +12,7 @@ export async function loadTodayRateLabels(): Promise<TodayRateBadgeLabels> {
   return {
     label: t("label"),
     unit: t("unit"),
+    datePrefix: t("datePrefix"),
     unavailable: t("unavailable"),
     loading: t("loading"),
   };

@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { Locale } from "@caribe/shared";
-import { formatRate, formatValueDate } from "@/lib/catalog-view";
+import { formatRate, formatShortValueDate } from "@/lib/catalog-view";
 import { parseTodayRateView, UNAVAILABLE_RATE, type TodayRateView } from "@/lib/today-rate";
 
 /** Textos visibles del badge, ya traducidos por el servidor. */
 export interface TodayRateBadgeLabels {
   label: string;
   unit: string;
+  datePrefix: string;
   unavailable: string;
   loading: string;
 }
@@ -20,9 +21,9 @@ interface BadgeProps {
 }
 
 const BASE_CLASSES =
-  "inline-flex items-center rounded-md border px-2 py-1 text-xs leading-6 min-h-8";
-const AVAILABLE_CLASSES = `${BASE_CLASSES} border-brand-200 bg-brand-50 font-medium text-brand-800`;
-const MUTED_CLASSES = `${BASE_CLASSES} border-slate-200 bg-slate-100 text-slate-700`;
+  "inline-flex items-center rounded border px-2 py-1 text-xs leading-5 min-h-8 whitespace-nowrap";
+const AVAILABLE_CLASSES = `${BASE_CLASSES} border-amber/40 bg-ink/40 font-medium text-amber`;
+const MUTED_CLASSES = `${BASE_CLASSES} border-bone/20 bg-ink/40 text-bone`;
 
 /**
  * Parte presentacional del badge. Es pura y se renderiza en el servidor en los
@@ -30,7 +31,7 @@ const MUTED_CLASSES = `${BASE_CLASSES} border-slate-200 bg-slate-100 text-slate-
  */
 export function TodayRateBadgeContent({ view, locale, labels }: BadgeProps) {
   if (view?.available && view.rate !== null && view.valueDate !== null) {
-    const text = `${labels.label} ${formatRate(view.rate, locale)} ${labels.unit} · ${formatValueDate(view.valueDate, locale)}`;
+    const text = `${labels.label} ${formatRate(view.rate, locale)} ${labels.unit} ${labels.datePrefix} ${formatShortValueDate(view.valueDate, locale)}`;
     return (
       <p role="status" aria-live="polite" className={AVAILABLE_CLASSES}>
         {text}

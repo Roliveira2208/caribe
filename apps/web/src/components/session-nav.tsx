@@ -51,6 +51,7 @@ export function SessionNav() {
       <Button
         size="sm"
         variant="outline"
+        className="border-bone/30 text-bone hover:bg-bone/10"
         onClick={() => {
           void signOut().finally(() => {
             setSession(null);

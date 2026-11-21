@@ -33,5 +33,9 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
   const { redirectTo } = await searchParams;
   const target = safeLocalizedRedirectPath(firstParam(redirectTo), locale) ?? `/${locale}`;
 
-  return <LoginForm locale={locale} redirectTo={target} />;
+  return (
+    <div className="flex w-full flex-1 items-center justify-center px-5 pb-12 pt-24">
+      <LoginForm locale={locale} redirectTo={target} />
+    </div>
+  );
 }

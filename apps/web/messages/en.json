@@ -7,16 +7,18 @@
     "security": "Security",
     "language": "Language",
     "spanish": "Español",
-    "english": "English"
+    "english": "English",
+    "menu": "Menu"
   },
   "todayRate": {
     "label": "BCV rate",
     "unit": "VES/USD",
+    "datePrefix": "on",
     "unavailable": "Rate unavailable",
     "loading": "BCV rate…"
   },
   "search": {
-    "title": "Search trips",
+    "title": "Search a trip",
     "subtitle": "Find stays published by Venezuelan agencies.",
     "anyDestination": "All destinations",
     "destination": "Destination",
@@ -33,29 +35,30 @@
     "maxPrice": "Maximum price (USD)",
     "priceError": "Check the price range: use positive decimals and a minimum no greater than the maximum.",
     "search": "Search",
-    "results": "results",
+    "results": "stays",
     "loading": "Loading results…",
-    "error": "Results could not be loaded. Please try again.",
+    "error": "We couldn't load the stays. Try again.",
     "emptyTitle": "No results",
     "emptyDescription": "Try other destinations, dates or prices.",
     "viewDetail": "View detail",
     "rateLabel": "BCV rate"
   },
   "metadata": {
-    "title": "Caribe · Travel across Venezuela",
-    "titleTemplate": "%s · Caribe",
+    "title": "Caribe: travel across Venezuela",
+    "titleTemplate": "%s | Caribe",
     "description": "Online travel agency to explore Venezuela: tours, stays and experiences from local agencies."
   },
   "home": {
-    "title": "Explore Venezuela with Caribe",
-    "subtitle": "Tours, stays and experiences hand-picked by Venezuelan agencies.",
-    "notReady": "Search and bookings arrive in the next phase.",
-    "featureCatalogTitle": "Local catalog",
-    "featureCatalogDescription": "Tours and experiences published and operated by Venezuelan agencies.",
-    "featureRatesTitle": "Prices in USD and VES",
-    "featureRatesDescription": "Every price with its bolívar equivalent at today's rate.",
-    "featureOfflineTitle": "Your bookings at hand",
-    "featureOfflineDescription": "Installable with offline booking access (coming soon)."
+    "title": "Explore Venezuela with fresh eyes",
+    "subtitle": "Stays published by Venezuelan agencies, with clear prices in dollars and bolívars.",
+    "cta": "Search a trip",
+    "searchTitle": "Choose where to begin",
+    "featureCatalogTitle": "Local stays",
+    "featureCatalogDescription": "Guesthouses, inns and hotels published by agencies in every region.",
+    "featureRatesTitle": "Dollars and bolívars",
+    "featureRatesDescription": "Every price shows its bolívar equivalent at today's rate.",
+    "featureOfflineTitle": "Bookings at hand",
+    "featureOfflineDescription": "Check the details of each booking from your phone."
   },
   "login": {
     "title": "Sign in",

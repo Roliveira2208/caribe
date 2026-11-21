@@ -4,16 +4,16 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-brand-600 text-white hover:bg-brand-700",
-        destructive: "bg-red-600 text-white hover:bg-red-700",
-        outline: "border border-slate-300 bg-white hover:bg-slate-100",
-        secondary: "bg-brand-100 text-brand-900 hover:bg-brand-200",
-        ghost: "hover:bg-slate-100",
-        link: "text-brand-700 underline-offset-4 hover:underline",
+        default: "bg-amber text-ink hover:bg-amber/85",
+        destructive: "bg-coral text-bone hover:bg-coral-ink",
+        outline: "border border-ink/25 bg-transparent text-ink hover:bg-ink/5",
+        secondary: "bg-ink text-bone hover:bg-ink/85",
+        ghost: "hover:bg-ink/5",
+        link: "text-teal-ink underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

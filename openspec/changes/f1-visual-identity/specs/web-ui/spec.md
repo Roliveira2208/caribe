@@ -125,7 +125,8 @@ El detalle SHALL mostrar la información pública del producto y el checkout SHA
 #### Scenario: Checkout con moneda elegida
 - GIVEN un producto con fechas y personas válidas
 - WHEN el usuario elige USD o VES y envía sus datos de viajero
-- THEN la petición contiene solo datos del viajero, fechas, persona y moneda elegida
+- THEN la petición contiene solo identificador del producto, fechas, cantidad y datos del viajero
+- THEN la moneda elegida solo cambia la presentación del resumen; no se envía al servidor
 - THEN el total y la tasa los calcula el servidor
 
 #### Scenario: Checkout sin viajeros
@@ -137,7 +138,7 @@ El detalle SHALL mostrar la información pública del producto y el checkout SHA
 #### Scenario: Reserva creada
 - GIVEN datos válidos y cupo en todas las noches
 - WHEN se crea la reserva
-- THEN checkout muestra el código de reserva y el estado "Pago pendiente"
+- THEN checkout muestra el código de reserva y el estado "Pago en revisión"
 - THEN no se navega a una ruta de pago o confirmación inexistente
 
 ## Casos límite

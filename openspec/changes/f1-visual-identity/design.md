@@ -103,13 +103,13 @@ Los estados de carga, vacío y error se implementan en las cuatro pantallas. Nin
 
 - Detalle consume el contrato público `GET /products/:id` y `GET /products/:id/availability` descrito en `f1-hotels-e2e/design.md` §2.2. Sin tasa global muestra solo USD. Un producto no público responde con 404 y la pantalla muestra el estado de error concreto.
 - Checkout consume el contrato de creación de reserva con viajeros y `Idempotency-Key` descrito en `f1-hotels-e2e/design.md` §2.3. El servidor calcula totales; la interfaz nunca envía montos ni tasas. La moneda seleccionada solo cambia la presentación y el resumen informativo.
-- Como pago y confirmación están fuera de alcance en esta change, el alta correcta de la reserva muestra dentro de checkout un estado de éxito con el código de reserva y el texto "Pago pendiente". No se crea una ruta de pago ni de confirmación.
+- Como pago y confirmación están fuera de alcance en esta change, el alta correcta de la reserva muestra dentro de checkout un estado de éxito con el código de reserva y el texto "Pago en revisión". No se crea una ruta de pago ni de confirmación.
 - El enlace "Reservar" de detalle lleva a checkout con `checkIn`, `checkOut` y `guests` en la query.
 
 ## 8. Copy e i18n
 
 - Todo texto visible sale de `messages/es.json` y `messages/en.json`. Se reutilizan claves existentes cuando el significado aplica y se añaden nuevas bajo `home`, `search`, `detail`, `checkout` y `nav`.
-- Voz activa y concreta: "Buscar viaje", "Buscar", "Reservar", "12 alojamientos", "No pudimos cargar los alojamientos. Intenta de nuevo.", "Pago pendiente". El badge de tasa pasa a "Tasa BCV 45,20 Bs/$ del 21 nov" sin punto medio.
+- Voz activa y concreta: "Buscar viaje", "Buscar", "Reservar", "12 alojamientos", "No pudimos cargar los alojamientos. Intenta de nuevo.", "Pago en revisión". El badge de tasa pasa a "Tasa BCV 45,20 Bs/$ del 21 nov" sin punto medio.
 - Los metadatos `metadata.title` también dejan el punto medio de decoración.
 - Los textos de prueba en `apps/web/test/messages.test.ts` se actualizan con las mismas claves.
 

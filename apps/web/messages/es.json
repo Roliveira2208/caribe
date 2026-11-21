@@ -7,16 +7,18 @@
     "security": "Seguridad",
     "language": "Idioma",
     "spanish": "Español",
-    "english": "English"
+    "english": "English",
+    "menu": "Menú"
   },
   "todayRate": {
     "label": "Tasa BCV",
     "unit": "Bs/$",
+    "datePrefix": "del",
     "unavailable": "Tasa no disponible",
     "loading": "Tasa BCV…"
   },
   "search": {
-    "title": "Buscar viajes",
+    "title": "Buscar viaje",
     "subtitle": "Encuentra alojamientos publicados por agencias venezolanas.",
     "anyDestination": "Todos los destinos",
     "destination": "Destino",
@@ -33,29 +35,30 @@
     "maxPrice": "Precio máximo (USD)",
     "priceError": "Revisa el rango de precio: usa decimales positivos y un mínimo menor o igual al máximo.",
     "search": "Buscar",
-    "results": "resultados",
+    "results": "alojamientos",
     "loading": "Cargando resultados…",
-    "error": "No se pudieron cargar los resultados. Inténtalo de nuevo.",
+    "error": "No pudimos cargar los alojamientos. Intenta de nuevo.",
     "emptyTitle": "Sin resultados",
     "emptyDescription": "Prueba con otros destinos, fechas o precios.",
     "viewDetail": "Ver detalle",
-    "rateLabel": "tasa BCV"
+    "rateLabel": "Tasa BCV"
   },
   "metadata": {
-    "title": "Caribe · Viajes por Venezuela",
-    "titleTemplate": "%s · Caribe",
+    "title": "Caribe: viajes por Venezuela",
+    "titleTemplate": "%s | Caribe",
     "description": "Agencia de viajes en línea para explorar Venezuela: tours, alojamientos y experiencias de agencias locales."
   },
   "home": {
-    "title": "Explora Venezuela con Caribe",
-    "subtitle": "Tours, alojamientos y experiencias seleccionadas por agencias venezolanas.",
-    "notReady": "El buscador y las reservas llegan en la siguiente fase.",
-    "featureCatalogTitle": "Catálogo local",
-    "featureCatalogDescription": "Tours y experiencias publicados y operados por agencias venezolanas.",
-    "featureRatesTitle": "Precios en USD y VES",
-    "featureRatesDescription": "Cada precio con su equivalente en bolívares a la tasa del día.",
-    "featureOfflineTitle": "Tus reservas siempre a mano",
-    "featureOfflineDescription": "Instalable y con lectura de reservas sin conexión (próximamente)."
+    "title": "Venezuela se recorre con curiosidad",
+    "subtitle": "Alojamientos publicados por agencias venezolanas, con precios claros en dólares y bolívares.",
+    "cta": "Buscar viaje",
+    "searchTitle": "Elige cómo empezar",
+    "featureCatalogTitle": "Alojamientos locales",
+    "featureCatalogDescription": "Casas, posadas y hoteles publicados por agencias de cada región.",
+    "featureRatesTitle": "Dólares y bolívares",
+    "featureRatesDescription": "Cada precio muestra su equivalente en bolívares a la tasa del día.",
+    "featureOfflineTitle": "Reservas a mano",
+    "featureOfflineDescription": "Consulta el detalle de cada reserva desde tu teléfono."
   },
   "login": {
     "title": "Iniciar sesión",
