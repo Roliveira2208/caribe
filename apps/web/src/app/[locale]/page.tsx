@@ -75,14 +75,16 @@ export default async function HomePage({ params }: HomePageProps) {
         </a>
       </section>
 
-      <section id="search" className="scroll-target bg-bone py-16">
+      <section id="search" className="search-stage scroll-target py-16">
         <noscript>
           <style>{`.search-reveal[data-reveal="pending"]{opacity:1;clip-path:none;transform:none}.search-reveal .reveal-field{opacity:1;transform:none}`}</style>
         </noscript>
         <SearchReveal>
-          <div className="mx-auto max-w-6xl space-y-6 px-5 lg:px-10">
-            <h2 className="font-display text-h2 text-ink">{t("searchTitle")}</h2>
-            <HomeSearchPanel locale={locale} />
+          <div className="flex min-h-[calc(100dvh-8rem)] items-center">
+            <div className="search-glass mx-auto w-full max-w-6xl space-y-6 rounded-2xl p-6 lg:p-10">
+              <h2 className="font-display text-h2 text-ink">{t("searchTitle")}</h2>
+              <HomeSearchPanel locale={locale} />
+            </div>
           </div>
         </SearchReveal>
       </section>

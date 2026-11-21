@@ -69,6 +69,31 @@ body {
   scroll-margin-top: 5.5rem;
 }
 
+/* Escena del buscador: giro local a pantalla completa y superficie glass. */
+.search-stage {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--color-bone);
+  background-image: url("/images/kinetic-giro.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.search-glass {
+  background-color: var(--color-bone);
+  background-color: color-mix(in srgb, var(--color-bone) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+  box-shadow: var(--shadow-brand);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .search-glass {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--color-amber);
   outline-offset: 2px;

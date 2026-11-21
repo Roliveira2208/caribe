@@ -84,6 +84,44 @@ try {
     await context.close();
   }
 
+  // Escena del buscador: fondo local, 100vh y mismo formulario que /search.
+  const stagePage = await browser.newPage();
+  await stagePage.goto(`${baseUrl}/es`, { waitUntil: "load" });
+  const stage = stagePage.locator("#search");
+  await stage.waitFor();
+  const asset = await stagePage.request.get(`${baseUrl}/images/kinetic-giro.svg`);
+  if (asset.status() !== 200) {
+    failures.push(`/images/kinetic-giro.svg: HTTP ${asset.status()}`);
+  }
+  const stageStyles = await stage.evaluate((node) => ({
+    height: node.getBoundingClientRect().height,
+    viewport: window.innerHeight,
+    backgroundImage: getComputedStyle(node).backgroundImage,
+  }));
+  if (stageStyles.height < stageStyles.viewport - 1) {
+    failures.push(`/es: buscador mide ${stageStyles.height}px y el viewport ${stageStyles.viewport}px`);
+  }
+  if (!stageStyles.backgroundImage.includes("kinetic-giro.svg")) {
+    failures.push(`/es: fondo inesperado ${stageStyles.backgroundImage}`);
+  }
+  const blur = await stagePage
+    .locator("#search .search-glass")
+    .evaluate((node) => getComputedStyle(node).backdropFilter);
+  if (!blur.includes("blur")) failures.push(`/es: superficie sin glass (${blur})`);
+  const homeForm = stagePage.locator("#search form");
+  const homeAction = await homeForm.getAttribute("action");
+  const homeFields = await homeForm.locator("input, select, button").count();
+  await stagePage.goto(`${baseUrl}/es/search`, { waitUntil: "load" });
+  const searchForm = stagePage.locator("form[action='/es/search']").first();
+  await searchForm.waitFor();
+  const searchFields = await searchForm.locator("input, select, button").count();
+  if (homeAction !== "/es/search" || homeFields !== searchFields || homeFields === 0) {
+    failures.push(`/es: formularios divergentes (${homeAction}, ${homeFields} vs ${searchFields})`);
+  } else {
+    console.log("OK   /es: buscador a 100vh con giro local y un solo formulario");
+  }
+  await stagePage.close();
+
   // Flecha del hero: ancla, foco por teclado y movimiento reducido.
   const home = await browser.newPage();
   await home.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });

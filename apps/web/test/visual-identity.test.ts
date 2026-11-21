@@ -31,8 +31,9 @@ describe("identidad visual Caribe", () => {
 
   it("declara el fondo solido antes del soporte de backdrop-filter", () => {
     const css = read("src/app/globals.css");
-    const solid = css.indexOf("background-color: var(--color-ink)");
-    const supports = css.indexOf("@supports ((backdrop-filter: blur(1px))");
+    const header = css.split(".site-header")[1] ?? "";
+    const solid = header.indexOf("background-color: var(--color-ink)");
+    const supports = header.indexOf("@supports ((backdrop-filter: blur(1px))");
     expect(solid).toBeGreaterThan(-1);
     expect(supports).toBeGreaterThan(solid);
     expect(css).toContain("data-scrolled=\"false\"");

@@ -34,11 +34,12 @@ enlace 2FA (TOTP) de la web pública, visible solo con sesión. Se mueve al áre
 
 ## 3. Portada y buscador
 
-- La flecha de bajada es un `a` con `href="#buscar"`, `scroll-behavior: smooth` y
+- La flecha de bajada es un `a` con `href="#search"`, `scroll-behavior: smooth` y
   `prefers-reduced-motion: reduce` → `auto`. Icono SVG decorativo, `aria-hidden`.
-- La sección `#buscar` ocupa `min-h-dvh`, usa `public/images/kinetic-giro.svg` como fondo
+- La sección `#search` ocupa `min-h-dvh`, usa `public/images/kinetic-giro.svg` como fondo
   (Formas cinéticas en azul, ámbar y teal sobre hueso; archivo local, sin proveedor externo) y
-  coloca encima el mismo `SearchPanel` de la portada, con superficie glass y radios ya aprobados.
+  coloca encima el mismo `SearchPanel` de la portada, con superficie `.search-glass` y radios ya
+  aprobados.
 - Segunda flecha hacia `#destacados`, sección con tarjetas leídas de `GET /products?limit=3`.
   Si no hay productos, se muestra el estado vacío i18n. No se crean datos de ejemplo.
 - El panel de `/search` reutiliza `SearchPanel`; no existe un segundo componente de formulario.
