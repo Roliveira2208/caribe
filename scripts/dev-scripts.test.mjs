@@ -19,6 +19,7 @@ test("pnpm dev levanta web, admin y API desde la raíz", () => {
 
   const apiPkg = readJson("apps/api/package.json");
   assert.match(apiPkg.scripts.dev ?? "", /dist\/main\.js/);
+  assert.doesNotMatch(apiPkg.scripts.dev, /\bpnpm\b|tsc-watch|tsx watch/);
 
   const dev = readTurbo().tasks.dev;
   assert.equal(dev.persistent, true);
