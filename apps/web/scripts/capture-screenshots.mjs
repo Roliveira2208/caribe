@@ -36,6 +36,14 @@ async function load(page, path) {
   await page.locator(".site-header").waitFor();
 }
 
+async function waitForReadyContent(page, screen) {
+  if (screen.name === "search") {
+    // El catalogo llega por API: esperar a una tarjeta o al error evita
+    // documentar el estado de carga como si fuera la pantalla final.
+    await page.locator("article, [role='alert']").first().waitFor();
+  }
+}
+
 for (const viewport of viewports) {
   const context = await browser.newContext({
     viewport: { width: viewport.width, height: viewport.height },
@@ -45,6 +53,7 @@ for (const viewport of viewports) {
 
   for (const screen of selected) {
     await load(page, screen.path);
+    await waitForReadyContent(page, screen);
     await page.screenshot({
       path: join(outputRoot, `${screen.name}-${viewport.name}.png`),
     });

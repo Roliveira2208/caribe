@@ -192,6 +192,8 @@ describe("SearchFormView", () => {
     expect(html).toContain('value="90"');
     expect(html).toContain('type="submit"');
     expect(html).toContain('focus-visible');
+    expect(html).not.toContain("·");
+    expect(html).toContain("shadow-brand");
   });
 
   it("muestra los cuatro tipos y deshabilita solo los que llegan en F2", () => {
@@ -228,6 +230,10 @@ describe("SearchResultsView", () => {
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain(`href="/es/hoteles/offer-1"`);
+    expect(html).not.toContain("·");
+    expect(html).toContain("bg-bone");
+    expect(html).toContain("text-teal-ink");
+    expect(html).toContain("shadow-brand");
   });
 
   it("sin fechas usa el precio base y sin VES no inventa un equivalente", () => {
@@ -249,9 +255,23 @@ describe("SearchResultsView", () => {
     expect(html).not.toContain("Ver detalle");
   });
 
-  it("carga y error tienen estado accesible", () => {
-    expect(renderResults(null, "loading")).toContain(labels.loading);
-    expect(renderResults(null, "error")).toContain('role="alert"');
-    expect(renderResults(null, "error")).toContain(labels.error);
+  it("carga y error tienen estado accesible y usan tokens de marca", () => {
+    const loading = renderResults(null, "loading");
+    const error = renderResults(null, "error");
+    expect(loading).toContain(labels.loading);
+    expect(loading).toContain('aria-live="polite"');
+    expect(loading).toContain("text-ink/70");
+    expect(error).toContain('role="alert"');
+    expect(error).toContain(labels.error);
+    expect(error).toContain("border-coral/30");
+    expect(error).toContain("bg-coral/5");
+    expect(error).toContain("text-coral-ink");
+  });
+
+  it("el estado vacío usa el radio y el borde de la identidad", () => {
+    const html = renderResults({ items: [], nextCursor: null });
+    expect(html).toContain("rounded-lg");
+    expect(html).toContain("border-dashed");
+    expect(html).toContain("border-ink/25");
   });
 });

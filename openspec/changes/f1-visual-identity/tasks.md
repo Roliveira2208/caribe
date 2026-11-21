@@ -6,7 +6,7 @@ Requiere aprobación del plan de diseño, ya recibida el 2026-11-21. Una tarea a
   Prueba: `node scripts/check-specs.mjs` en verde; sin código de app modificado.
 - [x] T-VIS-1 Inicio: tokens Tailwind v4, fuentes locales, header glass con fallback sólido, wordmark de texto, hero asimétrico, panel de búsqueda compartido y revelación única con `prefers-reduced-motion`. Copy es y en.
   Prueba: escenarios de la spec delta `web-ui` sobre identidad, header y revelación; capturas de escritorio y móvil de inicio; lint, typecheck y tests en verde.
-- [ ] T-VIS-2 Búsqueda: aplicar el panel compartido y las tarjetas de resultado con la nueva jerarquía, sombras de marca, estados de carga, vacío y error, y foco visible. Copy es y en.
+- [x] T-VIS-2 Búsqueda: aplicar el panel compartido y las tarjetas de resultado con la nueva jerarquía, sombras de marca, estados de carga, vacío y error, y foco visible. Copy es y en.
   Prueba: catalog › "Búsqueda y filtros"; escenarios de la spec delta `web-ui`; capturas de escritorio y móvil de búsqueda; lint, typecheck y tests en verde.
 - [ ] T-VIS-3 Detalle (`T-F1-13b`): construir `/[locale]/hoteles/[id]` con galería, descripción, disponibilidad por noche, precio USD y equivalente VES, política de cancelación y acción `Reservar`. Sin tasa global, solo USD.
   Prueba: catalog › "Detalle y disponibilidad públicos"; escenarios de la spec delta `web-ui`; capturas de escritorio y móvil de detalle; lint, typecheck y tests en verde.

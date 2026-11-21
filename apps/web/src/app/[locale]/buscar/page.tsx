@@ -18,7 +18,7 @@ export default function SearchPage() {
   const locale: Locale = isLocale(candidate) ? candidate : DEFAULT_LOCALE;
 
   return (
-    <div className="w-full max-w-6xl space-y-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pb-12 pt-24 lg:px-10">
       <Suspense
         fallback={
           <p role="status" aria-live="polite" className="text-sm text-slate-600">
