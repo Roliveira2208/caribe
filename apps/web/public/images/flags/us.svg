@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28" viewBox="0 0 40 28" role="img" aria-label="Estados Unidos">
+  <rect width="40" height="28" fill="#ffffff"/>
+  <g fill="#b22234">
+    <rect y="0" width="40" height="2.154"/>
+    <rect y="4.308" width="40" height="2.154"/>
+    <rect y="8.615" width="40" height="2.154"/>
+    <rect y="12.923" width="40" height="2.154"/>
+    <rect y="17.231" width="40" height="2.154"/>
+    <rect y="21.538" width="40" height="2.154"/>
+    <rect y="25.846" width="40" height="2.154"/>
+  </g>
+  <rect width="17" height="15.077" fill="#3c3b6e"/>
+  <g fill="#ffffff">
+    <circle cx="3" cy="2.5" r="0.75"/><circle cx="8.5" cy="2.5" r="0.75"/><circle cx="14" cy="2.5" r="0.75"/>
+    <circle cx="5.75" cy="5.5" r="0.75"/><circle cx="11.25" cy="5.5" r="0.75"/>
+    <circle cx="3" cy="8.5" r="0.75"/><circle cx="8.5" cy="8.5" r="0.75"/><circle cx="14" cy="8.5" r="0.75"/>
+    <circle cx="5.75" cy="11.5" r="0.75"/><circle cx="11.25" cy="11.5" r="0.75"/>
+    <circle cx="3" cy="14" r="0.75"/><circle cx="8.5" cy="14" r="0.75"/><circle cx="14" cy="14" r="0.75"/>
+  </g>
+</svg>

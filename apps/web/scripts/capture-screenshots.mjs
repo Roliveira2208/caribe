@@ -188,6 +188,9 @@ async function waitForReadyContent(page, screen) {
       await page.locator("#site-tools").waitFor({ state: "visible" });
     }
     await page.locator('.site-header [role="status"]').first().waitFor();
+    // Abierto documenta las banderas VE/US ademas del activo resaltado.
+    await page.locator('.site-header button[role="combobox"]').click();
+    await page.locator('[role="listbox"]').waitFor({ state: "visible" });
   }
   if (screen.name === "featured") {
     await page.locator('[data-featured-status="ready"]').waitFor();

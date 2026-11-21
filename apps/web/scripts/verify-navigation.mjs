@@ -116,6 +116,60 @@ try {
     await page.close();
   }
 
+  // Selector de idioma: desplegable con banderas VE/US y activo anunciado.
+  for (const locale of locales) {
+    const nextLocale = locale === "es" ? "en" : "es";
+    const languageLabel = locale === "es" ? "Idioma" : "Language";
+    const nextLabel = locale === "es" ? "English" : "Español";
+    const page = await browser.newPage();
+    // El desplegable necesita la hidratación de React para responder al clic.
+    await page.goto(`${baseUrl}/${locale}/search`, { waitUntil: "networkidle" });
+    const header = page.locator(".site-header");
+    const problems = [];
+
+    if ((await header.locator("select").count()) !== 0) problems.push("queda un select nativo");
+    const combo = header.getByRole("combobox", { name: languageLabel });
+    await combo.waitFor();
+    await combo.click();
+    await page.waitForFunction(
+      () => document.querySelector('button[role="combobox"]')?.getAttribute("aria-expanded") === "true",
+      null,
+      { timeout: 5000 },
+    );
+    const list = page.getByRole("listbox", { name: languageLabel });
+    const options = list.getByRole("option");
+    if ((await options.count()) !== 2) problems.push("no hay dos idiomas");
+    const flags = await options.locator('img[src*="/images/flags/"]').count();
+    if (flags !== 2) problems.push(`banderas=${flags}`);
+    const selected = list.getByRole("option", { selected: true });
+    if ((await selected.getAttribute("aria-current")) !== "true") {
+      problems.push("activo sin aria-current");
+    }
+
+    if (problems.length > 0) {
+      failures.push(`/${locale}: selector (${problems.join(", ")})`);
+      console.error(`FAIL /${locale}: selector (${problems.join(", ")})`);
+    } else {
+      console.log(`OK   /${locale}: desplegable con dos banderas y activo resaltado`);
+    }
+
+    await list.getByRole("option", { name: nextLabel }).click();
+    await page.waitForURL(`${baseUrl}/${nextLocale}/search`);
+    await page.waitForLoadState("networkidle");
+    const nextLanguageLabel = nextLocale === "es" ? "Idioma" : "Language";
+    await page.getByRole("combobox", { name: nextLanguageLabel }).click();
+    const switched = page
+      .getByRole("listbox", { name: nextLanguageLabel })
+      .getByRole("option", { selected: true });
+    if ((await switched.innerText()).trim() !== nextLabel) {
+      failures.push(`/${nextLocale}/search: el idioma activo no cambió`);
+      console.error(`FAIL /${nextLocale}/search: el idioma activo no cambió`);
+    } else {
+      console.log(`OK   /${locale}: ${nextLabel} abre /${nextLocale}/search y queda activo`);
+    }
+    await page.close();
+  }
+
   // Escena del buscador: fondo local, 100vh y mismo formulario que /search.
   const stagePage = await browser.newPage();
   await stagePage.goto(`${baseUrl}/es`, { waitUntil: "load" });

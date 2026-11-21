@@ -1,7 +1,12 @@
 import type { Locale } from "@caribe/shared";
 import { routing } from "@/i18n/routing";
 
-type FixedRoute = keyof NonNullable<typeof routing.pathnames>;
+export type FixedRoute = keyof NonNullable<typeof routing.pathnames>;
+
+/** Comprueba que una ruta del router pertenece al inventario fijo. */
+export function isFixedRoute(pathname: string): pathname is FixedRoute {
+  return Object.prototype.hasOwnProperty.call(routing.pathnames ?? {}, pathname);
+}
 
 /**
  * Construye la URL de una ruta pública fija con el prefijo de idioma.
