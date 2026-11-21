@@ -25,7 +25,8 @@ Reproducción exacta en el servidor de desarrollo (2026-11-21):
 3. Portada: flecha de bajada al buscador, buscador a 100vh con fondo «giro» propio y flecha a
    hoteles destacados con datos reales del catálogo. Tours, paquetes y vuelos siguen marcados
    como «Próximamente». Las tarjetas de hotel existentes no se modifican.
-4. Header: badge `BCV 45,20` sin fecha; píldora de idioma `ES | ENG` sin banderas.
+4. Header: barra flotante centrada y semitransparente con logo a la izquierda, enlaces a productos,
+   sesión, selector de idioma con banderas VE/US y badge `BCV 45,20` sin fecha.
 5. Contraste AA en claro y oscuro con verificación automatizada y paso de CI.
 6. Login real y pantalla `/account/trips` con reservas del usuario, estado y nota honesta sobre
    documentos (no hay endpoint de listado de documentos por reserva).
@@ -37,6 +38,12 @@ Reproducción exacta en el servidor de desarrollo (2026-11-21):
 - «Seguridad» se mueve al área de cuenta; no se elimina la pantalla 2FA.
 - «Mis viajes» usa `GET /api/v1/bookings`. No se inventa un endpoint de documentos: se muestra
   un mensaje i18n de que los documentos se publican al confirmar el pago.
+- El selector de idioma vuelve a ser un desplegable con banderas de Venezuela y Estados Unidos en
+  SVG local; no se añade una dependencia para dos idiomas.
+- Los enlaces de productos abren `/search` con `type=hotel|tour|package|flight`; las categorías sin
+  datos siguen etiquetadas como «Próximamente».
+- La portada tiene cuatro secciones a 100vh: hero, búsqueda, destacados y cierre. Las tres primeras
+  bajan con una flecha a la siguiente; el cierre es el destino final.
 
 ## Fuera de alcance
 

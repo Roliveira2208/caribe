@@ -21,8 +21,14 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenario «Animación de entrada y al desplazarse» de `specs/web-ui/spec.md`; `verify:navigation` con movimiento permitido y reducido; capturas de inicio y destacados en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-6 Simplificar el badge de la cabecera a `BCV` y monto; retirar claves i18n sin uso manteniendo paridad es/en y conservar la fecha valor en checkout y pagos.
   Prueba: escenarios «Badge de tasa compacto» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
-- [ ] T-NAV-7 Rediseñar el selector de idioma como píldora `ES | ENG`, sin banderas, con activo resaltado y `aria-current`.
-  Prueba: escenarios «Selector de idioma como píldora» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
+- [ ] T-NAV-7 Sustituir el selector por un desplegable accesible con banderas VE/US en SVG local, etiquetas «Español»/«English» y activo con `aria-current`; conservar ruta y parámetros al cambiar de idioma.
+  Prueba: escenarios «Selector de idioma con banderas» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
+- [ ] T-NAV-14 Convertir la cabecera en una barra flotante centrada, semitransparente y con desenfoque, con logo a la izquierda, enlaces a productos (`/search` con filtro `type`), sesión, idioma y tasa BCV.
+  Prueba: escenarios «Cabecera flotante» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
+- [ ] T-NAV-15 Dar al menos 100vh a hero, búsqueda, destacados y cierre, con flecha de hero a búsqueda, de búsqueda a destacados y de destacados al cierre con CTA.
+  Prueba: escenario «Secciones a pantalla completa» de `specs/web-ui/spec.md`; `verify:navigation`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.
+- [ ] T-NAV-16 Suavizar las transiciones de entrada, revelación y cabecera de la portada con degradación segura bajo movimiento reducido.
+  Prueba: escenario «Transiciones suaves» de `specs/web-ui/spec.md`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-8 Corregir el contraste de los pares gris sobre blanco con tokens aprobados, añadir `verify:contrast` con Playwright y crear el workflow de CI que lo ejecute.
   Prueba: escenarios «Contraste AA verificable» de `specs/web-ui/spec.md`; capturas claras y oscuras en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-9 Hacer real «Iniciar sesión» y construir `/account/trips` con reservas de `GET /api/v1/bookings`, estados accesibles y nota honesta sobre documentos.

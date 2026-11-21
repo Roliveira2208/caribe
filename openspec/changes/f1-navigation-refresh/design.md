@@ -40,15 +40,20 @@ enlace 2FA (TOTP) de la web pública, visible solo con sesión. Se mueve al áre
   (Formas cinéticas en azul, ámbar y teal sobre hueso; archivo local, sin proveedor externo) y
   coloca encima el mismo `SearchPanel` de la portada, con superficie `.search-glass` y radios ya
   aprobados.
-- Segunda flecha hacia `#destacados`, sección con tarjetas leídas de `GET /products?limit=3`.
-  Si no hay productos, se muestra el estado vacío i18n. No se crean datos de ejemplo.
+- Segunda flecha hacia `#destacados`, sección a `min-h-dvh` con tarjetas leídas de
+  `GET /products?limit=3`. Si no hay productos, se muestra el estado vacío i18n. No se crean datos
+  de ejemplo. Tercera flecha hacia `#cierre`, sección final a `min-h-dvh` con el CTA de cierre.
 - Animación: `hero-enter` (entrada escalonada del titular, subtítulo y CTA) y `scroll-rise`
   (revelación de encabezados y tarjetas ligada al scroll con `animation-timeline: view()` cuando
   el navegador la soporta; si no, la misma animación temporal de entrada). La animación nunca
   oculta contenido de forma permanente: con `prefers-reduced-motion` se desactiva y el estado
   inicial y final son visibles, por lo que funciona también sin JavaScript.
 - El panel de `/search` reutiliza `SearchPanel`; no existe un segundo componente de formulario.
-  Las tarjetas de resultados (`OfferCard`) quedan intactas.
+  Las tarjetas de resultados (`OfferCard`) quedan intactas. Las opciones `tour`, `package` y
+  `flight` dejan de estar deshabilitadas para que los enlaces del header puedan preseleccionarlas;
+  conservan el sufijo «Próximamente» en su etiqueta y el catálogo vacío se muestra con honestidad.
+- Las transiciones se suavizan con `ease-out` y duraciones moderadas en la entrada del hero, la
+  revelación al desplazarse y el cambio de estado de la cabecera, sin ocultar contenido nunca.
 
 ## 4. Header
 
@@ -57,10 +62,23 @@ miles/milesimas del locale. Se retiran `unit`, `datePrefix` y `valueDate` del ba
 y el panel de pagos conservan la fecha valor. Las claves `todayRate.*` que queden sin uso se
 retiran de `es.json` y `en.json` para mantener paridad.
 
-`LanguageSwitcher` sustituye el `<select>` por dos `a`/`button` dentro de un contenedor con
-`rounded-full`: `ES` y `ENG`, sin banderas, con `aria-current="true"` en el activo y cambio por
-`router.replace(pathname, { locale })`. El texto visible sale de i18n (`ES`/`ENG` son códigos
-de idioma, no cadenas traducidas).
+La cabecera deja de ser una franja anclada al borde: `HeaderFrame` centra una barra con
+`max-w-5xl`, `top-4`, esquinas redondeadas, fondo `color-mix(in srgb, var(--color-ink) 70%,
+transparent)` y `backdrop-filter: blur(20px)`. El wordmark queda a la izquierda; a la derecha se
+agrupan los enlaces de productos, el badge, el selector y la sesión. En móvil el botón «Menú»
+despliega el mismo contenido debajo de la barra. El `scroll-margin-top` de las anclas se mantiene
+para que la barra flotante no tape los encabezados.
+
+`LanguageSwitcher` es un desplegable accesible (`button[role=combobox]` + `ul[role=listbox]`)
+con dos banderas SVG locales en `public/images/flags/` (Venezuela para `es`, Estados Unidos para
+`en`) y las etiquetas i18n «Español» y «English». El activo lleva `aria-current="true"` y
+`aria-selected`; el cambio usa `languageSwitchHref` con el router de `next/navigation`, que ya
+devuelve la URL con el prefijo correcto y nunca duplica `/es` ni `/en`. No se añade una librería:
+dos opciones no justifican una dependencia y los SVG funcionan en todos los sistemas.
+
+Los enlaces de productos de la cabecera apuntan a `localizedPath(locale, "/search")` con
+`?type=hotel|tour|package|flight`. Hoteles es la categoría disponible; las otras tres mantienen
+su etiqueta «Próximamente» en el desplegable del buscador y en la portada.
 
 ## 5. Contraste y CI
 

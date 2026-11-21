@@ -79,6 +79,19 @@ SHALL funcionar con teclado y SHALL respetar `prefers-reduced-motion`.
 - THEN el texto del hero entra con una transición escalonada y las secciones y tarjetas se revelan al entrar en pantalla
 - THEN con movimiento reducido, sin JavaScript o sin soporte de animaciones todo el contenido queda visible
 
+#### Scenario: Secciones a pantalla completa
+- GIVEN la portada
+- WHEN se mide cada sección
+- THEN hero, búsqueda, destacados y cierre miden al menos el alto del viewport
+- THEN hero baja a búsqueda, búsqueda a destacados y destacados a cierre con una flecha
+- THEN el cierre es el destino final y ofrece un CTA hacia el buscador
+
+#### Scenario: Transiciones suaves
+- GIVEN la portada con movimiento permitido
+- WHEN se desplaza entre secciones y cambia el estado de la cabecera
+- THEN las transiciones de entrada, revelación y fondo son graduales y continuas
+- THEN con movimiento reducido todo el contenido queda visible y sin animación
+
 ### Requirement: Sección de búsqueda a pantalla completa
 
 La sección de búsqueda de la portada SHALL ocupar al menos el alto del viewport, SHALL usar una
@@ -134,21 +147,45 @@ apareciendo en checkout y en el panel de pagos.
 - WHEN se muestra el equivalente VES
 - THEN sigue apareciendo la fecha valor de la tasa
 
-### Requirement: Selector de idioma como píldora
+### Requirement: Selector de idioma con banderas
 
-El selector SHALL presentarse como una píldora redondeada con `ES` y `ENG` como único texto, sin
-banderas, con el idioma activo resaltado y accesible.
+El selector SHALL presentarse como un desplegable con banderas de Venezuela y Estados Unidos, las
+etiquetas «Español» y «English», y el idioma activo resaltado y anunciado con `aria-current`.
 
-#### Scenario: Píldora sin banderas
+#### Scenario: Desplegable con banderas
 - GIVEN la cabecera en cualquier idioma
 - WHEN se renderiza el selector
-- THEN se ven `ES` y `ENG` como texto y ninguna imagen de bandera
+- THEN se ve una bandera VE junto a «Español» y una bandera US junto a «English»
 - THEN el activo está resaltado y anunciado con `aria-current`
+- THEN no queda un control nativo `<select>` sin banderas
 
 #### Scenario: Cambio de idioma
 - GIVEN un usuario en `/es/search`
-- WHEN activa `ENG`
-- THEN navega a `/en/search` y la píldora resalta `ENG`
+- WHEN activa «English»
+- THEN navega a `/en/search` y la bandera US queda resaltada
+
+### Requirement: Cabecera flotante
+
+La cabecera pública SHALL ser una barra centrada que no ocupe todo el ancho, separada del borde
+superior, con fondo semitransparente y desenfoque. SHALL mostrar el logo a la izquierda, enlaces a
+productos, acceso a sesión, selector de idioma y badge BCV.
+
+#### Scenario: Barra flotante
+- GIVEN la portada en escritorio
+- WHEN se renderiza la cabecera
+- THEN la barra está centrada, más estrecha que el viewport y separada del borde superior
+- THEN el fondo es semitransparente con desenfoque y el logo queda a la izquierda
+
+#### Scenario: Enlaces de productos
+- GIVEN la cabecera pública
+- WHEN se revisan los enlaces de productos
+- THEN Hoteles abre `/search?type=hotel` y Tours, Paquetes y Vuelos abren `/search?type=tour`, `?type=package` y `?type=flight`
+- THEN las categorías sin datos siguen marcadas como «Próximamente»
+
+#### Scenario: Acciones de la barra
+- GIVEN la cabecera pública
+- WHEN se renderiza
+- THEN aparecen el badge BCV, el selector de idioma y «Iniciar sesión» (o «Mis viajes» con sesión) junto a los enlaces de productos
 
 ### Requirement: Contraste AA verificable
 
