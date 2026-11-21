@@ -1,4 +1,5 @@
 import type { Locale } from "@caribe/shared";
+import { localizedPath } from "@/lib/localized-path";
 import { localizedText, type CatalogSearchInput } from "@/lib/catalog-view";
 import type { CatalogDestinationView } from "@/lib/search-view";
 
@@ -60,7 +61,7 @@ export function SearchPanel({
 
   return (
     <form
-      action={`/${locale}/buscar`}
+      action={localizedPath(locale, "/search")}
       method="get"
       className="grid gap-4 rounded-xl border border-ink/10 bg-bone p-5 shadow-brand sm:grid-cols-2 lg:grid-cols-6"
     >

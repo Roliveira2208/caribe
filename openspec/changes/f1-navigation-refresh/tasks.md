@@ -3,9 +3,9 @@
 Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
 `docs/plans/screenshots/f1-navigation-refresh/`. `apps/admin` queda fuera del alcance.
 
-- [ ] T-NAV-0 Crear la change con proposal, design, tasks y spec delta `web-ui`, incorporando las decisiones confirmadas sobre prefijo de idioma, «Seguridad» y documentos.
+- [x] T-NAV-0 Crear la change con proposal, design, tasks y spec delta `web-ui`, incorporando las decisiones confirmadas sobre prefijo de idioma, «Seguridad» y documentos.
   Prueba: `node scripts/check-specs.mjs` en verde; sin código de app modificado.
-- [ ] T-NAV-1 Reproducir y corregir el 404 de rutas: directorios en inglés, `pathnames` en `defineRouting`, enlaces y formularios por `getPathname`, y test de navegación que visita cada ruta en ambos idiomas.
+- [x] T-NAV-1 Reproducir y corregir el 404 de rutas: directorios en inglés, `pathnames` en `defineRouting`, enlaces y formularios por el helper puro `localizedPath`, y test de navegación que visita cada ruta en ambos idiomas.
   Prueba: escenarios «Rutas públicas fijas» de `specs/web-ui/spec.md`; `pnpm --filter @caribe/web verify:navigation`; lint, typecheck y tests en verde.
 - [ ] T-NAV-2 Separar la navegación pública del panel: crear el área de cuenta y mover el enlace 2FA «Seguridad» desde la cabecera pública a esa área. No tocar `apps/admin`.
   Prueba: escenarios «Navegación pública separada del panel» de `specs/web-ui/spec.md`; capturas de cuenta y cabecera en escritorio y móvil; lint, typecheck y tests en verde.

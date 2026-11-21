@@ -1,7 +1,7 @@
 import type { CatalogSearchInput } from "./catalog-view";
 
 /**
- * Lectura y validación de la URL de `/[locale]/buscar` (change
+ * Lectura y validación de la URL de `/[locale]/search` (change
  * public-rate-and-price-filters). La web no inventa valores: los parámetros que
  * no respetan el contrato de `GET /products` se descartan y se anuncian, en vez
  * de enviarse para provocar un 422.

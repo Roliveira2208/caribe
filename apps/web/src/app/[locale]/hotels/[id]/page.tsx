@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: HotelDetailPageProps): Promis
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
-    alternates: alternateLinks(locale, `/hoteles/${id}`),
+    alternates: alternateLinks(locale, `/hotels/${id}`),
   };
 }
 

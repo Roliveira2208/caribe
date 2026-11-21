@@ -180,5 +180,10 @@
     "title": "Página no encontrada",
     "description": "La ruta que buscas no existe o cambió.",
     "back": "Volver al inicio"
+  },
+  "account": {
+    "title": "Mi cuenta",
+    "tripsTitle": "Mis viajes",
+    "tripsPlaceholder": "Tus reservas aparecerán aquí."
   }
 }

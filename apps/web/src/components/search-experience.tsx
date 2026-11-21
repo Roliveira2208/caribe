@@ -21,7 +21,7 @@ import {
 
 type LoadStatus = "loading" | "error" | "ready";
 
-/** Parte interactiva de `/[locale]/buscar`: lee la URL y consulta la API. */
+/** Parte interactiva de `/[locale]/search`: lee la URL y consulta la API. */
 export function SearchExperience({ locale }: { locale: Locale }) {
   const t = useTranslations("search");
   const params = useSearchParams();

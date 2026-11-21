@@ -15,9 +15,11 @@
 
 Los directorios de `app/[locale]` pasan a `search/`, `hotels/[id]/`, `checkout/[productId]/`,
 `login/`, `two-factor/`, `account/trips/`. Se eliminan `buscar/` y `hoteles/` (movidos, no
-borrados). Todo `href` interno usa `Link` de `@/i18n/navigation` o `getPathname` para formularios
-GET; no se construyen URL con plantillas en español. `metadata.alternateLinks` usa el mismo
-mapa para canonical y hreflang.
+borrados). Todo `href` interno usa `Link` de `@/i18n/navigation` o el helper puro
+`localizedPath` (que lee el mismo `pathnames`) para formularios GET; no se construyen URL con
+plantillas en español. El helper puro mantiene las vistas probables con `react-dom/server` sin
+arrastrar el resolvedor ESM de `next-intl/navigation` a Vitest. `metadata.alternateLinks` usa el
+mismo mapa para canonical y hreflang.
 
 La navegación se prueba con un script de Playwright que visita cada ruta en `es` y `en`,
 comprueba `200`, ausencia del título «Página no encontrada» y que el `<html lang>` coincide con

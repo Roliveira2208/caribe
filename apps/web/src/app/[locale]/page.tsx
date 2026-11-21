@@ -48,7 +48,7 @@ export default async function HomePage({ params }: HomePageProps) {
           </div>
           <div className="order-3 lg:col-start-1 lg:row-start-2">
             <Link
-              href={`/${locale}/buscar`}
+              href="/search"
               className="inline-flex h-12 items-center rounded-md bg-amber px-6 font-semibold text-ink hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
             >
               {t("cta")}

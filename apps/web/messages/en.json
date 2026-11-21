@@ -180,5 +180,10 @@
     "title": "Page not found",
     "description": "The route you are looking for does not exist or has changed.",
     "back": "Back to home"
+  },
+  "account": {
+    "title": "My account",
+    "tripsTitle": "My trips",
+    "tripsPlaceholder": "Your bookings will appear here."
   }
 }

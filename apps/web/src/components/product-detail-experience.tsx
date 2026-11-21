@@ -19,7 +19,7 @@ import {
   type DetailViewLabels,
 } from "./product-detail-view";
 
-/** Parte interactiva de `/[locale]/hoteles/[id]`: consulta detalle y disponibilidad. */
+/** Parte interactiva de `/[locale]/hotels/[id]`: consulta detalle y disponibilidad. */
 export function ProductDetailExperience({
   locale,
   productId,

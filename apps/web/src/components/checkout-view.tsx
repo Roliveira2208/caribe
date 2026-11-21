@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import type { Locale } from "@caribe/shared";
+import { localizedPath } from "@/lib/localized-path";
 import { formatUsd, formatValueDate, formatVes, localizedText } from "@/lib/catalog-view";
 import type {
   CatalogAvailabilityView,
@@ -171,7 +172,7 @@ export function CheckoutView({
   onRemoveTraveler,
   onSubmit,
 }: CheckoutViewProps) {
-  const detailHref = `/${locale}/hoteles/${productId}`;
+  const detailHref = localizedPath(locale, "/hotels/[id]", { id: productId });
 
   if (status === "loading") {
     return (

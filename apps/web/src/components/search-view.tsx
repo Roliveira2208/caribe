@@ -1,4 +1,5 @@
 import type { Locale } from "@caribe/shared";
+import { localizedPath } from "@/lib/localized-path";
 import {
   buildCatalogQuery,
   formatUsd,
@@ -102,7 +103,7 @@ function OfferCard({
       </div>
       <a
         className="mt-5 inline-flex h-11 items-center rounded-md bg-ink px-4 text-sm font-medium text-bone hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
-        href={`/${locale}/hoteles/${offer.id}`}
+        href={localizedPath(locale, "/hotels/[id]", { id: offer.id })}
       >
         {labels.viewDetail}
       </a>

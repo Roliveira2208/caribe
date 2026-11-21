@@ -210,6 +210,6 @@ describe("vista de detalle", () => {
 
     const missing = render({ status: "not-found", product: null, availability: null });
     expect(missing).toContain("Este alojamiento ya no está disponible.");
-    expect(missing).toContain("/es/buscar");
+    expect(missing).toContain("/es/search");
   });
 });

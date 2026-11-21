@@ -181,7 +181,7 @@ describe("extractDestinations", () => {
 describe("SearchFormView", () => {
   it("asocia etiquetas, envía la búsqueda por GET al locale y respeta los valores iniciales", () => {
     const html = renderForm();
-    expect(html).toContain('action="/es/buscar"');
+    expect(html).toContain('action="/es/search"');
     expect(html).toContain('method="get"');
     expect(html).toContain('for="search-destination"');
     expect(html).toMatch(/<option(?=[^>]*value="dest-roques")[^>]*selected/);
@@ -229,7 +229,7 @@ describe("SearchResultsView", () => {
     expect(html).toContain(labels.rateLabel);
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
-    expect(html).toContain(`href="/es/hoteles/offer-1"`);
+    expect(html).toContain(`href="/es/hotels/offer-1"`);
     expect(html).not.toContain("·");
     expect(html).toContain("bg-bone");
     expect(html).toContain("text-teal-ink");

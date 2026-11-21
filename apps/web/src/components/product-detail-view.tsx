@@ -1,5 +1,6 @@
 import type { Locale } from "@caribe/shared";
 import Image from "next/image";
+import { localizedPath } from "@/lib/localized-path";
 import {
   formatUsd,
   formatValueDate,
@@ -157,7 +158,7 @@ export function ProductDetailView({
   status,
   labels,
 }: ProductDetailViewProps) {
-  const searchHref = `/${locale}/buscar`;
+  const searchHref = localizedPath(locale, "/search");
   if (status === "loading") {
     return (
       <p

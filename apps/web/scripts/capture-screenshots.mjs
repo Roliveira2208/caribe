@@ -8,7 +8,15 @@ import { chromium } from "@playwright/test";
  * No se importa desde src/ y no forma parte del build de produccion.
  */
 const baseUrl = process.env.CARIBE_WEB_URL ?? "http://localhost:3000";
-const outputRoot = join(process.cwd(), "..", "..", "docs", "plans", "screenshots", "f1-visual-identity");
+const outputRoot = join(
+  process.cwd(),
+  "..",
+  "..",
+  "docs",
+  "plans",
+  "screenshots",
+  "f1-navigation-refresh",
+);
 
 async function fetchJson(path) {
   const response = await fetch(`${baseUrl}${path}`);
@@ -86,8 +94,8 @@ const mockBooking = {
 
 const screens = [
   { name: "home", path: "/es" },
-  { name: "search", path: "/es/buscar" },
-  { name: "detail", path: `/es/hoteles/${productId}` },
+  { name: "search", path: "/es/search" },
+  { name: "detail", path: `/es/hotels/${productId}` },
   {
     name: "checkout",
     path: `/es/checkout/${productId}?checkIn=${checkIn}&checkOut=${checkOut}&guests=1`,

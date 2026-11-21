@@ -21,7 +21,7 @@ export async function SiteHeader() {
       menuLabel={t("menu")}
       brand={
         <Link
-          href={`/${locale}`}
+          href="/"
           className="inline-flex min-h-11 items-center gap-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
         >
           <span className="size-2 bg-amber" aria-hidden="true" />
