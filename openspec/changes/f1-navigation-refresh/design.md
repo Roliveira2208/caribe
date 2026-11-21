@@ -42,6 +42,11 @@ enlace 2FA (TOTP) de la web pública, visible solo con sesión. Se mueve al áre
   aprobados.
 - Segunda flecha hacia `#destacados`, sección con tarjetas leídas de `GET /products?limit=3`.
   Si no hay productos, se muestra el estado vacío i18n. No se crean datos de ejemplo.
+- Animación: `hero-enter` (entrada escalonada del titular, subtítulo y CTA) y `scroll-rise`
+  (revelación de encabezados y tarjetas ligada al scroll con `animation-timeline: view()` cuando
+  el navegador la soporta; si no, la misma animación temporal de entrada). La animación nunca
+  oculta contenido de forma permanente: con `prefers-reduced-motion` se desactiva y el estado
+  inicial y final son visibles, por lo que funciona también sin JavaScript.
 - El panel de `/search` reutiliza `SearchPanel`; no existe un segundo componente de formulario.
   Las tarjetas de resultados (`OfferCard`) quedan intactas.
 

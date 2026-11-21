@@ -73,6 +73,12 @@ SHALL funcionar con teclado y SHALL respetar `prefers-reduced-motion`.
 - THEN la flecha permanece dentro del viewport mientras el hero ocupa la parte alta
 - THEN se oculta y sale del tabulado al salir del hero
 
+#### Scenario: Animación de entrada y al desplazarse
+- GIVEN la portada con movimiento permitido
+- WHEN se carga y después se desplaza hacia los destacados
+- THEN el texto del hero entra con una transición escalonada y las secciones y tarjetas se revelan al entrar en pantalla
+- THEN con movimiento reducido, sin JavaScript o sin soporte de animaciones todo el contenido queda visible
+
 ### Requirement: Sección de búsqueda a pantalla completa
 
 La sección de búsqueda de la portada SHALL ocupar al menos el alto del viewport, SHALL usar una
