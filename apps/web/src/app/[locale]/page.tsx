@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { alternateLinks } from "@/i18n/metadata";
 import { HomeSearchPanel } from "@/components/home-search-panel";
 import { KineticComposition } from "@/components/kinetic-composition";
+import { ScrollCue } from "@/components/scroll-cue";
 import { SearchReveal } from "@/components/search-reveal";
 
 interface HomePageProps {
@@ -55,24 +56,7 @@ export default async function HomePage({ params }: HomePageProps) {
             </Link>
           </div>
         </div>
-        <a
-          href="#search"
-          aria-label={t("scrollToSearch")}
-          className="absolute bottom-4 left-1/2 inline-flex size-12 -translate-x-1/2 items-center justify-center rounded-full text-bone hover:bg-bone/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="size-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </a>
+        <ScrollCue targetId="search" label={t("scrollToSearch")} />
       </section>
 
       <section id="search" className="search-stage scroll-target py-16">

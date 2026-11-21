@@ -67,6 +67,12 @@ SHALL funcionar con teclado y SHALL respetar `prefers-reduced-motion`.
 - WHEN alcanza cada flecha
 - THEN ve el contorno ámbar de foco y puede activarla con Enter
 
+#### Scenario: Gesto siempre a la vista
+- GIVEN la portada en un viewport bajo, por ejemplo 1280x600
+- WHEN se carga y después se desplaza hasta el buscador
+- THEN la flecha permanece dentro del viewport mientras el hero ocupa la parte alta
+- THEN se oculta y sale del tabulado al salir del hero
+
 ### Requirement: Sección de búsqueda a pantalla completa
 
 La sección de búsqueda de la portada SHALL ocupar al menos el alto del viewport, SHALL usar una

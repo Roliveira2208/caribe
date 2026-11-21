@@ -69,6 +69,34 @@ body {
   scroll-margin-top: 5.5rem;
 }
 
+/* Gesto de bajada: fijo al viewport y retirado del tabulado fuera de su sección. */
+.scroll-cue {
+  position: fixed;
+  inset-block-end: 1rem;
+  inset-inline-start: 50%;
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease,
+    visibility 300ms ease;
+}
+
+.scroll-cue[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue {
+    transform: translate(-50%, 0);
+    transition: none;
+  }
+}
+
 /* Escena del buscador: giro local a pantalla completa y superficie glass. */
 .search-stage {
   min-height: 100vh;

@@ -13,6 +13,8 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenarios «Recorrido guiado de la portada» de `specs/web-ui/spec.md`; capturas de inicio en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-4 Convertir la sección de búsqueda en pantalla completa con fondo `kinetic-giro.svg`, superficie glass y el formulario compartido encima.
   Prueba: escenarios «Sección de búsqueda a pantalla completa» de `specs/web-ui/spec.md`; capturas de inicio y buscador revelado en escritorio y móvil; lint, typecheck y tests en verde.
+- [x] T-NAV-12 Mantener la flecha del hero dentro del viewport en pantallas bajas y retirarla del tabulado al salir del hero.
+  Prueba: escenario «Gesto siempre a la vista» de `specs/web-ui/spec.md`; `verify:navigation` con 1366x768 y 1280x600; capturas de inicio en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-5 Añadir la segunda flecha y la sección de hoteles destacados con datos reales de la API, estado vacío y etiquetas «Próximamente» sin datos de ejemplo. No modificar tarjetas de hotel existentes.
   Prueba: escenarios «Destacados con datos reales» de `specs/web-ui/spec.md`; capturas de destacados en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-6 Simplificar el badge de la cabecera a `BCV` y monto; retirar claves i18n sin uso manteniendo paridad es/en y conservar la fecha valor en checkout y pagos.

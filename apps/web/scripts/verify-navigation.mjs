@@ -167,6 +167,34 @@ try {
   await reducedPage.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
   console.log("OK   /es: salto inmediato con movimiento reducido");
   await reduced.close();
+
+  // El gesto no queda fuera de pantalla en viewports bajos y se retira al salir.
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 1280, height: 600 },
+  ]) {
+    const short = await browser.newPage({ viewport });
+    await short.goto(`${baseUrl}/es`, { waitUntil: "load" });
+    const cue = short.locator('a[href="#search"]');
+    await cue.waitFor({ state: "visible" });
+    const box = await cue.boundingBox();
+    if (!box || box.y < 0 || box.y + box.height > viewport.height) {
+      failures.push(`/es ${viewport.width}x${viewport.height}: flecha fuera del viewport`);
+    } else {
+      console.log(`OK   /es ${viewport.width}x${viewport.height}: flecha dentro del viewport`);
+    }
+    await short.close();
+  }
+
+  await home.goto(`${baseUrl}/es`, { waitUntil: "load" });
+  const cue = home.locator('a[href="#search"]');
+  await cue.waitFor({ state: "visible" });
+  await home.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+  await cue.waitFor({ state: "hidden" });
+  console.log("OK   /es: flecha se retira al salir del hero");
 } finally {
   await browser.close();
 }
