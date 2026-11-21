@@ -23,5 +23,5 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
 
 ## 3. Verificación
 
-- [ ] T-CANC-3 `node scripts/check-specs.mjs`, `pnpm lint`, `pnpm typecheck` y `pnpm test` en verde;
+- [x] T-CANC-3 `node scripts/check-specs.mjs`, `pnpm lint`, `pnpm typecheck` y `pnpm test` en verde;
   sin cambios en `apps/admin` y sin `any` nuevo. Prueba: salida en verde de los cuatro comandos.
