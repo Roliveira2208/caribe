@@ -37,7 +37,7 @@ export default async function HomePage({ params }: HomePageProps) {
 
   return (
     <div className="w-full">
-      <section className="min-h-dvh overflow-hidden bg-ink pt-20 text-bone">
+      <section className="relative min-h-dvh overflow-hidden bg-ink pt-20 text-bone">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 pb-16 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-28">
           <div className="order-1 max-w-2xl space-y-6 lg:col-start-1 lg:row-start-1">
             <h1 className="max-w-3xl font-display text-display text-bone">{t("title")}</h1>
@@ -55,9 +55,27 @@ export default async function HomePage({ params }: HomePageProps) {
             </Link>
           </div>
         </div>
+        <a
+          href="#search"
+          aria-label={t("scrollToSearch")}
+          className="absolute bottom-4 left-1/2 inline-flex size-12 -translate-x-1/2 items-center justify-center rounded-full text-bone hover:bg-bone/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </a>
       </section>
 
-      <section className="bg-bone py-16">
+      <section id="search" className="scroll-target bg-bone py-16">
         <noscript>
           <style>{`.search-reveal[data-reveal="pending"]{opacity:1;clip-path:none;transform:none}.search-reveal .reveal-field{opacity:1;transform:none}`}</style>
         </noscript>

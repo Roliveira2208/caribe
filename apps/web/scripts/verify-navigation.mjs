@@ -83,6 +83,52 @@ try {
     }
     await context.close();
   }
+
+  // Flecha del hero: ancla, foco por teclado y movimiento reducido.
+  const home = await browser.newPage();
+  await home.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });
+  const arrow = home.locator('a[href="#search"]');
+  await arrow.waitFor();
+  const smooth = await home.evaluate(
+    () => getComputedStyle(document.documentElement).scrollBehavior,
+  );
+  if (smooth !== "smooth") failures.push(`/es: scroll-behavior=${smooth}`);
+  await arrow.click();
+  await home.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
+  console.log("OK   /es: flecha al buscador");
+
+  await home.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });
+  let focusedArrow = false;
+  for (let step = 0; step < 30; step += 1) {
+    await home.keyboard.press("Tab");
+    focusedArrow = await home.evaluate(
+      () => document.activeElement?.getAttribute("href") === "#search",
+    );
+    if (focusedArrow) break;
+  }
+  const outline = focusedArrow
+    ? await home.evaluate(() => {
+        const style = getComputedStyle(document.activeElement);
+        return { width: style.outlineWidth, style: style.outlineStyle };
+      })
+    : null;
+  if (!outline || outline.style === "none" || Number.parseFloat(outline.width) < 2) {
+    failures.push("/es: la flecha no tiene foco visible");
+  } else {
+    console.log("OK   /es: foco visible en la flecha");
+  }
+
+  const reduced = await browser.newContext({ reducedMotion: "reduce" });
+  const reducedPage = await reduced.newPage();
+  await reducedPage.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });
+  const reducedBehavior = await reducedPage.evaluate(
+    () => getComputedStyle(document.documentElement).scrollBehavior,
+  );
+  if (reducedBehavior !== "auto") failures.push(`/es: movimiento reducido=${reducedBehavior}`);
+  await reducedPage.locator('a[href="#search"]').click();
+  await reducedPage.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
+  console.log("OK   /es: salto inmediato con movimiento reducido");
+  await reduced.close();
 } finally {
   await browser.close();
 }

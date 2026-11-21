@@ -56,8 +56,17 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply bg-bone font-body text-ink antialiased;
+}
+
+/* Compensa la cabecera fija al llegar a una sección con ancla. */
+.scroll-target {
+  scroll-margin-top: 5.5rem;
 }
 
 :focus-visible {
@@ -137,6 +146,10 @@ body {
 .search-reveal[data-reveal="visible"] .reveal-field:nth-child(8) { transition-delay: 420ms; }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .search-reveal,
   .search-reveal .reveal-field {
     transition: none !important;
