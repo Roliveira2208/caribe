@@ -268,6 +268,17 @@ cliente puede tener reservas en varias agencias; "Mis reservas" consulta por `us
   se observaron `could not renew lock` y `Missing lock ... moveToFinished`; el job se recuperó y terminó
   con `expired: 0, failed: 0`, gracias a la idempotencia del escenario "Expiración idempotente". Los
   mensajes de lock transitorio se registran en WARN; los fallos del processor siguen en ERROR.
+  Segundo incidente (2026-11-21): el mismo patrón apareció en `jobs.recover-pending` (`Missing lock for
+  job repeat:jobs.recover-pending:1795293120000. moveToFinished`). De 391 pasadas, 12 (~3 %) fueron
+  `stalled` y re-arrancadas; ningún job quedó en `failed` porque BullMQ exime a los scheduler jobs de
+  `maxStalledCount`. La causa es la renovación del lock, no el processor: BullMQ renueva cada
+  `lockRenewTime / 2` (30 s por defecto) y una pausa transitoria del entorno basta para perderlo; el
+  job se reencola y el intento antiguo avisa al querer cerrarlo. Se fija `lockRenewTime` en 10 s
+  (renovación cada 5 s) sin cambiar el lock de 120 s ni la detección de crashes, y se acota la
+  retención (`removeOnComplete` 1 h/1000 jobs, `removeOnFail` 24 h) porque el historial no se consulta.
+  El barrido sigue cada minuto: el backlog amplifica la latency del reintento, pero no es el
+  disparador, así que no se cambia el calendario. Plan B si reaparece con frecuencia: pasar el barrido
+  a cada 5 min o partirlo por agencia, con su delta de spec correspondiente.
 - La tasa no tiene trabajo programado (T-F1-5b): `ensureTodayRate()` se dispara al crear una sesión y
   antes de crear un pago, como máximo una vez al día por `fetched_at`. `withRatesGlobal`, sin tenant,
   solo escribe `exchange_rates` globales y no lee ninguna otra tabla.

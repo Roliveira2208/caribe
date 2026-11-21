@@ -111,14 +111,37 @@ export const WORKER_LOCK_DURATION_MS = 120_000;
 export const WORKER_STALLED_INTERVAL_MS = 120_000;
 export const WORKER_CONCURRENCY = 1;
 
+/**
+ * Nota operativa de 2026-11-21 (segundo incidente): el barrido `jobs.recover-pending`
+ * también sufrió `Missing lock ... moveToFinished` en ~3 % de 391 pasadas. El lock
+ * se pierde por pausas transitorias del entorno (suspensión, breakpoint, blip de
+ * Redis) y BullMQ lo reencola; el intento antiguo intenta cerrarlo después y avisa.
+ * BullMQ renueva cada `lockRenewTime / 2`: con el valor por defecto son 30 s, así
+ * que una pausa larga dentro de esa ventana basta para perder el lock. Se baja a
+ * 5 s para acortar la ventana sin cambiar la detección de crashes (el lock sigue
+ * siendo de 120 s). Los jobs terminados se acotan para que Redis no crezca sin
+ * límite; no se consulta su historial.
+ */
+export const WORKER_LOCK_RENEW_TIME_MS = 10_000;
+export const WORKER_KEEP_COMPLETED = { age: 3600, count: 1000 } as const;
+export const WORKER_KEEP_FAILED = { age: 86400 } as const;
+
 export function workerOptions(): Pick<
   WorkerOptions,
-  "lockDuration" | "stalledInterval" | "concurrency"
+  | "lockDuration"
+  | "stalledInterval"
+  | "concurrency"
+  | "lockRenewTime"
+  | "removeOnComplete"
+  | "removeOnFail"
 > {
   return {
     lockDuration: WORKER_LOCK_DURATION_MS,
     stalledInterval: WORKER_STALLED_INTERVAL_MS,
     concurrency: WORKER_CONCURRENCY,
+    lockRenewTime: WORKER_LOCK_RENEW_TIME_MS,
+    removeOnComplete: WORKER_KEEP_COMPLETED,
+    removeOnFail: WORKER_KEEP_FAILED,
   };
 }
 

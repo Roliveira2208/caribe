@@ -11,7 +11,10 @@ import {
   RENDER_DOCUMENT_JOB,
   SEND_NOTIFICATION_JOB,
   WORKER_CONCURRENCY,
+  WORKER_KEEP_COMPLETED,
+  WORKER_KEEP_FAILED,
   WORKER_LOCK_DURATION_MS,
+  WORKER_LOCK_RENEW_TIME_MS,
   WORKER_STALLED_INTERVAL_MS,
   isTransientLockError,
   jobsEnabled,
@@ -169,15 +172,22 @@ describe("jobs", () => {
     );
   });
 
-  it("usa un lock con holgura y un solo trabajo en vuelo", () => {
+  it("usa un lock con holgura, renovación frecuente y un solo trabajo en vuelo", () => {
     expect(workerOptions()).toEqual({
       lockDuration: WORKER_LOCK_DURATION_MS,
       stalledInterval: WORKER_STALLED_INTERVAL_MS,
       concurrency: WORKER_CONCURRENCY,
+      lockRenewTime: WORKER_LOCK_RENEW_TIME_MS,
+      removeOnComplete: WORKER_KEEP_COMPLETED,
+      removeOnFail: WORKER_KEEP_FAILED,
     });
     expect(WORKER_LOCK_DURATION_MS).toBeGreaterThanOrEqual(WORKER_STALLED_INTERVAL_MS);
     expect(WORKER_LOCK_DURATION_MS).toBeGreaterThan(30_000);
+    // BullMQ renueva cada lockRenewTime / 2: 5 s frente a 120 s de lock.
+    expect(WORKER_LOCK_RENEW_TIME_MS * 2).toBeLessThanOrEqual(WORKER_LOCK_DURATION_MS / 4);
     expect(WORKER_CONCURRENCY).toBe(1);
+    expect(WORKER_KEEP_COMPLETED.count).toBeGreaterThan(0);
+    expect(WORKER_KEEP_FAILED.age).toBeGreaterThan(WORKER_KEEP_COMPLETED.age);
   });
 
   it("clasifica los errores de lock como transitorios y los fallos reales no", () => {
@@ -187,6 +197,11 @@ describe("jobs", () => {
     expect(isTransientLockError("Missing lock for job repeat:bookings.expire:123. moveToFinished")).toBe(
       true,
     );
+    expect(
+      isTransientLockError(
+        "Missing lock for job repeat:jobs.recover-pending:1795293120000. moveToFinished",
+      ),
+    ).toBe(true);
     expect(isTransientLockError("lockRenewalFailed")).toBe(true);
     expect(isTransientLockError("Trabajo desconocido: otro.trabajo")).toBe(false);
     expect(isTransientLockError("ECONNREFUSED")).toBe(false);
