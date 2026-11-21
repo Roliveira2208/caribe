@@ -63,10 +63,26 @@ if (!resolved.night) throw new Error(`El producto ${resolved.id} no tiene noches
 const checkIn = resolved.night;
 const checkOut = nextDay(checkIn);
 const productId = resolved.id;
+const stayAvailability = await fetchJson(
+  `/api/v1/products/${encodeURIComponent(productId)}/availability?from=${checkIn}&to=${checkOut}`,
+);
+const mockTotalUsd = stayAvailability.nights?.[0]?.priceUsd ?? "180.00";
 
 // Las imágenes del seed apuntan a un host de ejemplo. Se intercepta el
 // optimizador local para documentar la galería sin depender de ese host.
 const mockImage = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="#0e2a3d"/><rect width="420" height="900" fill="#f4a300"/><rect x="780" width="420" height="900" fill="#1fa6a0"/><circle cx="600" cy="450" r="210" fill="#fbf7ef"/></svg>`;
+
+// El checkout se captura con una respuesta de reserva simulada: no queremos
+// crear reservas reales en la base de demostración ni depender de una sesión.
+const bookingRequestKeys = ["checkIn", "checkOut", "productId", "quantity", "travelers"];
+const bookingRequests = [];
+const mockBooking = {
+  id: "44444444-4444-4444-8444-444444444444",
+  code: "CRB-CARIBE01",
+  status: "PENDING_PAYMENT",
+  expiresAt: `${checkOut}T15:00:00.000Z`,
+  totalUsd: mockTotalUsd,
+};
 
 const screens = [
   { name: "home", path: "/es" },
@@ -96,6 +112,59 @@ async function load(page, path) {
   // contenido del header evita capturar un estado transitorio del boton.
   await page.locator("#site-tools a[href]").first().waitFor({ state: "attached" });
   await page.locator(".site-header").waitFor();
+}
+
+async function mockBookingApi(page) {
+  await page.route("**/api/v1/bookings", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    let body = null;
+    try {
+      body = JSON.parse(route.request().postData() ?? "null");
+    } catch {
+      // body sigue siendo null: la petición no trae un JSON válido.
+    }
+    bookingRequests.push(body);
+
+    const travelerKeys = ["documentNumber", "documentType", "email", "fullName", "phone"];
+    const keys =
+      body && typeof body === "object" && !Array.isArray(body) ? Object.keys(body).sort() : [];
+    const travelersValid =
+      Array.isArray(body?.travelers) &&
+      body.travelers.every(
+        (traveler) =>
+          traveler &&
+          typeof traveler === "object" &&
+          !Array.isArray(traveler) &&
+          Object.keys(traveler).every((key) => travelerKeys.includes(key)),
+      );
+    const valid = keys.join(",") === bookingRequestKeys.join(",") && travelersValid;
+
+    if (!valid) {
+      await route.fulfill({
+        status: 422,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ code: "VALIDATION_ERROR", detail: "Cuerpo inesperado en la captura" }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(mockBooking),
+    });
+  });
+}
+
+function assertLastBookingRequest() {
+  const sent = bookingRequests[bookingRequests.length - 1];
+  const keys = sent && typeof sent === "object" && !Array.isArray(sent) ? Object.keys(sent).sort() : [];
+  if (keys.join(",") !== bookingRequestKeys.join(",")) {
+    throw new Error(`El checkout envió campos inesperados: ${keys.join(",") || "ninguno"}`);
+  }
 }
 
 async function waitForReadyContent(page, screen) {
@@ -129,6 +198,7 @@ for (const viewport of viewports) {
   await page.route("**/_next/image**", (route) =>
     route.fulfill({ status: 200, contentType: "image/svg+xml", body: mockImage }),
   );
+  await mockBookingApi(page);
 
   for (const screen of selected) {
     await load(page, screen.path);
@@ -136,6 +206,17 @@ for (const viewport of viewports) {
     await page.screenshot({
       path: join(outputRoot, `${screen.name}-${viewport.name}.png`),
     });
+
+    if (screen.name === "checkout") {
+      await page.getByLabel("Nombre completo").fill("Ana Pérez");
+      await page.getByLabel("Número de documento").fill("V12345678");
+      await page.locator('form button[type="submit"]').click();
+      await page.locator('[data-checkout-status="success"]').waitFor();
+      assertLastBookingRequest();
+      await page.screenshot({
+        path: join(outputRoot, `${screen.name}-success-${viewport.name}.png`),
+      });
+    }
 
     if (screen.name === "home") {
       await page.locator(".search-reveal").scrollIntoViewIfNeeded();
