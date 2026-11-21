@@ -28,7 +28,7 @@ export default async function TripsPage({ params }: TripsPageProps) {
   const t = await getTranslations("account");
 
   return (
-    <section className="mx-auto w-full max-w-5xl flex-1 px-5 pb-16 pt-28 lg:px-10">
+    <section className="mx-auto w-full max-w-5xl flex-1 px-5 pb-16 pt-8 lg:px-10">
       <h1 className="font-display text-h2 text-ink">{t("tripsTitle")}</h1>
       <p className="mt-4 text-body-lg text-ink/80">{t("tripsPlaceholder")}</p>
     </section>

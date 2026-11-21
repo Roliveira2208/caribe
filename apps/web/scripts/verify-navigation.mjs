@@ -44,6 +44,45 @@ try {
     }
     await context.close();
   }
+
+  // La cabecera pública solo muestra acciones del cliente; el enlace 2FA vive en la cuenta.
+  const session = {
+    user: { id: "nav-check", email: "cliente@example.com" },
+    session: { id: "nav-check-session" },
+  };
+  for (const locale of locales) {
+    const context = await browser.newContext();
+    await context.route("**/api/auth/get-session", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(session),
+      }),
+    );
+    const page = await context.newPage();
+
+    await page.goto(`${baseUrl}/${locale}`, { waitUntil: "domcontentloaded" });
+    await page.locator(`.site-header a[href="/${locale}/account/trips"]`).waitFor();
+    const headerText = await page.locator(".site-header").innerText();
+    if (headerText.includes("Seguridad") || headerText.includes("Security")) {
+      failures.push(`/${locale}: la cabecera pública muestra Seguridad`);
+      console.error(`FAIL /${locale}: la cabecera pública muestra Seguridad`);
+    } else {
+      console.log(`OK   /${locale}: cabecera sin Seguridad`);
+    }
+
+    await page.goto(`${baseUrl}/${locale}/account/trips`, { waitUntil: "domcontentloaded" });
+    const securityLabel = locale === "es" ? "Seguridad" : "Security";
+    const securityLink = page.locator(`a[href="/${locale}/two-factor"]`);
+    await securityLink.waitFor();
+    if ((await securityLink.innerText()).trim() !== securityLabel) {
+      failures.push(`/${locale}/account/trips: falta el enlace ${securityLabel}`);
+      console.error(`FAIL /${locale}/account/trips: falta el enlace ${securityLabel}`);
+    } else {
+      console.log(`OK   /${locale}/account/trips: enlace ${securityLabel}`);
+    }
+    await context.close();
+  }
 } finally {
   await browser.close();
 }
@@ -52,4 +91,6 @@ if (failures.length > 0) {
   console.error(`\n${failures.length} ruta(s) fallaron.`);
   process.exit(1);
 }
-console.log(`\nOK: ${locales.length * routes.length} rutas verificadas en es y en.`);
+console.log(
+  `\nOK: ${locales.length * routes.length} rutas y la navegación de cuenta verificadas en es y en.`,
+);

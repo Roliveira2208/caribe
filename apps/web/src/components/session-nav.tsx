@@ -7,7 +7,7 @@ import { getSession, signOut, type SessionData } from "@caribe/shared";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 
-/** Acciones de sesion en la cabecera: entrar, seguridad (TOTP) o salir. */
+/** Acciones de sesión en la cabecera pública: entrar, mis viajes o salir. */
 export function SessionNav() {
   const t = useTranslations("nav");
   const router = useRouter();
@@ -46,7 +46,7 @@ export function SessionNav() {
   return (
     <div className="flex items-center gap-2">
       <Button asChild size="sm" variant="secondary">
-        <Link href="/two-factor">{t("security")}</Link>
+        <Link href="/account/trips">{t("trips")}</Link>
       </Button>
       <Button
         size="sm"

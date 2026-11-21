@@ -100,6 +100,7 @@ const screens = [
     name: "checkout",
     path: `/es/checkout/${productId}?checkIn=${checkIn}&checkOut=${checkOut}&guests=1`,
   },
+  { name: "account", path: "/es/account/trips" },
 ];
 const viewports = [
   { name: "desktop", width: 1440, height: 900 },
@@ -209,6 +210,20 @@ for (const viewport of viewports) {
   await mockBookingApi(page);
 
   for (const screen of selected) {
+    if (screen.name === "account") {
+      // La cuenta se captura con sesión simulada: el enlace 2FA y «Mis viajes»
+      // dependen de la sesión, pero no queremos autenticarnos de verdad.
+      await page.route("**/api/auth/get-session", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            user: { id: "capture-client", email: "cliente@example.com" },
+            session: { id: "capture-session" },
+          }),
+        }),
+      );
+    }
     await load(page, screen.path);
     await waitForReadyContent(page, screen);
     await page.screenshot({
