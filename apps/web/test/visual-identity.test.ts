@@ -79,12 +79,16 @@ describe("cabecera y revelacion", () => {
     const html = renderToStaticMarkup(
       createElement(HeaderFrame, {
         brand: createElement("span", null, "Caribe"),
+        products: createElement("span", null, "productos"),
         tools: createElement("span", null, "tasa"),
         menuLabel: "Menú",
+        productsLabel: "Productos",
       }),
     );
     expect(html).toContain('class="site-header"');
+    expect(html).toContain('class="site-bar');
     expect(html).toContain('data-scrolled="false"');
+    expect(html).toContain('aria-label="Productos"');
     expect(html).toContain('aria-controls="site-tools"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('id="site-tools"');

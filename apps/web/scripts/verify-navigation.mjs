@@ -116,6 +116,64 @@ try {
     await page.close();
   }
 
+  // Barra flotante centrada, semitransparente y con enlaces de productos (T-NAV-14).
+  for (const locale of locales) {
+    const page = await browser.newPage();
+    await page.goto(`${baseUrl}/${locale}`, { waitUntil: "networkidle" });
+    const bar = page.locator(".site-bar");
+    await bar.waitFor();
+    const shape = await bar.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        viewport: window.innerWidth,
+        radius: Number.parseFloat(style.borderRadius),
+        background: style.backgroundColor,
+        blur: style.backdropFilter || style.webkitBackdropFilter || "",
+        transition: style.transitionDuration,
+      };
+    });
+    const problems = [];
+    if (shape.top < 8) problems.push(`pegada arriba (${shape.top}px)`);
+    if (shape.left < 4 || shape.viewport - shape.right < 4) problems.push("ocupa todo el ancho");
+    if (shape.width >= shape.viewport) problems.push("no es mas estrecha que el viewport");
+    if (shape.radius < 8) problems.push("sin esquinas redondeadas");
+    if (shape.background === "rgb(14, 42, 61)") problems.push("fondo opaco");
+    if (!shape.blur.includes("blur")) problems.push("sin desenfoque");
+    if (shape.transition === "0s") problems.push("sin transicion suave");
+
+    const expectedTypes = ["hotel", "tour", "package", "flight"];
+    const productLinks = page.locator(".site-products a");
+    if ((await productLinks.count()) !== expectedTypes.length) {
+      problems.push("faltan enlaces de productos");
+    } else {
+      for (const [index, type] of expectedTypes.entries()) {
+        const href = await productLinks.nth(index).getAttribute("href");
+        if (href !== `/${locale}/search?type=${type}`) {
+          problems.push(`${type}: ${href ?? "sin href"}`);
+        }
+      }
+    }
+    if ((await page.locator('.site-header button[role="combobox"]').count()) !== 1) {
+      problems.push("falta el selector de idioma");
+    }
+    if ((await page.locator('.site-header [role="status"]').count()) === 0) {
+      problems.push("falta el badge BCV");
+    }
+
+    if (problems.length > 0) {
+      failures.push(`/${locale}: barra flotante (${problems.join(", ")})`);
+      console.error(`FAIL /${locale}: barra flotante (${problems.join(", ")})`);
+    } else {
+      console.log(`OK   /${locale}: barra flotante centrada con cuatro productos y acciones`);
+    }
+    await page.close();
+  }
+
   // Selector de idioma: desplegable con banderas VE/US y activo anunciado.
   for (const locale of locales) {
     const nextLocale = locale === "es" ? "en" : "es";

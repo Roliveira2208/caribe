@@ -23,7 +23,7 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenarios «Badge de tasa compacto» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-7 Sustituir el selector por un desplegable accesible con banderas VE/US en SVG local, etiquetas «Español»/«English» y activo con `aria-current`; conservar ruta y parámetros al cambiar de idioma.
   Prueba: escenarios «Selector de idioma con banderas» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
-- [ ] T-NAV-14 Convertir la cabecera en una barra flotante centrada, semitransparente y con desenfoque, con logo a la izquierda, enlaces a productos (`/search` con filtro `type`), sesión, idioma y tasa BCV.
+- [x] T-NAV-14 Convertir la cabecera en una barra flotante centrada, semitransparente y con desenfoque, con logo a la izquierda, enlaces a productos (`/search` con filtro `type`), sesión, idioma y tasa BCV.
   Prueba: escenarios «Cabecera flotante» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-15 Dar al menos 100vh a hero, búsqueda, destacados y cierre, con flecha de hero a búsqueda, de búsqueda a destacados y de destacados al cierre con CTA.
   Prueba: escenario «Secciones a pantalla completa» de `specs/web-ui/spec.md`; `verify:navigation`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.

@@ -9,6 +9,11 @@
     "language": "Idioma",
     "spanish": "Español",
     "english": "English",
+    "products": "Productos",
+    "hotels": "Hoteles",
+    "tours": "Tours",
+    "packages": "Paquetes",
+    "flights": "Vuelos",
     "menu": "Menú"
   },
   "todayRate": {
