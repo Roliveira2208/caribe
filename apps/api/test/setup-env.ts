@@ -20,3 +20,8 @@ process.env.ALLOWED_IMAGE_HOSTS ??= "images.caribe.test";
 // crear la aplicación. La clave es un valor de prueba, nunca una real.
 process.env.COTIZAVE_API_URL ??= "http://127.0.0.1:9/rates";
 process.env.COTIZAVE_API_KEY ??= "ctz_live_test_no_usar";
+// La caché de tasas de Redis sobrevive a la limpieza de `caribe_test`: una
+// corrida anterior podía dejar la tasa de hoy y hacer que el e2e de pagos no
+// llamara al proveedor. En pruebas se usa solo la caché en memoria, que muere
+// con el proceso (jobs sigue deshabilitado por NODE_ENV).
+process.env.REDIS_URL = "";
