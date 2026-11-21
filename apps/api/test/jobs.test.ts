@@ -10,8 +10,13 @@ import {
   RECOVER_PENDING_SCHEDULE,
   RENDER_DOCUMENT_JOB,
   SEND_NOTIFICATION_JOB,
+  WORKER_CONCURRENCY,
+  WORKER_LOCK_DURATION_MS,
+  WORKER_STALLED_INTERVAL_MS,
+  isTransientLockError,
   jobsEnabled,
   pendingRecoveryMinutes,
+  workerOptions,
 } from "../src/jobs/jobs.constants.js";
 import {
   createJobProcessor,
@@ -162,6 +167,29 @@ describe("jobs", () => {
     await expect(process({ name: "otro.trabajo", data: {} })).rejects.toThrow(
       "Trabajo desconocido: otro.trabajo",
     );
+  });
+
+  it("usa un lock con holgura y un solo trabajo en vuelo", () => {
+    expect(workerOptions()).toEqual({
+      lockDuration: WORKER_LOCK_DURATION_MS,
+      stalledInterval: WORKER_STALLED_INTERVAL_MS,
+      concurrency: WORKER_CONCURRENCY,
+    });
+    expect(WORKER_LOCK_DURATION_MS).toBeGreaterThanOrEqual(WORKER_STALLED_INTERVAL_MS);
+    expect(WORKER_LOCK_DURATION_MS).toBeGreaterThan(30_000);
+    expect(WORKER_CONCURRENCY).toBe(1);
+  });
+
+  it("clasifica los errores de lock como transitorios y los fallos reales no", () => {
+    expect(isTransientLockError("could not renew lock for job repeat:bookings.expire:123")).toBe(
+      true,
+    );
+    expect(isTransientLockError("Missing lock for job repeat:bookings.expire:123. moveToFinished")).toBe(
+      true,
+    );
+    expect(isTransientLockError("lockRenewalFailed")).toBe(true);
+    expect(isTransientLockError("Trabajo desconocido: otro.trabajo")).toBe(false);
+    expect(isTransientLockError("ECONNREFUSED")).toBe(false);
   });
 
   it("solo habilita BullMQ con REDIS_URL y fuera de las pruebas", () => {

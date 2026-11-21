@@ -263,6 +263,11 @@ cliente puede tener reservas en varias agencias; "Mis reservas" consulta por `us
   `upsertJobScheduler`: `bookings.expire` con `* * * * *`. Cola y worker usan conexiones propias con
   `maxRetriesPerRequest: null`; el worker cierra en `onModuleDestroy`. Sin `REDIS_URL` o con
   `NODE_ENV=test` el planificador no arranca: la API sigue sirviendo y los e2e no dependen de Redis.
+  El worker fija `lockDuration` y `stalledInterval` en 120 s y `concurrency` en 1 ( defaults de 30 s
+  insuficientes cuando la pasada recorre miles de agencias). Nota operativa de 2026-11-21: en el dev
+  se observaron `could not renew lock` y `Missing lock ... moveToFinished`; el job se recuperó y terminó
+  con `expired: 0, failed: 0`, gracias a la idempotencia del escenario "Expiración idempotente". Los
+  mensajes de lock transitorio se registran en WARN; los fallos del processor siguen en ERROR.
 - La tasa no tiene trabajo programado (T-F1-5b): `ensureTodayRate()` se dispara al crear una sesión y
   antes de crear un pago, como máximo una vez al día por `fetched_at`. `withRatesGlobal`, sin tenant,
   solo escribe `exchange_rates` globales y no lee ninguna otra tabla.

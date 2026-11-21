@@ -1,3 +1,4 @@
+import type { WorkerOptions } from "bullmq";
 import { z } from "@caribe/shared";
 
 /**
@@ -94,4 +95,41 @@ export type NotificationPayload = z.infer<typeof notificationPayloadSchema>;
  */
 export function jobsEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return Boolean(env.REDIS_URL) && env.NODE_ENV !== "test";
+}
+
+/**
+ * Opciones del worker (fix de los errores de lock de `bookings.expire`).
+ *
+ * La expiración recorre todas las agencias en una sola pasada: con 2404 tenants
+ * tarda ~15 s y el lock por defecto de BullMQ es 30 s. Cualquier pausa del
+ * entorno (suspensión del equipo, breakpoint, blip de Redis) impedía renovar,
+ * el job pasaba a stalled y el intento antiguo terminaba con `Missing lock ...
+ * moveToFinished`. Se da holgura de 4x sobre el peor caso medido y se iguala
+ * `stalledInterval` al lock para no robar un job que sigue corriendo.
+ */
+export const WORKER_LOCK_DURATION_MS = 120_000;
+export const WORKER_STALLED_INTERVAL_MS = 120_000;
+export const WORKER_CONCURRENCY = 1;
+
+export function workerOptions(): Pick<
+  WorkerOptions,
+  "lockDuration" | "stalledInterval" | "concurrency"
+> {
+  return {
+    lockDuration: WORKER_LOCK_DURATION_MS,
+    stalledInterval: WORKER_STALLED_INTERVAL_MS,
+    concurrency: WORKER_CONCURRENCY,
+  };
+}
+
+/**
+ * Errores transitorios de lock de BullMQ. Se registran en WARN: el job se
+ * recupera solo (la expiración es idempotente) y no son fallos del processor.
+ */
+export function isTransientLockError(message: string): boolean {
+  return (
+    message.includes("could not renew lock") ||
+    message.includes("Missing lock for job") ||
+    message.includes("lockRenewalFailed")
+  );
 }

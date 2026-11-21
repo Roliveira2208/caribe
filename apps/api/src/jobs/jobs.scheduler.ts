@@ -13,9 +13,11 @@ import {
   RECOVER_PENDING_SCHEDULE,
   RENDER_DOCUMENT_JOB,
   SEND_NOTIFICATION_JOB,
+  isTransientLockError,
   jobsEnabled,
   notificationPayloadSchema,
   renderDocumentPayloadSchema,
+  workerOptions,
   type NotificationPayload,
   type RenderDocumentPayload,
 } from "./jobs.constants.js";
@@ -216,7 +218,7 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
           this.notifications.sendWithRetries(payload.notificationId, payload.tenantId),
         recoverPending: () => this.recoverPending(),
       }),
-      { connection },
+      { connection, ...workerOptions() },
     );
 
     // Sin oyentes de "error", un fallo de conexión de ioredis se propaga como
@@ -225,7 +227,12 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
       this.logger.error(`Error de la cola ${JOBS_QUEUE_NAME}: ${error.message}`);
     });
     worker.on("error", (error) => {
-      this.logger.error(`Error del worker ${JOBS_QUEUE_NAME}: ${error.message}`);
+      const detail = `Error del worker ${JOBS_QUEUE_NAME}: ${error.message}`;
+      if (isTransientLockError(error.message)) {
+        this.logger.warn(detail);
+        return;
+      }
+      this.logger.error(detail);
     });
     worker.on("failed", (job, error) => {
       this.logger.error(
