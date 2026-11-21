@@ -40,12 +40,15 @@ describe("identidad visual Caribe", () => {
     expect(css).toContain("data-scrolled=\"true\"");
   });
 
-  it("respeta movimiento reducido sin animar otras propiedades", () => {
+  it("respeta movimiento reducido con la animación aprobada", () => {
     const css = read("src/app/globals.css");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("clip-path: none !important");
     expect(css).toContain("transform: none !important");
-    expect(css).not.toMatch(/@keyframes/);
+    // La change f1-navigation-refresh aprobó una sola animación de portada.
+    expect([...css.matchAll(/@keyframes\s+([\w-]+)/g)].map((match) => match[1])).toEqual([
+      "caribe-rise",
+    ]);
   });
 
   it("auto-aloja las dos fuentes aprobadas", () => {

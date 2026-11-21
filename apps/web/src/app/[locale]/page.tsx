@@ -42,8 +42,10 @@ export default async function HomePage({ params }: HomePageProps) {
       <section className="relative min-h-dvh overflow-hidden bg-ink pt-20 text-bone">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 pb-16 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-28">
           <div className="order-1 max-w-2xl space-y-6 lg:col-start-1 lg:row-start-1">
-            <h1 className="max-w-3xl font-display text-display text-bone">{t("title")}</h1>
-            <p className="max-w-xl text-body-lg text-bone/80">{t("subtitle")}</p>
+            <h1 className="hero-enter max-w-3xl font-display text-display text-bone">
+              {t("title")}
+            </h1>
+            <p className="hero-enter max-w-xl text-body-lg text-bone/80">{t("subtitle")}</p>
           </div>
           <div className="order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <KineticComposition />
@@ -51,7 +53,7 @@ export default async function HomePage({ params }: HomePageProps) {
           <div className="order-3 lg:col-start-1 lg:row-start-2">
             <Link
               href="/search"
-              className="inline-flex h-12 items-center rounded-md bg-amber px-6 font-semibold text-ink hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+              className="hero-enter inline-flex h-12 items-center rounded-md bg-amber px-6 font-semibold text-ink hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
             >
               {t("cta")}
             </Link>

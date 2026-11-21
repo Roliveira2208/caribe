@@ -163,6 +163,22 @@ try {
     () => getComputedStyle(document.documentElement).scrollBehavior,
   );
   if (reducedBehavior !== "auto") failures.push(`/es: movimiento reducido=${reducedBehavior}`);
+  const animated = await home.locator(".hero-enter").first().evaluate((node) => getComputedStyle(node).animationName);
+  const rising = await home.locator(".scroll-rise").first().evaluate((node) => getComputedStyle(node).animationName);
+  if (animated !== "caribe-rise" || rising !== "caribe-rise") {
+    failures.push(`/es: animaciones ausentes (${animated}, ${rising})`);
+  } else {
+    console.log("OK   /es: entrada y revelación animadas");
+  }
+  const reducedRise = await reducedPage.locator(".scroll-rise").first().evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { name: style.animationName, opacity: style.opacity, transform: style.transform };
+  });
+  if (reducedRise.name !== "none" || reducedRise.opacity !== "1" || reducedRise.transform !== "none") {
+    failures.push(`/es: movimiento reducido no desactiva las animaciones (${JSON.stringify(reducedRise)})`);
+  } else {
+    console.log("OK   /es: animaciones desactivadas con movimiento reducido");
+  }
   await reducedPage.locator('a[href="#search"]').click();
   await reducedPage.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
   console.log("OK   /es: salto inmediato con movimiento reducido");

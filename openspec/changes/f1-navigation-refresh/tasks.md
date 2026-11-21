@@ -17,7 +17,7 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenario «Gesto siempre a la vista» de `specs/web-ui/spec.md`; `verify:navigation` con 1366x768 y 1280x600; capturas de inicio en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-5 Añadir la segunda flecha y la sección de hoteles destacados con datos reales de la API, estado vacío y etiquetas «Próximamente» sin datos de ejemplo. No modificar tarjetas de hotel existentes.
   Prueba: escenarios «Destacados con datos reales» de `specs/web-ui/spec.md`; capturas de destacados en escritorio y móvil; lint, typecheck y tests en verde.
-- [ ] T-NAV-13 Animar la entrada del hero y la revelación de secciones y tarjetas al desplazarse, con degradación segura sin movimiento.
+- [x] T-NAV-13 Animar la entrada del hero y la revelación de secciones y tarjetas al desplazarse, con degradación segura sin movimiento.
   Prueba: escenario «Animación de entrada y al desplazarse» de `specs/web-ui/spec.md`; `verify:navigation` con movimiento permitido y reducido; capturas de inicio y destacados en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-6 Simplificar el badge de la cabecera a `BCV` y monto; retirar claves i18n sin uso manteniendo paridad es/en y conservar la fecha valor en checkout y pagos.
   Prueba: escenarios «Badge de tasa compacto» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.

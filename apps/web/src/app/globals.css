@@ -97,6 +97,51 @@ body {
   }
 }
 
+/* Animaciones de portada: entrada escalonada y revelación ligera al desplazarse. */
+@keyframes caribe-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-enter {
+  animation: caribe-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.hero-enter:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.hero-enter:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.scroll-rise {
+  animation: caribe-rise 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@supports (animation-timeline: view()) {
+  .scroll-rise {
+    animation: caribe-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 25%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter,
+  .scroll-rise {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* Escena del buscador: giro local a pantalla completa y superficie glass. */
 .search-stage {
   min-height: 100vh;
