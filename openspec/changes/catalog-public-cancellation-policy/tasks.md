@@ -16,7 +16,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Antes de cada commit: `
   `database.test.ts` sin relajar el RLS directo de `cancellation_policies`.
   Prueba: «Lectura pública de la política» y «Sin acceso directo a la tabla».
 
-- [ ] T-CANC-2 Extender el contrato y el servicio de detalle con `cancellationPolicy` validado en
+- [x] T-CANC-2 Extender el contrato y el servicio de detalle con `cancellationPolicy` validado en
   camelCase; añadir los casos e2e de detalle con política, sin política, producto no público y
   reglas corruptas. Prueba: «Detalle con política», «Detalle sin política», «Producto no público» y
   «Reglas corruptas no se exponen».

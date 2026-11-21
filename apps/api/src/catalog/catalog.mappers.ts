@@ -1,4 +1,9 @@
-import type { CatalogAttributes, LocalizedText } from "./catalog.schemas.js";
+import { cancellationRulesSchema } from "@caribe/shared";
+import type {
+  CatalogAttributes,
+  CatalogCancellationPolicy,
+  LocalizedText,
+} from "./catalog.schemas.js";
 
 /**
  * Mapeos compartidos entre la lectura pública (T-F1-3) y el panel (T-F1-4).
@@ -20,6 +25,27 @@ export function toAttributes(value: unknown): CatalogAttributes {
     maxGuests: integerOr(record["maxGuests"], 0),
     amenities: stringArray(record["amenities"]),
     images: stringArray(record["images"]),
+  };
+}
+
+/**
+ * Convierte la fila de la función SQL de la política pública al contrato
+ * camelCase. Las reglas se validan con el esquema compartido: si el JSONB está
+ * corrupto se devuelve una lista vacía, nunca el contenido crudo.
+ */
+export function toPublicCancellationPolicy(record: {
+  name: string;
+  rules: unknown;
+}): CatalogCancellationPolicy {
+  const parsed = cancellationRulesSchema.safeParse(record.rules);
+  return {
+    name: record.name,
+    rules: parsed.success
+      ? parsed.data.map((rule) => ({
+          hoursBefore: rule.hours_before,
+          percentage: rule.percentage,
+        }))
+      : [],
   };
 }
 

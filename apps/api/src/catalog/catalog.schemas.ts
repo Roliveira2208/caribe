@@ -142,6 +142,18 @@ export interface CatalogAttributes {
   images: string[];
 }
 
+/** Regla pública de cancelación, ya validada y en camelCase. */
+export interface CatalogCancellationRule {
+  hoursBefore: number;
+  percentage: number;
+}
+
+/** Política de cancelación expuesta solo en el detalle público. */
+export interface CatalogCancellationPolicy {
+  name: string;
+  rules: CatalogCancellationRule[];
+}
+
 /** Ficha pública de un tipo de habitación. */
 export interface CatalogProduct {
   id: string;
@@ -155,6 +167,11 @@ export interface CatalogProduct {
   basePriceUsd: string;
   /** Equivalente informativo con la tasa global; `null` si no hay tasa. */
   basePriceVes: string | null;
+}
+
+/** Ficha pública con la política de cancelación del producto. */
+export interface CatalogProductDetail extends CatalogProduct {
+  cancellationPolicy: CatalogCancellationPolicy | null;
 }
 
 /**

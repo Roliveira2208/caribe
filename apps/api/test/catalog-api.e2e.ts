@@ -46,6 +46,9 @@ describe("catalog", () => {
   const aNoEn = randomUUID();
   const bStd = randomUUID();
 
+  const policyA = randomUUID();
+  const policyDraftOnly = randomUUID();
+
   const today = todayInCaracas();
   const night1 = addDays(today, 10);
   const night2 = addDays(today, 11);
@@ -145,14 +148,15 @@ describe("catalog", () => {
       description: unknown;
       attributes: string;
       deletedAt?: Date | null;
+      cancellationPolicyId?: string | null;
     }): Promise<void> => {
       await owner.query(
         `INSERT INTO "products"
            (id, tenant_id, provider_id, type, hotel_key, room_type, title, description,
             destination_id, status, base_price_usd, cancellation_policy_id, source, attributes,
             deleted_at, created_at, updated_at)
-         VALUES ($1, $2, $3, 'HOTEL', $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, NULL, 'OWN',
-                 $11::jsonb, $12, now(), now())`,
+         VALUES ($1, $2, $3, 'HOTEL', $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, 'OWN',
+                 $12::jsonb, $13, now(), now())`,
         [
           params.id,
           params.tenantId,
@@ -164,11 +168,32 @@ describe("catalog", () => {
           params.destinationId,
           params.status,
           params.basePrice,
+          params.cancellationPolicyId ?? null,
           params.attributes,
           params.deletedAt ?? null,
         ],
       );
     };
+
+    // Política del producto publicado y política usada solo por un borrador.
+    // Las reglas cumplen el trigger de la base y el esquema compartido.
+    await owner.query(
+      `INSERT INTO "cancellation_policies" (id, tenant_id, name, rules, created_at, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, now(), now()),
+              ($5, $2, $6, $7::jsonb, now(), now())`,
+      [
+        policyA,
+        orgA,
+        `Cancelación flexible ${suffix}`,
+        JSON.stringify([
+          { hours_before: 48, percentage: 100 },
+          { hours_before: 24, percentage: 50 },
+        ]),
+        policyDraftOnly,
+        `Solo borrador ${suffix}`,
+        JSON.stringify([{ hours_before: 72, percentage: 0 }]),
+      ],
+    );
 
     await product({
       id: aStd,
@@ -182,6 +207,7 @@ describe("catalog", () => {
       title: titleA,
       description: { es: "Habitación standard", en: "standard room" },
       attributes: attributes(2, [imageA]),
+      cancellationPolicyId: policyA,
     });
     await product({
       id: aSuite,
@@ -234,6 +260,7 @@ describe("catalog", () => {
       title: titleA,
       description: { es: "Individual", en: "Single" },
       attributes: attributes(2),
+      cancellationPolicyId: policyDraftOnly,
     });
     await product({
       id: aArchived,
@@ -378,6 +405,9 @@ describe("catalog", () => {
         [orgA, orgB],
       ]);
       await owner.query(`DELETE FROM "products" WHERE "tenant_id" = ANY($1::text[])`, [
+        [orgA, orgB],
+      ]);
+      await owner.query(`DELETE FROM "cancellation_policies" WHERE "tenant_id" = ANY($1::text[])`, [
         [orgA, orgB],
       ]);
       await owner.query(`DELETE FROM "providers" WHERE "tenant_id" = ANY($1::text[])`, [
@@ -758,6 +788,46 @@ describe("catalog", () => {
       );
       expect(status).toBe(422);
       expect(body.code).toBe("VALIDATION_ERROR");
+    });
+  });
+
+  describe("Política de cancelación pública", () => {
+    it("detalle con política: expone nombre y reglas ordenadas sin identificadores", async () => {
+      const { status, body } = await getJson<Record<string, unknown>>(`/products/${aStd}`);
+      expect(status).toBe(200);
+      expect(body.cancellationPolicy).toEqual({
+        name: `Cancelación flexible ${suffix}`,
+        rules: [
+          { hoursBefore: 48, percentage: 100 },
+          { hoursBefore: 24, percentage: 50 },
+        ],
+      });
+      const serialized = JSON.stringify(body.cancellationPolicy);
+      for (const key of ["policyId", "tenantId", "id", "createdAt", "updatedAt"]) {
+        expect(serialized).not.toContain(key);
+      }
+      expect(serialized).not.toContain(orgA);
+    });
+
+    it("detalle sin política: devuelve null", async () => {
+      const { status, body } = await getJson<Record<string, unknown>>(`/products/${aSuite}`);
+      expect(status).toBe(200);
+      expect(body.cancellationPolicy).toBeNull();
+    });
+
+    it("producto no público: 404 sin filtrar la política del borrador", async () => {
+      const { status, body } = await getJson<ProblemBody>(`/products/${aDraft}`);
+      expect(status).toBe(404);
+      expect(body.code).toBe("NOT_FOUND");
+      expect(JSON.stringify(body)).not.toContain(`Solo borrador ${suffix}`);
+    });
+
+    it("política de otro producto: no se filtra en un detalle distinto", async () => {
+      const { status, body } = await getJson<Record<string, unknown>>(`/products/${aStd}`);
+      expect(status).toBe(200);
+      const serialized = JSON.stringify(body);
+      expect(serialized).not.toContain(`Solo borrador ${suffix}`);
+      expect(body.cancellationPolicy).not.toMatchObject({ name: `Solo borrador ${suffix}` });
     });
   });
 

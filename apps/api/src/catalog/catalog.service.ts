@@ -20,10 +20,21 @@ import {
   type CatalogOffer,
   type CatalogPage,
   type CatalogProduct,
+  type CatalogProductDetail,
   type CatalogQuery,
 } from "./catalog.schemas.js";
 import { catalogOrderKey, decodeCatalogCursor, encodeCatalogCursor } from "./catalog.cursor.js";
-import { toAttributes, toLocalized } from "./catalog.mappers.js";
+import {
+  toAttributes,
+  toLocalized,
+  toPublicCancellationPolicy,
+} from "./catalog.mappers.js";
+
+/** Fila devuelta por la función de lectura pública de la política. */
+interface PublicPolicyRow {
+  name: string;
+  rules: unknown;
+}
 
 /** Fila de la ficha pública; la oferta añade el total de la estancia. */
 interface ProductRow {
@@ -111,10 +122,10 @@ export class CatalogService {
   }
 
   /** Ficha pública de un producto `PUBLISHED` sin borrado lógico. */
-  async detail(id: string): Promise<CatalogProduct> {
+  async detail(id: string): Promise<CatalogProductDetail> {
     const rate = await this.globalRateOrNull();
-    const rows = await this.tenantService.withPublic((tx) =>
-      tx.$queryRaw<ProductRow[]>(Prisma.sql`
+    const rows = await this.tenantService.withPublic(async (tx) => {
+      const products = await tx.$queryRaw<ProductRow[]>(Prisma.sql`
         SELECT p."id" AS id,
                p."hotel_key" AS hotel_key,
                p."room_type" AS room_type,
@@ -132,12 +143,21 @@ export class CatalogService {
            AND p."status" = 'PUBLISHED'
            AND p."deleted_at" IS NULL
          LIMIT 1
-      `),
-    );
+      `);
+      const policies = await tx.$queryRaw<PublicPolicyRow[]>(Prisma.sql`
+        SELECT name, rules FROM public_cancellation_policy(${id})
+      `);
+      return { products, policies };
+    });
 
-    const product = rows[0];
+    const product = rows.products[0];
     if (!product) throw productNotFound();
-    return toProduct(product, rate);
+    return {
+      ...toProduct(product, rate),
+      cancellationPolicy: rows.policies[0]
+        ? toPublicCancellationPolicy(rows.policies[0])
+        : null,
+    };
   }
 
   /**
