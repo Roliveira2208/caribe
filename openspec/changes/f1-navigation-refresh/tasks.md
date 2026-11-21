@@ -25,7 +25,7 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenarios «Selector de idioma con banderas» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-14 Convertir la cabecera en una barra flotante centrada, semitransparente y con desenfoque, con logo a la izquierda, enlaces a productos (`/search` con filtro `type`), sesión, idioma y tasa BCV.
   Prueba: escenarios «Cabecera flotante» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
-- [ ] T-NAV-15 Dar al menos 100vh a hero, búsqueda, destacados y cierre, con flecha de hero a búsqueda, de búsqueda a destacados y de destacados al cierre con CTA.
+- [x] T-NAV-15 Dar al menos 100vh a hero, búsqueda, destacados y cierre, con flecha de hero a búsqueda, de búsqueda a destacados y de destacados al cierre con CTA.
   Prueba: escenario «Secciones a pantalla completa» de `specs/web-ui/spec.md`; `verify:navigation`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-16 Suavizar las transiciones de entrada, revelación y cabecera de la portada con degradación segura bajo movimiento reducido.
   Prueba: escenario «Transiciones suaves» de `specs/web-ui/spec.md`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.

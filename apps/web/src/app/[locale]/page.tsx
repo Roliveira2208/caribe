@@ -79,8 +79,21 @@ export default async function HomePage({ params }: HomePageProps) {
 
       <FeaturedStaysPanel locale={locale} />
 
-      <section className="border-t border-ink/10 bg-bone py-14">
-        <div className="mx-auto max-w-6xl px-5 lg:px-10">
+      <section
+        id="cierre"
+        className="scroll-target flex min-h-dvh flex-col justify-center border-t border-ink/10 bg-bone py-24"
+      >
+        <div className="mx-auto w-full max-w-6xl space-y-10 px-5 lg:px-10">
+          <div className="max-w-2xl space-y-3">
+            <h2 className="scroll-rise font-display text-h2 text-ink">{t("closingTitle")}</h2>
+            <p className="scroll-rise text-body-lg text-ink/70">{t("closingDescription")}</p>
+            <Link
+              href="/search"
+              className="scroll-rise mt-2 inline-flex h-12 items-center rounded-md bg-ink px-6 font-semibold text-bone hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+            >
+              {t("cta")}
+            </Link>
+          </div>
           <ul className="grid gap-6 sm:grid-cols-3">
             {features.map((feature) => (
               <li key={feature.title} className="scroll-rise space-y-2 border-t-4 border-teal pt-4">

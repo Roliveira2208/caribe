@@ -18,6 +18,7 @@ const labels: FeaturedLabels = {
   package: "Paquetes",
   flight: "Vuelos",
   comingSoon: "Próximamente",
+  scrollToClosing: "Ir al cierre",
 };
 
 function offer(overrides: Partial<CatalogOfferView> = {}): CatalogOfferView {
@@ -61,6 +62,8 @@ describe("alojamientos destacados", () => {
       ),
     );
     expect(html).toContain('id="destacados"');
+    expect(html).toContain('min-h-dvh');
+    expect(html).toContain('href="#cierre"');
     expect(html).toContain("Posada Malvin");
     expect(html).toContain("Hotel Sol");
     expect(html).toContain("120,00");

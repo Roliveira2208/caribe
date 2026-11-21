@@ -387,6 +387,40 @@ try {
   const soonCount = await home.locator("#destacados").getByText("Próximamente", { exact: true }).count();
   if (soonCount !== 3) failures.push(`/es: ${soonCount} etiquetas Próximamente (esperadas 3)`);
   else console.log("OK   /es: Tours, Paquetes y Vuelos marcados como próximamente");
+
+  // Cuatro secciones a pantalla completa y tercera flecha al cierre (T-NAV-15).
+  const sections = home.locator("section");
+  const sectionCount = await sections.count();
+  if (sectionCount !== 4) {
+    failures.push(`/es: ${sectionCount} secciones en la portada (esperadas 4)`);
+  } else {
+    for (let index = 0; index < sectionCount; index += 1) {
+      const size = await sections.nth(index).evaluate((node) => ({
+        height: node.getBoundingClientRect().height,
+        viewport: window.innerHeight,
+      }));
+      if (size.height < size.viewport - 1) {
+        failures.push(`/es: sección ${index + 1} mide ${size.height}px y el viewport ${size.viewport}px`);
+      }
+    }
+    console.log("OK   /es: cuatro secciones a pantalla completa");
+  }
+
+  const closingCue = home.locator('a[href="#cierre"]');
+  await closingCue.waitFor({ state: "visible" });
+  await closingCue.click();
+  await home.waitForFunction(() => location.hash === "#cierre");
+  const closingTop = await home.locator("#cierre").evaluate((node) => node.getBoundingClientRect().top);
+  if (Math.abs(closingTop) > 120) {
+    failures.push(`/es: la flecha al cierre no llegó (top=${closingTop})`);
+  } else {
+    console.log("OK   /es: flecha al cierre");
+  }
+  if ((await home.locator('#cierre a[href="/es/search"]').count()) !== 1) {
+    failures.push("/es: falta el CTA del cierre hacia el buscador");
+  } else {
+    console.log("OK   /es: CTA del cierre hacia el buscador");
+  }
 } finally {
   await browser.close();
 }

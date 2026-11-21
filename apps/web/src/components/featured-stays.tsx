@@ -7,6 +7,7 @@ import { localizedText } from "@/lib/catalog-view";
 import { featuredApiUrl, FEATURED_LIMIT, featuredUsd, featuredVes } from "@/lib/featured-view";
 import { localizedPath } from "@/lib/localized-path";
 import { parseCatalogPageView, type CatalogOfferView } from "@/lib/search-view";
+import { ScrollCue } from "./scroll-cue";
 
 export interface FeaturedLabels {
   title: string;
@@ -19,6 +20,7 @@ export interface FeaturedLabels {
   package: string;
   flight: string;
   comingSoon: string;
+  scrollToClosing: string;
 }
 
 interface FeaturedStaysViewProps {
@@ -36,8 +38,11 @@ export function FeaturedStaysView({ items, status, locale, labels }: FeaturedSta
   const soon = [labels.tour, labels.package, labels.flight];
 
   return (
-    <section id="destacados" className="scroll-target border-t border-ink/10 bg-bone py-16">
-      <div className="mx-auto max-w-6xl space-y-8 px-5 lg:px-10">
+    <section
+      id="destacados"
+      className="scroll-target relative flex min-h-dvh flex-col justify-center border-t border-ink/10 bg-bone py-24"
+    >
+      <div className="mx-auto w-full max-w-6xl space-y-8 px-5 lg:px-10">
         <div className="max-w-2xl space-y-2">
           <h2 className="scroll-rise font-display text-h2 text-ink">{labels.title}</h2>
           <p className="scroll-rise text-body-lg text-ink/70">{labels.subtitle}</p>
@@ -100,6 +105,7 @@ export function FeaturedStaysView({ items, status, locale, labels }: FeaturedSta
           ))}
         </ul>
       </div>
+      <ScrollCue targetId="cierre" label={labels.scrollToClosing} tone="on-light" />
     </section>
   );
 }
@@ -152,6 +158,7 @@ export function FeaturedStaysPanel({ locale }: { locale: Locale }) {
     package: t("featuredPackage"),
     flight: t("featuredFlight"),
     comingSoon: t("featuredComingSoon"),
+    scrollToClosing: t("scrollToClosing"),
   };
   return <FeaturedStays locale={locale} labels={labels} />;
 }
