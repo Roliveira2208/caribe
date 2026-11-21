@@ -12,7 +12,7 @@ Requiere aprobación del plan de diseño, ya recibida el 2026-11-21. Una tarea a
   Prueba: catalog › "Detalle y disponibilidad públicos"; escenarios de la spec delta `web-ui`; capturas de escritorio y móvil de detalle; lint, typecheck y tests en verde.
 - [x] T-VIS-4 Checkout (`T-F1-13c`): construir `/[locale]/checkout/[productId]` con fechas, viajeros, selector USD o VES, resumen y alta de reserva con `Idempotency-Key`, sin enviar montos ni tasas desde el cliente. Estado de éxito dentro de la misma pantalla con el código de reserva.
   Prueba: booking › "Hay cupo en todas las noches" y "Reserva sin viajeros"; escenarios de la spec delta `web-ui`; capturas de escritorio y móvil de checkout; lint, typecheck y tests en verde.
-- [ ] T-VIS-5 Verificación de la change: revisar las ocho capturas, comprobar que no hay cambios en `apps/admin`, ejecutar lint, typecheck y tests completos y documentar el resultado.
+- [x] T-VIS-5 Verificación de la change: revisar las trece capturas, comprobar que no hay cambios en `apps/admin`, ejecutar lint, typecheck y tests completos y documentar el resultado en `verify.md`.
   Prueba: todos los escenarios de la spec delta `web-ui` con evidencia; `node scripts/check-specs.mjs` en verde.
 
 ## Notas
