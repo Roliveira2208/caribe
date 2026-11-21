@@ -56,6 +56,15 @@
   }
 }
 
+/* Ritmo compartido de la portada: una sola curva y duraciones moderadas. */
+:root {
+  --ease-caribe: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-enter: 700ms;
+  --duration-reveal: 650ms;
+  --duration-cue: 400ms;
+  --duration-chrome: 400ms;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -79,9 +88,9 @@ body {
   visibility: hidden;
   transform: translate(-50%, 8px);
   transition:
-    opacity 300ms ease,
-    transform 300ms ease,
-    visibility 300ms ease;
+    opacity var(--duration-cue) var(--ease-caribe),
+    transform var(--duration-cue) var(--ease-caribe),
+    visibility var(--duration-cue) var(--ease-caribe);
 }
 
 .scroll-cue[data-visible="true"] {
@@ -110,7 +119,7 @@ body {
 }
 
 .hero-enter {
-  animation: caribe-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: caribe-rise var(--duration-enter) var(--ease-caribe) both;
 }
 
 .hero-enter:nth-child(2) {
@@ -122,14 +131,14 @@ body {
 }
 
 .scroll-rise {
-  animation: caribe-rise 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: caribe-rise var(--duration-reveal) var(--ease-caribe) both;
 }
 
 @supports (animation-timeline: view()) {
   .scroll-rise {
     animation: caribe-rise linear both;
     animation-timeline: view();
-    animation-range: entry 0% cover 25%;
+    animation-range: entry 0% cover 30%;
   }
 }
 
@@ -188,9 +197,9 @@ body {
   background-color: var(--color-ink);
   box-shadow: 0 18px 40px -20px rgb(14 42 61 / 0.65);
   transition:
-    background-color 400ms ease,
-    border-color 400ms ease,
-    box-shadow 400ms ease;
+    background-color var(--duration-chrome) var(--ease-caribe),
+    border-color var(--duration-chrome) var(--ease-caribe),
+    box-shadow var(--duration-chrome) var(--ease-caribe);
 }
 
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -230,12 +239,24 @@ body {
   }
 }
 
+/* Las tarjetas solo suavizan borde y sombra: `scroll-rise` conserva el transform. */
+.featured-card {
+  transition:
+    border-color var(--duration-cue) var(--ease-caribe),
+    box-shadow var(--duration-cue) var(--ease-caribe);
+}
+
+.featured-card:hover {
+  border-color: color-mix(in srgb, var(--color-teal) 45%, transparent);
+  box-shadow: 0 22px 44px -26px rgb(14 42 61 / 0.45);
+}
+
 /* Un solo gesto: clip-path y translate del panel, stagger corto de campos. */
 .search-reveal {
   transition:
-    opacity 500ms ease,
-    clip-path 650ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    transform 650ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    opacity var(--duration-cue) var(--ease-caribe),
+    clip-path var(--duration-reveal) var(--ease-caribe),
+    transform var(--duration-reveal) var(--ease-caribe);
   clip-path: inset(0 0 0 0);
 }
 
@@ -252,8 +273,8 @@ body {
 
 .search-reveal .reveal-field {
   transition:
-    opacity 400ms ease,
-    transform 400ms ease;
+    opacity var(--duration-cue) var(--ease-caribe),
+    transform var(--duration-cue) var(--ease-caribe);
 }
 
 .search-reveal[data-reveal="visible"] .reveal-field:nth-child(2) { transition-delay: 60ms; }
@@ -270,10 +291,29 @@ body {
   }
 
   .search-reveal,
-  .search-reveal .reveal-field {
+  .search-reveal .reveal-field,
+  .featured-card {
     transition: none !important;
+  }
+
+  .search-reveal,
+  .search-reveal .reveal-field {
     opacity: 1 !important;
     clip-path: none !important;
     transform: none !important;
+  }
+}
+
+/* Degradacion segura si el navegador aplica view transitions a la navegacion. */
+::view-transition {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

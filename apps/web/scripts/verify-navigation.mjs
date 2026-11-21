@@ -314,6 +314,28 @@ try {
   } else {
     console.log("OK   /es: entrada y revelación animadas");
   }
+  const rhythm = await home.evaluate(() => {
+    const read = (selector, property) =>
+      getComputedStyle(document.querySelector(selector))[property];
+    return {
+      hero: read(".hero-enter", "animationTimingFunction"),
+      // Con animation-timeline: view() el navegador fuerza linear; la suavidad
+      // la da el progreso del scroll, no la curva de tiempo.
+      revealTimeline: read(".scroll-rise", "animationTimeline"),
+      cue: read(".scroll-cue", "transitionTimingFunction"),
+      bar: read(".site-bar", "transitionTimingFunction"),
+      cueDuration: read(".scroll-cue", "transitionDuration"),
+      barDuration: read(".site-bar", "transitionDuration"),
+    };
+  });
+  const smoothRhythm =
+    [rhythm.hero, rhythm.cue, rhythm.bar].every((value) => value.includes("cubic-bezier")) &&
+    rhythm.revealTimeline.includes("view") &&
+    rhythm.cueDuration !== "0s" &&
+    rhythm.barDuration !== "0s";
+  if (!smoothRhythm) failures.push(`/es: ritmo de transiciones inconsistente (${JSON.stringify(rhythm)})`);
+  else console.log("OK   /es: transiciones suaves con curva compartida");
+
   const reducedRise = await reducedPage.locator(".scroll-rise").first().evaluate((node) => {
     const style = getComputedStyle(node);
     return { name: style.animationName, opacity: style.opacity, transform: style.transform };

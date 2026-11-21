@@ -14,7 +14,7 @@ describe("animaciones de la portada", () => {
     expect(css).toContain(".hero-enter");
     expect(css).toContain(".scroll-rise");
     expect(css).toContain("animation-timeline: view()");
-    expect(css).toContain("animation-range: entry 0% cover 25%");
+    expect(css).toContain("animation-range: entry 0% cover 30%");
     expect(home).toContain("hero-enter");
     expect(home).toContain("scroll-rise");
     expect(featured).toContain("scroll-rise");

@@ -51,6 +51,24 @@ describe("identidad visual Caribe", () => {
     ]);
   });
 
+  it("comparte un ritmo suave y desactiva el movimiento de forma segura", () => {
+    const css = read("src/app/globals.css");
+    for (const token of [
+      "--ease-caribe: cubic-bezier(0.2, 0.7, 0.2, 1)",
+      "--duration-enter: 700ms",
+      "--duration-reveal: 650ms",
+      "--duration-cue: 400ms",
+      "--duration-chrome: 400ms",
+    ]) {
+      expect(css).toContain(token);
+    }
+    expect(css).toContain("animation: caribe-rise var(--duration-enter) var(--ease-caribe) both");
+    expect(css).toContain("animation: caribe-rise var(--duration-reveal) var(--ease-caribe) both");
+    expect(css).toContain(".featured-card:hover");
+    expect(css).toContain("::view-transition {");
+    expect(css).toContain("::view-transition-group(*)");
+  });
+
   it("auto-aloja las dos fuentes aprobadas", () => {
     const layout = read("src/app/[locale]/layout.tsx");
     expect(layout).toContain("next/font/local");

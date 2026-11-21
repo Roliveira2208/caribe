@@ -27,7 +27,7 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenarios «Cabecera flotante» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-15 Dar al menos 100vh a hero, búsqueda, destacados y cierre, con flecha de hero a búsqueda, de búsqueda a destacados y de destacados al cierre con CTA.
   Prueba: escenario «Secciones a pantalla completa» de `specs/web-ui/spec.md`; `verify:navigation`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.
-- [ ] T-NAV-16 Suavizar las transiciones de entrada, revelación y cabecera de la portada con degradación segura bajo movimiento reducido.
+- [x] T-NAV-16 Suavizar las transiciones de entrada, revelación y cabecera de la portada con degradación segura bajo movimiento reducido.
   Prueba: escenario «Transiciones suaves» de `specs/web-ui/spec.md`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-8 Corregir el contraste de los pares gris sobre blanco con tokens aprobados, añadir `verify:contrast` con Playwright y crear el workflow de CI que lo ejecute.
   Prueba: escenarios «Contraste AA verificable» de `specs/web-ui/spec.md`; capturas claras y oscuras en escritorio y móvil; lint, typecheck y tests en verde.
