@@ -226,8 +226,13 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Evidencia: `docs/wireframes/checkout.svg` (paso 2, aprobado); `apps/web/test/checkout-view.test.ts`
   (contrato por método, importes serializados, clasificación de errores y retención); capturas
   `checkout-payment-*.png` y `checkout-success-*.png` en claro/oscuro y escritorio/móvil.
-- [ ] T-F1-13e Web: confirmación con voucher/comprobante. Wireframe aprobado antes de construir.
+- [x] T-F1-13e Web: confirmación con voucher/comprobante. Wireframe aprobado antes de construir.
   Prueba: documents › "Voucher" y "Comprobante de pago".
+  Evidencia: `docs/wireframes/checkout.svg` (paso 3, aprobado); `apps/web/test/documents-view.test.ts` y
+  `checkout-view.test.ts` (contrato cerrado, estados PENDING/READY/FAILED y sin descargas falsas en
+  IN_REVIEW); `apps/api/test/documents-list.e2e.ts` y `two-factor.e2e.ts` (listado autenticado e
+  inventario de rutas); `verify:navigation` en es/en para IN_REVIEW y APPROVED; capturas
+  `checkout-success-*.png` y `checkout-dark-success-*.png` en claro/oscuro y escritorio/móvil.
 - [ ] T-F1-14a Web: "Mis reservas" (lista/detalle). Wireframe aprobado antes de construir.
   Prueba: booking › "Mis reservas entre agencias".
 - [ ] T-F1-14b Web: cancelación y descarga de documentos. Wireframe aprobado antes de construir.

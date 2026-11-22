@@ -146,11 +146,34 @@
     "paymentStatusLabel": "Payment status",
     "statusInReview": "Payment under review",
     "statusApproved": "Payment approved",
+    "statusConfirmed": "Booking confirmed",
     "successTotal": "Booking total",
     "successVes": "Amount in bolívares",
     "successRate": "Frozen rate",
     "successExpires": "Hold until",
-    "successDescription": "Save your code. Depending on the agency setting, the payment is approved instantly or reviewed by an administrator."
+    "successDescription": "Save your code. Depending on the agency setting, the payment is approved instantly or reviewed by an administrator.",
+    "voucherPreviewTitle": "Voucher preview",
+    "voucherQrCaption": "The QR code with the public link is included in the PDF.",
+    "documentNotFiscal": "Non-tax document",
+    "documentsTitle": "Your documents",
+    "documentsIntro": "Documents are issued once payment is confirmed.",
+    "documentsRefresh": "Refresh documents",
+    "documentsRefreshing": "Refreshing documents…",
+    "documentsLoadError": "We couldn't load your documents. Try again.",
+    "documentsEmpty": "No documents are available yet.",
+    "documentTypeVoucher": "Booking voucher",
+    "documentTypeReceipt": "Payment receipt",
+    "documentTypeRefundNote": "Refund note",
+    "documentStatusPending": "Being prepared",
+    "documentStatusReady": "Available",
+    "documentStatusFailed": "Unavailable",
+    "documentNumberLabel": "Number",
+    "documentDownload": "Download PDF",
+    "viewTrips": "View in My trips",
+    "nextStepsTitle": "What happens next",
+    "nextStepReview": "If the payment is under review, an administrator reviews it before the documents are issued.",
+    "nextStepApproved": "Once the payment is approved, the booking is confirmed and the documents are issued.",
+    "nextStepExpired": "If the hold expires without payment, the booking expires and the room is released."
   },
   "metadata": {
     "title": "Caribe: travel across Venezuela",
@@ -257,5 +280,15 @@
     "tripsTotalLabel": "Total",
     "tripsTotalUsd": "{amount} USD",
     "tripsDocumentsNote": "Documents are issued once payment is confirmed."
+  },
+  "reservation": {
+    "metaTitle": "Booking code",
+    "metaDescription": "Public page for your Caribe booking code.",
+    "title": "Booking code",
+    "subtitle": "This code identifies your booking on Caribe.",
+    "codeLabel": "Code",
+    "signIn": "Sign in to see My trips",
+    "note": "Sign in with the account you booked with to check the status and download your documents.",
+    "privacyNote": "This page shows no personal data, amounts or booking status."
   }
 }

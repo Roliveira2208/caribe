@@ -108,6 +108,7 @@ const mockPayment = {
 };
 const paymentRequestKeys = ["bank", "method", "phone", "reference"];
 const paymentRequests = [];
+const documentRequests = [];
 
 const screens = [
   { name: "header", path: "/es" },
@@ -237,6 +238,17 @@ async function mockPaymentApi(page) {
   });
 }
 
+async function mockDocumentsApi(page) {
+  await page.route("**/api/v1/bookings/*/documents", async (route) => {
+    documentRequests.push(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items: [] }),
+    });
+  });
+}
+
 function assertRequestKeys(label, sent, expected) {
   const keys = sent && typeof sent === "object" && !Array.isArray(sent) ? Object.keys(sent).sort() : [];
   if (keys.join(",") !== expected.join(",")) {
@@ -327,6 +339,7 @@ for (const viewport of viewports) {
   );
   await mockBookingApi(page);
   await mockPaymentApi(page);
+  await mockDocumentsApi(page);
 
   for (const screen of selected) {
     if (screen.name === "account") {
@@ -364,6 +377,11 @@ for (const viewport of viewports) {
       await page.locator('form button[type="submit"]').click();
       await page.locator('[data-checkout-status="success"]').waitFor();
       assertRequestKeys("El pago", paymentRequests.at(-1)?.body, paymentRequestKeys);
+      await page.locator('button:has-text("Actualizar documentos"):not([disabled])').waitFor();
+      if (documentRequests.length < 1) throw new Error("La confirmación no consultó los documentos");
+      if ((await page.locator('a[href*="/api/v1/documents/"]').count()) !== 0) {
+        throw new Error("La confirmación muestra una descarga sin documento READY");
+      }
       await page.screenshot({
         path: join(outputRoot, `${screen.name}${themeSuffix}-success-${viewport.name}.png`),
       });

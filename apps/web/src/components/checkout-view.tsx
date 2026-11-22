@@ -1,6 +1,8 @@
-import type { FormEvent } from "react";
+import { type FormEvent, useEffect, useState } from "react";
+import QRCode from "react-qr-code";
 import type { Locale, PaymentBody } from "@caribe/shared";
 import { localizedPath } from "@/lib/localized-path";
+import type { BookingDocumentView } from "@/lib/documents-view";
 import { formatUsd, formatValueDate, formatVes, localizedText } from "@/lib/catalog-view";
 import type { ReportedPaymentView } from "@/lib/payment-view";
 import { PaymentForm, type PaymentFormLabels } from "./payment-form";
@@ -56,11 +58,34 @@ export interface CheckoutViewLabels extends PaymentFormLabels {
   paymentStatusLabel: string;
   statusInReview: string;
   statusApproved: string;
+  statusConfirmed: string;
   successTotal: string;
   successVes: string;
   successRate: string;
   successExpires: string;
   successDescription: string;
+  voucherPreviewTitle: string;
+  voucherQrCaption: string;
+  documentNotFiscal: string;
+  documentsTitle: string;
+  documentsIntro: string;
+  documentsRefresh: string;
+  documentsRefreshing: string;
+  documentsLoadError: string;
+  documentsEmpty: string;
+  documentTypeVoucher: string;
+  documentTypeReceipt: string;
+  documentTypeRefundNote: string;
+  documentStatusPending: string;
+  documentStatusReady: string;
+  documentStatusFailed: string;
+  documentNumberLabel: string;
+  documentDownload: string;
+  viewTrips: string;
+  nextStepsTitle: string;
+  nextStepReview: string;
+  nextStepApproved: string;
+  nextStepExpired: string;
 }
 
 export type CheckoutStatus = "loading" | "error" | "ready" | "payment" | "success";
@@ -82,6 +107,9 @@ interface CheckoutViewProps {
   status: CheckoutStatus;
   booking: BookingCreatedView | null;
   payment: ReportedPaymentView | null;
+  documents: BookingDocumentView[] | null;
+  documentsError: string | null;
+  documentsRefreshing: boolean;
   paymentError: string | null;
   travelers: CheckoutTraveler[];
   travelerError: string | null;
@@ -96,6 +124,7 @@ interface CheckoutViewProps {
   onRemoveTraveler?: (index: number) => void;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
   onPay?: (body: PaymentBody) => void;
+  onRefreshDocuments?: () => void;
 }
 
 const FIELD_CLASSES =
@@ -113,25 +142,73 @@ function BackToDetail({ href, label }: { href: string; label: string }) {
   );
 }
 
+function documentTypeLabel(type: BookingDocumentView["type"], labels: CheckoutViewLabels): string {
+  switch (type) {
+    case "VOUCHER":
+      return labels.documentTypeVoucher;
+    case "RECEIPT":
+      return labels.documentTypeReceipt;
+    case "REFUND_NOTE":
+      return labels.documentTypeRefundNote;
+  }
+}
+
+function documentStatusLabel(
+  status: BookingDocumentView["status"],
+  labels: CheckoutViewLabels,
+): string {
+  switch (status) {
+    case "PENDING":
+      return labels.documentStatusPending;
+    case "READY":
+      return labels.documentStatusReady;
+    case "FAILED":
+      return labels.documentStatusFailed;
+  }
+}
+
 function Success({
   booking,
   payment,
+  documents,
+  documentsError,
+  documentsRefreshing,
+  stay,
+  product,
   locale,
   labels,
   detailHref,
+  tripsHref,
+  onRefreshDocuments,
 }: {
   booking: BookingCreatedView;
   payment: ReportedPaymentView | null;
+  documents: BookingDocumentView[] | null;
+  documentsError: string | null;
+  documentsRefreshing: boolean;
+  stay: CheckoutStay | null;
+  product: CatalogProductDetailView | null;
   locale: Locale;
   labels: CheckoutViewLabels;
   detailHref: string;
+  tripsHref: string;
+  onRefreshDocuments?: () => void;
 }) {
+  // El QR del PDF apunta a la ruta pública del código; la vista previa usa el
+  // origen real del navegador para no inventar una URL absoluta en el servidor.
+  const [qrOrigin, setQrOrigin] = useState<string | null>(null);
+  useEffect(() => {
+    setQrOrigin(window.location.origin);
+  }, []);
+  const qrValue = qrOrigin ? `${qrOrigin}/reservas/${encodeURIComponent(booking.code)}` : null;
+
   const paymentStatus =
     payment?.status === "APPROVED"
       ? labels.statusApproved
       : payment?.status === "IN_REVIEW"
         ? labels.statusInReview
         : labels.successStatus;
+
   return (
     <section
       data-checkout-status="success"
@@ -151,6 +228,9 @@ function Success({
         <div className="rounded-md bg-amber/15 p-4">
           <dt className="text-sm text-ink/70">{labels.paymentStatusLabel}</dt>
           <dd className="font-semibold text-ink">{paymentStatus}</dd>
+          {payment?.status === "APPROVED" ? (
+            <dd className="text-sm text-ink/70">{labels.statusConfirmed}</dd>
+          ) : null}
         </div>
         <div>
           <dt className="text-sm text-ink/70">{labels.successTotal}</dt>
@@ -175,7 +255,109 @@ function Success({
           </dd>
         </div>
       </dl>
-      <BackToDetail href={detailHref} label={labels.backToDetail} />
+
+      <section aria-labelledby="voucher-preview-title" className="rounded-lg border border-ink/10 p-5">
+        <h2 id="voucher-preview-title" className="font-display text-h4 text-ink">
+          {labels.voucherPreviewTitle}
+        </h2>
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-5">
+          <div className="space-y-2 text-sm text-ink/80">
+            {product ? <p className="font-medium text-ink">{localizedText(product.title, locale)}</p> : null}
+            {stay ? (
+              <p>
+                {formatValueDate(stay.checkIn, locale)} - {formatValueDate(stay.checkOut, locale)}
+              </p>
+            ) : null}
+            <p className="break-all">{booking.code}</p>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            {qrValue ? (
+              <QRCode value={qrValue} size={96} data-voucher-qr="preview" />
+            ) : (
+              <div
+                data-voucher-qr="pending"
+                className="flex h-24 w-24 items-center justify-center border border-dashed border-ink/30 text-xs text-ink/70"
+              >
+                QR
+              </div>
+            )}
+            <p className="max-w-[12rem] text-center text-xs text-ink/70">{labels.voucherQrCaption}</p>
+          </div>
+        </div>
+        <p className="mt-4 border-t border-ink/10 pt-3 text-sm font-medium text-ink">
+          {labels.documentNotFiscal}
+        </p>
+      </section>
+
+      <section aria-labelledby="documents-title" className="space-y-4">
+        <div className="space-y-1">
+          <h2 id="documents-title" className="font-display text-h4 text-ink">
+            {labels.documentsTitle}
+          </h2>
+          <p className="text-sm text-ink/70">{labels.documentsIntro}</p>
+        </div>
+        {documentsError ? (
+          <p role="alert" className="rounded-md border border-coral/30 bg-coral/5 p-3 text-sm text-coral-ink">
+            {documentsError}
+          </p>
+        ) : null}
+        {documents && documents.length > 0 ? (
+          <ul className="divide-y divide-ink/10 rounded-md border border-ink/10">
+            {documents.map((document) => (
+              <li key={document.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="space-y-1">
+                  <p className="font-medium text-ink">{documentTypeLabel(document.type, labels)}</p>
+                  <p className="text-sm text-ink/70">
+                    {labels.documentNumberLabel}: {document.number}
+                  </p>
+                  <p className="text-sm text-ink/70">
+                    {documentStatusLabel(document.status, labels)}
+                  </p>
+                </div>
+                {document.status === "READY" && document.downloadPath ? (
+                  <a
+                    href={document.downloadPath}
+                    className="inline-flex min-h-11 items-center rounded-md border border-ink/20 px-4 text-sm font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+                  >
+                    {labels.documentDownload}
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : !documentsError ? (
+          <p className="rounded-md border border-dashed border-ink/25 p-4 text-sm text-ink/70">
+            {documents === null ? labels.documentsIntro : labels.documentsEmpty}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={onRefreshDocuments}
+          disabled={documentsRefreshing || !onRefreshDocuments}
+          className="inline-flex min-h-11 items-center rounded-md border border-ink/20 px-4 text-sm font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {documentsRefreshing ? labels.documentsRefreshing : labels.documentsRefresh}
+        </button>
+      </section>
+
+      <section aria-labelledby="next-steps-title" className="space-y-2">
+        <h2 id="next-steps-title" className="font-display text-h4 text-ink">
+          {labels.nextStepsTitle}
+        </h2>
+        <p className="text-sm text-ink/70">{labels.nextStepReview}</p>
+        <p className="text-sm text-ink/70">{labels.nextStepApproved}</p>
+        <p className="text-sm text-ink/70">{labels.nextStepExpired}</p>
+      </section>
+
+      <div className="flex flex-wrap gap-3">
+        <a
+          href={tripsHref}
+          className="inline-flex min-h-12 items-center justify-center rounded-md bg-amber px-6 font-semibold text-ink hover:bg-amber/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber"
+        >
+          {labels.viewTrips}
+        </a>
+        <BackToDetail href={detailHref} label={labels.backToDetail} />
+      </div>
     </section>
   );
 }
@@ -190,6 +372,9 @@ export function CheckoutView({
   status,
   booking,
   payment,
+  documents,
+  documentsError,
+  documentsRefreshing,
   paymentError,
   travelers,
   travelerError,
@@ -204,8 +389,10 @@ export function CheckoutView({
   onRemoveTraveler,
   onSubmit,
   onPay,
+  onRefreshDocuments,
 }: CheckoutViewProps) {
   const detailHref = localizedPath(locale, "/hotels/[id]", { id: productId });
+  const tripsHref = localizedPath(locale, "/account/trips");
 
   if (status === "loading") {
     return (
@@ -238,9 +425,16 @@ export function CheckoutView({
       <Success
         booking={booking}
         payment={payment}
+        documents={documents}
+        documentsError={documentsError}
+        documentsRefreshing={documentsRefreshing}
+        stay={stay}
+        product={product}
         locale={locale}
         labels={labels}
         detailHref={detailHref}
+        tripsHref={tripsHref}
+        onRefreshDocuments={onRefreshDocuments}
       />
     );
   }

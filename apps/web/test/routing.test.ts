@@ -10,6 +10,7 @@ const fixedRoutes = [
   "/two-factor",
   "/account",
   "/account/trips",
+  "/reservas/[code]",
 ] as const;
 
 describe("routing de la web", () => {

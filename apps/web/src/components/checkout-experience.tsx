@@ -23,6 +23,11 @@ import {
   type ReportedPaymentView,
 } from "@/lib/payment-view";
 import {
+  documentsApiUrl,
+  parseBookingDocuments,
+  type BookingDocumentView,
+} from "@/lib/documents-view";
+import {
   availabilityApiUrl,
   detailApiUrl,
   parseAvailabilityView,
@@ -120,11 +125,34 @@ export function CheckoutExperience({
     paymentStatusLabel: t("paymentStatusLabel"),
     statusInReview: t("statusInReview"),
     statusApproved: t("statusApproved"),
+    statusConfirmed: t("statusConfirmed"),
     successTotal: t("successTotal"),
     successVes: t("successVes"),
     successRate: t("successRate"),
     successExpires: t("successExpires"),
     successDescription: t("successDescription"),
+    voucherPreviewTitle: t("voucherPreviewTitle"),
+    voucherQrCaption: t("voucherQrCaption"),
+    documentNotFiscal: t("documentNotFiscal"),
+    documentsTitle: t("documentsTitle"),
+    documentsIntro: t("documentsIntro"),
+    documentsRefresh: t("documentsRefresh"),
+    documentsRefreshing: t("documentsRefreshing"),
+    documentsLoadError: t("documentsLoadError"),
+    documentsEmpty: t("documentsEmpty"),
+    documentTypeVoucher: t("documentTypeVoucher"),
+    documentTypeReceipt: t("documentTypeReceipt"),
+    documentTypeRefundNote: t("documentTypeRefundNote"),
+    documentStatusPending: t("documentStatusPending"),
+    documentStatusReady: t("documentStatusReady"),
+    documentStatusFailed: t("documentStatusFailed"),
+    documentNumberLabel: t("documentNumberLabel"),
+    documentDownload: t("documentDownload"),
+    viewTrips: t("viewTrips"),
+    nextStepsTitle: t("nextStepsTitle"),
+    nextStepReview: t("nextStepReview"),
+    nextStepApproved: t("nextStepApproved"),
+    nextStepExpired: t("nextStepExpired"),
   };
 
   const errorMessages: Record<CheckoutErrorKind, string> = {
@@ -153,6 +181,10 @@ export function CheckoutExperience({
   const [errorKind, setErrorKind] = useState<CheckoutErrorKind>("generic");
   const [booking, setBooking] = useState<BookingCreatedView | null>(null);
   const [payment, setPayment] = useState<ReportedPaymentView | null>(null);
+  const [documents, setDocuments] = useState<BookingDocumentView[] | null>(null);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [documentsRefreshing, setDocumentsRefreshing] = useState(false);
+  const [documentsRequest, setDocumentsRequest] = useState(0);
   const [paymentErrorKind, setPaymentErrorKind] = useState<PaymentErrorKind>("generic");
   const [travelers, setTravelers] = useState<CheckoutTraveler[]>(() => initialTravelers(1));
   const [travelerError, setTravelerError] = useState<string | null>(null);
@@ -178,6 +210,10 @@ export function CheckoutExperience({
   function getPaymentIdempotencyKey(): string {
     paymentIdempotencyKey.current ??= crypto.randomUUID();
     return paymentIdempotencyKey.current;
+  }
+
+  function refreshDocuments(): void {
+    setDocumentsRequest((count) => count + 1);
   }
 
   useEffect(() => {
@@ -240,6 +276,46 @@ export function CheckoutExperience({
     return () => controller.abort();
   }, [detailUrl, availabilityUrl, stay]);
 
+  // La confirmación solo muestra descargas que la API entrega como `READY`.
+  // Un error deja el botón de actualización visible, nunca un enlace inventado.
+  useEffect(() => {
+    if (status !== "success" || !booking) return;
+    const controller = new AbortController();
+    setDocumentsRefreshing(true);
+    setDocumentsError(null);
+    const load = async (): Promise<void> => {
+      try {
+        const response = await fetch(documentsApiUrl(booking.id), {
+          signal: controller.signal,
+          credentials: "same-origin",
+        });
+        const body: unknown = await response.json().catch(() => null);
+        if (controller.signal.aborted) return;
+        if (!response.ok) {
+          setDocuments(null);
+          setDocumentsError(labels.documentsLoadError);
+          return;
+        }
+        const parsed = parseBookingDocuments(body);
+        if (!parsed) {
+          setDocuments(null);
+          setDocumentsError(labels.documentsLoadError);
+          return;
+        }
+        setDocuments(parsed);
+      } catch {
+        if (!controller.signal.aborted) {
+          setDocuments(null);
+          setDocumentsError(labels.documentsLoadError);
+        }
+      } finally {
+        if (!controller.signal.aborted) setDocumentsRefreshing(false);
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [status, booking?.id, documentsRequest, labels.documentsLoadError]);
+
   function changeTraveler(index: number, field: TravelerField, value: string): void {
     setTravelers((current) =>
       current.map((traveler, position) =>
@@ -278,6 +354,10 @@ export function CheckoutExperience({
     paymentIdempotencyKey.current = null;
     paymentBodySignature.current = null;
     setPayment(null);
+    setDocuments(null);
+    setDocumentsError(null);
+    setDocumentsRefreshing(false);
+    setDocumentsRequest(0);
     setPaymentErrorKind("generic");
     try {
       const response = await fetch(bookingApiUrl(), {
@@ -360,6 +440,9 @@ export function CheckoutExperience({
       status={status}
       booking={booking}
       payment={payment}
+      documents={documents}
+      documentsError={documentsError}
+      documentsRefreshing={documentsRefreshing}
       paymentError={status === "payment" ? paymentErrorMessages[paymentErrorKind] : null}
       travelers={travelers}
       travelerError={travelerError}
@@ -374,6 +457,7 @@ export function CheckoutExperience({
       onRemoveTraveler={removeTraveler}
       onSubmit={(event) => void onSubmit(event)}
       onPay={(body) => void onPay(body)}
+      onRefreshDocuments={refreshDocuments}
     />
   );
 }

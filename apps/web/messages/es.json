@@ -146,11 +146,34 @@
     "paymentStatusLabel": "Estado del pago",
     "statusInReview": "Pago en revisión",
     "statusApproved": "Pago aprobado",
+    "statusConfirmed": "Reserva confirmada",
     "successTotal": "Total de la reserva",
     "successVes": "Monto en bolívares",
     "successRate": "Tasa congelada",
     "successExpires": "Retención hasta",
-    "successDescription": "Guarda tu código. Según el modo de la agencia, el pago se aprueba al instante o lo revisa un administrador."
+    "successDescription": "Guarda tu código. Según el modo de la agencia, el pago se aprueba al instante o lo revisa un administrador.",
+    "voucherPreviewTitle": "Vista previa del voucher",
+    "voucherQrCaption": "El QR con el enlace público se incluye en el PDF.",
+    "documentNotFiscal": "Documento no fiscal",
+    "documentsTitle": "Tus documentos",
+    "documentsIntro": "Los documentos se publican al confirmar el pago.",
+    "documentsRefresh": "Actualizar documentos",
+    "documentsRefreshing": "Actualizando documentos…",
+    "documentsLoadError": "No pudimos cargar tus documentos. Inténtalo de nuevo.",
+    "documentsEmpty": "Todavía no hay documentos disponibles.",
+    "documentTypeVoucher": "Voucher de reserva",
+    "documentTypeReceipt": "Comprobante de pago",
+    "documentTypeRefundNote": "Nota de reembolso",
+    "documentStatusPending": "En preparación",
+    "documentStatusReady": "Disponible",
+    "documentStatusFailed": "No disponible",
+    "documentNumberLabel": "Número",
+    "documentDownload": "Descargar PDF",
+    "viewTrips": "Ver en Mis viajes",
+    "nextStepsTitle": "Qué pasa ahora",
+    "nextStepReview": "Si el pago está en revisión, un administrador lo revisa antes de publicar los documentos.",
+    "nextStepApproved": "Al aprobarse el pago, la reserva queda confirmada y los documentos se publican.",
+    "nextStepExpired": "Si vence la retención sin pago, la reserva caduca y el cupo se libera."
   },
   "metadata": {
     "title": "Caribe: viajes por Venezuela",
@@ -257,5 +280,15 @@
     "tripsTotalLabel": "Total",
     "tripsTotalUsd": "{amount} USD",
     "tripsDocumentsNote": "Los documentos se publican al confirmar el pago."
+  },
+  "reservation": {
+    "metaTitle": "Código de reserva",
+    "metaDescription": "Página pública del código de tu reserva en Caribe.",
+    "title": "Código de reserva",
+    "subtitle": "Este código identifica tu reserva en Caribe.",
+    "codeLabel": "Código",
+    "signIn": "Iniciar sesión para ver Mis viajes",
+    "note": "Inicia sesión con la cuenta con la que reservaste para consultar el estado y descargar tus documentos.",
+    "privacyNote": "Esta página no muestra datos personales, importes ni el estado de la reserva."
   }
 }

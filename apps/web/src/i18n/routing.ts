@@ -21,5 +21,6 @@ export const routing = defineRouting({
     "/two-factor": fixedPath("/two-factor"),
     "/account": fixedPath("/account"),
     "/account/trips": fixedPath("/account/trips"),
+    "/reservas/[code]": fixedPath("/reservas/[code]"),
   },
 });

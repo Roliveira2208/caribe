@@ -92,11 +92,34 @@ const labels: CheckoutViewLabels = {
   paymentStatusLabel: "Estado del pago",
   statusInReview: "Pago en revisión",
   statusApproved: "Pago aprobado",
+  statusConfirmed: "Reserva confirmada",
   successTotal: "Total de la reserva",
   successVes: "Monto en bolívares",
   successRate: "Tasa congelada",
   successExpires: "Retención hasta",
   successDescription: "Guarda tu código.",
+  voucherPreviewTitle: "Vista previa del voucher",
+  voucherQrCaption: "El QR con el enlace público se incluye en el PDF.",
+  documentNotFiscal: "Documento no fiscal",
+  documentsTitle: "Tus documentos",
+  documentsIntro: "Los documentos se publican al confirmar el pago.",
+  documentsRefresh: "Actualizar documentos",
+  documentsRefreshing: "Actualizando documentos…",
+  documentsLoadError: "No pudimos cargar tus documentos. Inténtalo de nuevo.",
+  documentsEmpty: "Todavía no hay documentos disponibles.",
+  documentTypeVoucher: "Voucher de reserva",
+  documentTypeReceipt: "Comprobante de pago",
+  documentTypeRefundNote: "Nota de reembolso",
+  documentStatusPending: "En preparación",
+  documentStatusReady: "Disponible",
+  documentStatusFailed: "No disponible",
+  documentNumberLabel: "Número",
+  documentDownload: "Descargar PDF",
+  viewTrips: "Ver en Mis viajes",
+  nextStepsTitle: "Qué pasa ahora",
+  nextStepReview: "Si el pago está en revisión, un administrador lo revisa.",
+  nextStepApproved: "Al aprobarse el pago, la reserva queda confirmada.",
+  nextStepExpired: "Si vence la retención sin pago, la reserva caduca.",
 };
 
 const productId = "11111111-1111-4111-8111-111111111111";
@@ -158,6 +181,9 @@ function render(overrides: Partial<Parameters<typeof CheckoutView>[0]> = {}): st
         status: "ready",
         booking: null,
         payment: null,
+        documents: null,
+        documentsError: null,
+        documentsRefreshing: false,
         paymentError: null,
         travelers: [traveler],
         travelerError: null,
@@ -408,5 +434,83 @@ describe("vista del pago", () => {
     expect(html).toContain("Pago en revisión");
     expect(html).toContain("Bs.S 15.300,00");
     expect(html).toContain("45.0000");
+  });
+});
+
+describe("confirmación con documentos", () => {
+  const inReview = {
+    id: "55555555-5555-4555-8555-555555555555",
+    status: "IN_REVIEW" as const,
+    amountUsd: "340.00",
+    amountVes: "15300.00",
+    rate: "45.0000",
+  };
+
+  it("no ofrece descargas falsas mientras el pago está en revisión", () => {
+    const html = render({ status: "success", booking, payment: inReview });
+    expect(html).toContain("Vista previa del voucher");
+    expect(html).toContain("Documento no fiscal");
+    expect(html).toContain("El QR con el enlace público se incluye en el PDF.");
+    expect(html).toContain("Los documentos se publican al confirmar el pago.");
+    expect(html).toContain("Actualizar documentos");
+    expect(html).toContain("/es/account/trips");
+    expect(html).not.toContain("Descargar PDF");
+    expect(html).not.toContain("/api/v1/documents/");
+  });
+
+  it("descarga solo el documento READY con la ruta que devuelve la API", () => {
+    const readyId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const html = render({
+      status: "success",
+      booking,
+      payment: { ...inReview, status: "APPROVED" },
+      documents: [
+        {
+          id: readyId,
+          type: "VOUCHER",
+          number: 7,
+          status: "READY",
+          issuedAt: "2026-11-21T15:00:00.000Z",
+          downloadPath: `/api/v1/documents/${readyId}/download`,
+        },
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          type: "RECEIPT",
+          number: 8,
+          status: "PENDING",
+          issuedAt: null,
+          downloadPath: null,
+        },
+        {
+          id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          type: "REFUND_NOTE",
+          number: 9,
+          status: "FAILED",
+          issuedAt: null,
+          downloadPath: null,
+        },
+      ],
+    });
+    expect(html).toContain("Reserva confirmada");
+    expect(html).toContain(`href="/api/v1/documents/${readyId}/download"`);
+    expect(html.match(/Descargar PDF/g)).toHaveLength(1);
+    expect(html).toContain("En preparación");
+    expect(html).toContain("No disponible");
+    expect(html).not.toContain("/api/v1/documents/bbbb");
+    expect(html).not.toContain("/api/v1/documents/cccc");
+  });
+
+  it("anuncia el error de carga sin inventar enlaces", () => {
+    const html = render({
+      status: "success",
+      booking,
+      payment: inReview,
+      documents: null,
+      documentsError: labels.documentsLoadError,
+    });
+    expect(html).toContain('role="alert"');
+    expect(html).toContain(labels.documentsLoadError);
+    expect(html).toContain("Actualizar documentos");
+    expect(html).not.toContain("Descargar PDF");
   });
 });

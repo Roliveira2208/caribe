@@ -15,6 +15,7 @@ const routes = [
   "/login",
   "/two-factor",
   "/account/trips",
+  "/reservas/CR-2026-0001",
 ];
 const notFoundTitles = ["Página no encontrada", "Page not found"];
 
@@ -60,6 +61,30 @@ try {
       } else {
         console.log(`OK   ${path}`);
       }
+    }
+    await context.close();
+  }
+
+  // El QR del voucher abre una página real que no filtra datos de la reserva.
+  for (const locale of locales) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(`${baseUrl}/${locale}/reservas/CR-2026-0001`, {
+      waitUntil: "domcontentloaded",
+    });
+    const text = await page.locator("main").innerText();
+    const signIn = await page.locator('main a[href*="/login?redirectTo="]').count();
+    const problems = [];
+    if (!text.includes("CR-2026-0001")) problems.push("no muestra el código");
+    if (signIn !== 1) problems.push("sin enlace a iniciar sesión");
+    if (/(?:Ana|Pérez|\$|USD|Bs\.?S?|IN_REVIEW|CONFIRMED)/.test(text)) {
+      problems.push("muestra datos de la reserva");
+    }
+    if (problems.length > 0) {
+      failures.push(`/${locale}/reservas/CR-2026-0001: ${problems.join(", ")}`);
+      console.error(`FAIL /${locale}/reservas/CR-2026-0001: ${problems.join(", ")}`);
+    } else {
+      console.log(`OK   /${locale}/reservas/CR-2026-0001: código visible, sin datos de la reserva`);
     }
     await context.close();
   }
@@ -918,6 +943,159 @@ try {
         console.log(`OK   /${locale}: estado ${caseName} de reservas traducido y accesible`);
       }
       await stateContext.close();
+    }
+  }
+
+  // Confirmación del checkout: sin descargas en IN_REVIEW y solo una ruta REAL
+  // cuando la API entrega un documento READY (T-F1-13e).
+  const confirmationLabels = {
+    es: {
+      preview: "Vista previa del voucher",
+      legend: "Documento no fiscal",
+      refresh: "Actualizar documentos",
+      review: "Pago en revisión",
+      approved: "Pago aprobado",
+      download: "Descargar PDF",
+      note: "Los documentos se publican al confirmar el pago.",
+    },
+    en: {
+      preview: "Voucher preview",
+      legend: "Non-tax document",
+      refresh: "Refresh documents",
+      review: "Payment under review",
+      approved: "Payment approved",
+      download: "Download PDF",
+      note: "Documents are issued once payment is confirmed.",
+    },
+  };
+  const readyDocumentId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const detailMock = {
+    id: "navigation-check",
+    hotelKey: "22222222-2222-4222-8222-222222222222",
+    roomType: "standard",
+    type: "hotel",
+    title: { es: "Alojamiento de prueba", en: "Test stay" },
+    description: { es: "Estancia de prueba.", en: "Test stay." },
+    destination: {
+      id: "dest-nav",
+      name: { es: "Mérida", en: "Mérida" },
+      country: "VE",
+      code: "MRD",
+    },
+    attributes: { stars: 3, maxGuests: 2, amenities: [], images: [] },
+    basePriceUsd: "100.00",
+    basePriceVes: null,
+    cancellationPolicy: null,
+  };
+  const availabilityMock = {
+    productId: "navigation-check",
+    from: "2026-12-01",
+    to: "2026-12-03",
+    nights: [
+      { night: "2026-12-01", remaining: 2, priceUsd: "100.00", priceVes: null },
+      { night: "2026-12-02", remaining: 2, priceUsd: "100.00", priceVes: null },
+    ],
+  };
+  const bookingMock = {
+    id: "33333333-3333-4333-8333-333333333333",
+    code: "CRB-CONFIRM01",
+    status: "PENDING_PAYMENT",
+    expiresAt: "2026-12-03T15:00:00.000Z",
+    totalUsd: "200.00",
+  };
+
+  for (const locale of locales) {
+    const labels = confirmationLabels[locale];
+    for (const [caseName, paymentStatus, documents] of [
+      ["revisión", "IN_REVIEW", []],
+      [
+        "aprobado",
+        "APPROVED",
+        [
+          {
+            id: readyDocumentId,
+            type: "VOUCHER",
+            number: 7,
+            status: "READY",
+            issuedAt: "2026-11-21T15:00:00.000Z",
+            downloadPath: `/api/v1/documents/${readyDocumentId}/download`,
+          },
+        ],
+      ],
+    ]) {
+      const context = await browser.newContext();
+      let documentCalls = 0;
+      await context.route("**/api/v1/products/navigation-check", (route) =>
+        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detailMock) }),
+      );
+      await context.route("**/api/v1/products/navigation-check/availability*", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(availabilityMock),
+        }),
+      );
+      await context.route("**/api/v1/bookings", (route) =>
+        route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(bookingMock) }),
+      );
+      await context.route("**/api/v1/bookings/*/payments", (route) =>
+        route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: "55555555-5555-4555-8555-555555555555",
+            status: paymentStatus,
+            amountUsd: "200.00",
+            amountVes: "9000.00",
+            rate: "45.0000",
+          }),
+        }),
+      );
+      await context.route("**/api/v1/bookings/*/documents", (route) => {
+        documentCalls += 1;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ items: documents }),
+        });
+      });
+
+      const page = await context.newPage();
+      await page.goto(
+        `${baseUrl}/${locale}/checkout/navigation-check?checkIn=2026-12-01&checkOut=2026-12-03&guests=1`,
+        { waitUntil: "domcontentloaded" },
+      );
+      await page.locator('[data-checkout-status="ready"]').waitFor();
+      await page.locator("#traveler-0-fullName").fill("Ana Pérez");
+      await page.locator("#traveler-0-documentNumber").fill("V12345678");
+      await page.locator('form button[type="submit"]').click();
+      await page.locator('[data-checkout-status="payment"]').waitFor();
+      await page.locator("#payment-bank").fill("Banco de Venezuela");
+      await page.locator("#payment-phone").fill("04125551122");
+      await page.locator("#payment-reference").fill("ABC12345");
+      await page.locator('form button[type="submit"]').click();
+      await page.locator('[data-checkout-status="success"]').waitFor();
+      await page.locator(`button:has-text("${labels.refresh}"):not([disabled])`).waitFor();
+
+      const text = await page.locator('[data-checkout-status="success"]').innerText();
+      const downloadLinks = await page.locator('a[href*="/api/v1/documents/"]').count();
+      const expectedStatus = paymentStatus === "APPROVED" ? labels.approved : labels.review;
+      const problems = [];
+      if (!text.includes(bookingMock.code)) problems.push("sin código de reserva");
+      if (!text.includes(expectedStatus)) problems.push(`sin estado ${expectedStatus}`);
+      if (!text.includes(labels.preview)) problems.push("sin vista previa del voucher");
+      if (!text.includes(labels.legend)) problems.push("sin leyenda de documento no fiscal");
+      if (!text.includes(labels.note)) problems.push("sin nota de documentos");
+      if (documentCalls < 1) problems.push("no consultó GET /documents");
+      if (caseName === "revisión" && downloadLinks !== 0) problems.push("descarga falsa en revisión");
+      if (caseName === "aprobado" && downloadLinks !== 1) problems.push("sin descarga READY");
+      if (problems.length > 0) {
+        failures.push(`/${locale} ${caseName}: ${problems.join(", ")}`);
+        console.error(`FAIL /${locale} ${caseName}: ${problems.join(", ")}`);
+      } else {
+        console.log(`OK   /${locale} ${caseName}: confirmación honesta con documentos reales`);
+      }
+      await context.close();
     }
   }
 } finally {
