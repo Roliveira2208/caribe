@@ -46,12 +46,13 @@ describe("identidad visual Caribe", () => {
     expect(css).toContain("clip-path: none !important");
     expect(css).toContain("transform: none !important");
     expect(css).toMatch(/\.scroll-cue-icon\s*\{\s*animation: none;/);
-    // f1-navigation-refresh aprobó la entrada de portada y el gesto de flecha.
+    // f1-navigation-refresh aprobó la entrada de portada y el balanceo de flecha;
+    // la pulsación es una transición de bajada, no una animación de impacto.
     expect([...css.matchAll(/@keyframes\s+([\w-]+)/g)].map((match) => match[1])).toEqual([
-      "cue-press",
       "cue-nudge",
       "caribe-rise",
     ]);
+    expect(css).not.toContain("@keyframes cue-press");
   });
 
   it("comparte un ritmo suave y desactiva el movimiento de forma segura", () => {

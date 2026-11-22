@@ -180,7 +180,7 @@ try {
 
     // Menú móvil: hamburgesa accesible, opciones apiladas y barra sin pegarse al borde.
     const mobile = await browser.newPage({ viewport: { width: 360, height: 640 } });
-    await mobile.goto(`${baseUrl}/${locale}`, { waitUntil: "domcontentloaded" });
+    await mobile.goto(`${baseUrl}/${locale}`, { waitUntil: "networkidle" });
     const mobileBar = mobile.locator(".site-bar");
     await mobileBar.waitFor();
     const mobileBox = await mobileBar.boundingBox();
@@ -205,10 +205,28 @@ try {
         nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
       );
       const stacked = childTops.every((top, index) => index === 0 || top > childTops[index - 1]);
-      if ((await menu.getAttribute("aria-expanded")) !== "true" || tools.direction !== "column" || tools.visible !== "visible" || !stacked) {
-        failures.push(`/${locale}: menú móvil no se abre en vertical`);
+      const itemBoxes = await mobile
+        .locator('#site-tools a, #site-tools [role="status"], #site-tools button[role="combobox"]')
+        .evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const rect = node.getBoundingClientRect();
+            return { top: Math.round(rect.top), width: Math.round(rect.width) };
+          }),
+        );
+      const onePerRow =
+        itemBoxes.length >= 7 &&
+        new Set(itemBoxes.map((box) => box.top)).size === itemBoxes.length &&
+        itemBoxes.every((box) => box.width > 200);
+      if (
+        (await menu.getAttribute("aria-expanded")) !== "true" ||
+        tools.direction !== "column" ||
+        tools.visible !== "visible" ||
+        !stacked ||
+        !onePerRow
+      ) {
+        failures.push(`/${locale}: menú móvil no apila cada ítem (${JSON.stringify(itemBoxes)})`);
       } else {
-        console.log(`OK   /${locale}: cabecera móvil con hamburgesa y menú vertical`);
+        console.log(`OK   /${locale}: cabecera móvil con hamburgesa y ${itemBoxes.length} ítems apilados`);
       }
     }
     await mobile.close();
@@ -333,6 +351,57 @@ try {
   console.log("OK   /es: tipos preseleccionados y categorías próximamente honestas");
   await stagePage.close();
 
+  // Contenido ajustado al viewport: el hero no se tapa con la cabecera ni con
+  // la flecha, y ninguna sección se sale de la altura disponible (T-NAV-21).
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 360, height: 640 },
+  ]) {
+    const layoutPage = await browser.newPage({ viewport });
+    await layoutPage.goto(`${baseUrl}/es`, { waitUntil: "networkidle" });
+    const layout = await layoutPage.evaluate(() => {
+      const box = (selector) => {
+        const rect = document.querySelector(selector)?.getBoundingClientRect();
+        return rect
+          ? { top: Math.round(rect.top), bottom: Math.round(rect.bottom), height: Math.round(rect.height) }
+          : null;
+      };
+      return {
+        bar: box(".site-bar"),
+        title: box(".hero-section h1"),
+        subtitle: box(".hero-section h1 + p"),
+        cta: box('.hero-section a[href="/es/search"]'),
+        cue: box('.scroll-cue[href="#search"]'),
+        hero: box(".hero-section"),
+        viewport: window.innerHeight,
+        anchorMargin: Number.parseFloat(
+          getComputedStyle(document.querySelector("#search")).scrollMarginTop,
+        ),
+      };
+    });
+    const problems = [];
+    if (!layout.bar || !layout.title || !layout.subtitle || !layout.cta || !layout.cue || !layout.hero) {
+      problems.push(" faltan medidas del hero");
+    } else {
+      if (layout.title.top < layout.bar.bottom || layout.subtitle.top < layout.bar.bottom) {
+        problems.push(" texto bajo la cabecera");
+      }
+      if (layout.cta.bottom > layout.cue.top) problems.push(" CTA solapada por la flecha");
+      if (layout.hero.height > layout.viewport + 1) {
+        problems.push(` hero de ${layout.hero.height}px supera ${layout.viewport}px`);
+      }
+      if (layout.anchorMargin < layout.bar.bottom) problems.push(" ancla sin margen para la cabecera");
+    }
+    if (problems.length > 0) {
+      failures.push(`/es ${viewport.width}x${viewport.height}:${problems.join(",")}`);
+    } else {
+      console.log(
+        `OK   /es ${viewport.width}x${viewport.height}: hero sin solapamiento y ancho útil respetado`,
+      );
+    }
+    await layoutPage.close();
+  }
+
   // Flecha en móvil: dentro del viewport y por encima de la zona segura.
   const arrowMobile = await browser.newPage({ viewport: { width: 360, height: 640 } });
   await arrowMobile.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });
@@ -371,17 +440,33 @@ try {
   if (!arrowBox || !activeHandle) {
     failures.push("/es: flecha sin geometría");
   } else {
+    const restingY = await activeHandle.evaluate((node) =>
+      getComputedStyle(node).getPropertyValue("--cue-press-y").trim(),
+    );
     await home.mouse.move(arrowBox.x + arrowBox.width / 2, arrowBox.y + arrowBox.height / 2);
     await home.mouse.down();
     await home.mouse.up();
-    const pressed = await activeHandle.evaluate((node) => ({
-      state: node.getAttribute("data-pressed"),
-      ripple: getComputedStyle(node, "::after").animationName,
-    }));
-    if (pressed.state !== "true" || pressed.ripple !== "cue-press") {
-      failures.push(`/es: flecha sin animación al pulsar (${JSON.stringify(pressed)})`);
+    const pressed = await activeHandle.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        state: node.getAttribute("data-pressed"),
+        descent: style.getPropertyValue("--cue-press-y").trim(),
+        scale: style.getPropertyValue("--cue-scale").trim(),
+        ripple: getComputedStyle(node, "::after").content,
+        transition: style.transitionProperty,
+      };
+    });
+    if (
+      restingY !== "0px" ||
+      pressed.state !== "true" ||
+      pressed.descent !== "6px" ||
+      pressed.scale !== "" ||
+      pressed.ripple !== "none" ||
+      !pressed.transition.includes("transform")
+    ) {
+      failures.push(`/es: flecha sin descenso suave al pulsar (${JSON.stringify(pressed)})`);
     } else {
-      console.log("OK   /es: flecha con estado pulsado y onda animada");
+      console.log("OK   /es: flecha con descenso suave al pulsar, sin golpe");
     }
   }
   await home.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
@@ -468,11 +553,19 @@ try {
     );
     await reducedPage.mouse.down();
     await reducedPage.mouse.up();
-    const reducedPress = await reducedHandle.evaluate((node) => ({
-      state: node.getAttribute("data-pressed"),
-      icon: getComputedStyle(node.querySelector("svg")).animationName,
-    }));
-    if (reducedPress.state !== "true" || reducedPress.icon !== "none") {
+    const reducedPress = await reducedHandle.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        state: node.getAttribute("data-pressed"),
+        descent: style.getPropertyValue("--cue-press-y").trim(),
+        icon: getComputedStyle(node.querySelector("svg")).animationName,
+      };
+    });
+    if (
+      reducedPress.state !== "true" ||
+      reducedPress.descent !== "0px" ||
+      reducedPress.icon !== "none"
+    ) {
       failures.push(`/es: pulsación con movimiento reducido no degradada (${JSON.stringify(reducedPress)})`);
     }
   }

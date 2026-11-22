@@ -29,4 +29,15 @@ describe("gesto de bajada", () => {
     expect(cue).toContain("visibility: hidden");
     expect(cue).toContain("transition: none");
   });
+
+  it("baja suavemente al pulsarse, sin escalas ni ondas de impacto", () => {
+    const css = read("src/app/globals.css");
+    const cue = css.slice(css.indexOf(".scroll-cue"), css.indexOf(".search-glass"));
+    expect(cue).toContain("--cue-press-y: 0px");
+    expect(cue).toContain('data-pressed="true"');
+    expect(cue).toContain("translate(-50%, calc(var(--cue-y) + var(--cue-press-y)))");
+    expect(cue).toContain("transform var(--duration-cue) var(--ease-caribe)");
+    expect(cue).not.toContain("@keyframes cue-press");
+    expect(cue).not.toContain("scale(");
+  });
 });

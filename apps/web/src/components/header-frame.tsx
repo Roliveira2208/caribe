@@ -73,10 +73,15 @@ export function HeaderFrame({
           data-open={menuOpen ? "true" : "false"}
           className="site-tools flex w-full flex-col gap-3 border-t border-bone/15 pt-3 lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:border-t-0 lg:pt-0"
         >
-          <nav aria-label={productsLabel} className="site-products flex flex-wrap items-center gap-1">
+          <nav
+            aria-label={productsLabel}
+            className="site-products flex flex-col items-stretch gap-1 lg:flex-row lg:items-center lg:gap-1"
+          >
             {products}
           </nav>
-          <div className="flex flex-wrap items-center gap-2">{tools}</div>
+          <div className="site-tools-actions flex flex-col items-stretch gap-2 lg:flex-row lg:items-center">
+            {tools}
+          </div>
         </div>
       </div>
     </header>

@@ -12,7 +12,7 @@ export function KineticComposition() {
   return (
     <div
       aria-hidden="true"
-      className="relative h-40 w-full overflow-hidden lg:h-[520px]"
+      className="hero-composition relative h-40 w-full overflow-hidden lg:h-[520px]"
       role="presentation"
     >
       <svg

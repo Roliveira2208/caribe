@@ -10,9 +10,10 @@ interface ScrollCueProps {
 }
 
 /**
- * Gesto de bajada siempre dentro del viewport. Muestra un estado pulsado
- * breve para que el salto de sección tenga respuesta visual incluso cuando el
- * desplazamiento es inmediato (movimiento reducido).
+ * Gesto de bajada siempre dentro del viewport. Al pulsarlo, el control baja de
+ * forma gradual y vuelve a subir, sin escalas ni impactos, para acompañar el
+ * desplazamiento suave hacia la sección (o el salto inmediato con movimiento
+ * reducido).
  */
 export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps) {
   const sentinel = useRef<HTMLSpanElement>(null);
@@ -41,7 +42,7 @@ export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps)
   function markPressed() {
     setPressed(true);
     if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setPressed(false), 450);
+    timer.current = window.setTimeout(() => setPressed(false), 620);
   }
 
   const colors =

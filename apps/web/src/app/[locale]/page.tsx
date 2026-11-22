@@ -39,8 +39,8 @@ export default async function HomePage({ params }: HomePageProps) {
 
   return (
     <div className="w-full">
-      <section className="relative min-h-dvh overflow-hidden bg-ink pt-20 text-bone">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 pb-16 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-28">
+      <section className="hero-section relative min-h-dvh overflow-hidden bg-ink pt-28 text-bone">
+        <div className="hero-inner mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 pb-16 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:pb-24">
           <div className="order-1 max-w-2xl space-y-6 lg:col-start-1 lg:row-start-1">
             <h1 className="hero-enter max-w-3xl font-display text-display text-bone">
               {t("title")}

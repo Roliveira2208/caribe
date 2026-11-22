@@ -102,6 +102,7 @@ const screens = [
   { name: "header", path: "/es" },
   { name: "header-menu", path: "/es" },
   { name: "home", path: "/es" },
+  { name: "home-arrow-pressed", path: "/es" },
   { name: "featured", path: "/es" },
   { name: "search", path: "/es/search" },
   { name: "login", path: "/es/login" },
@@ -209,6 +210,17 @@ async function waitForReadyContent(page, screen) {
     // Abierto documenta las banderas VE/US ademas del activo resaltado.
     await page.locator('.site-header button[role="combobox"]').click();
     await page.locator('[role="listbox"]').waitFor({ state: "visible" });
+  }
+  if (screen.name === "home-arrow-pressed") {
+    // Estado pulsado forzado para documentar el descenso gradual sin iniciar
+    // el desplazamiento de la página durante la captura.
+    await page.waitForFunction(
+      () => document.querySelectorAll('.scroll-cue[data-visible="true"]').length === 1,
+    );
+    await page.evaluate(() => {
+      document.querySelector('.scroll-cue[data-visible="true"]')?.setAttribute("data-pressed", "true");
+    });
+    await page.waitForTimeout(280);
   }
   if (screen.name === "featured") {
     await page.locator('[data-featured-status="ready"]').waitFor();

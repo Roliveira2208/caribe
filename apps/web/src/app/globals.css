@@ -85,10 +85,31 @@ body {
   scroll-margin-top: 7rem;
 }
 
+/* En pantallas bajas se compacta el contenido para que nada quede tapado. */
+@media (max-height: 700px) {
+  .hero-inner {
+    gap: 1rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .hero-composition {
+    max-height: 7rem;
+  }
+
+  .search-stage {
+    padding-block: 2.5rem;
+  }
+
+  #destacados,
+  #cierre {
+    padding-block: 3rem;
+  }
+}
+
 /* Gesto de bajada: fijo al viewport y retirado del tabulado fuera de su sección. */
 .scroll-cue {
   --cue-y: 8px;
-  --cue-scale: 1;
+  --cue-press-y: 0px;
   position: fixed;
   inset-block-end: calc(1rem + env(safe-area-inset-bottom, 0px));
   inset-inline-start: 50%;
@@ -96,7 +117,7 @@ body {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translate(-50%, var(--cue-y)) scale(var(--cue-scale));
+  transform: translate(-50%, calc(var(--cue-y) + var(--cue-press-y)));
   transition:
     opacity var(--duration-cue) var(--ease-caribe),
     transform var(--duration-cue) var(--ease-caribe),
@@ -112,33 +133,8 @@ body {
 }
 
 .scroll-cue[data-pressed="true"] {
-  --cue-scale: 0.9;
-  background-color: color-mix(in srgb, currentColor 18%, transparent);
-}
-
-.scroll-cue::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1px solid currentColor;
-  border-radius: inherit;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.scroll-cue[data-pressed="true"]::after {
-  animation: cue-press 450ms var(--ease-caribe);
-}
-
-@keyframes cue-press {
-  from {
-    opacity: 0.6;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 0;
-    transform: scale(1.4);
-  }
+  --cue-press-y: 6px;
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .scroll-cue-icon {
@@ -165,15 +161,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue {
     --cue-y: 0px;
-    transform: translate(-50%, 0) scale(var(--cue-scale));
+    transform: translate(-50%, 0);
     transition: none;
   }
 
+  /* Igualdad de especificidad con el estado pulsado para anular el descenso. */
   .scroll-cue[data-pressed="true"] {
-    --cue-scale: 1;
+    --cue-press-y: 0px;
   }
 
-  .scroll-cue::after,
   .scroll-cue-icon {
     animation: none;
   }
@@ -342,6 +338,21 @@ body {
     visibility: visible;
     opacity: 1;
     transform: none;
+  }
+
+  /* Cada control del menú ocupa una fila completa, sin flex-wrap de escritorio. */
+  .site-products a,
+  .site-tools-actions > a,
+  .site-tools-actions > p,
+  .site-tools-actions > div {
+    width: 100%;
+  }
+
+  .site-tools-actions > div > a,
+  .site-tools-actions > div > button,
+  .site-tools-actions button[role="combobox"] {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
