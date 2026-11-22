@@ -29,6 +29,10 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenario «Secciones a pantalla completa» de `specs/web-ui/spec.md`; `verify:navigation`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-16 Suavizar las transiciones de entrada, revelación y cabecera de la portada con degradación segura bajo movimiento reducido.
   Prueba: escenario «Transiciones suaves» de `specs/web-ui/spec.md`; capturas de portada en escritorio y móvil; lint, typecheck y tests en verde.
+- [x] T-NAV-17 Hacer la cabecera responsiva: margen lateral en móvil, menú hamburguesa con opciones verticales y glass con borde y realce interior.
+  Prueba: escenarios «Cabecera estrecha», «Menú vertical» y «Borde de glass» de `specs/web-ui/spec.md`; capturas de cabecera en escritorio y móvil; `verify:navigation` y `verify:contrast`; lint, typecheck y tests en verde.
+- [ ] T-NAV-18 Animar la pulsación de las flechas de sección y revisar su tamaño y zona segura en móvil, con degradación segura bajo movimiento reducido.
+  Prueba: escenarios «Pulsación de la flecha» y «Flecha en móvil» de `specs/web-ui/spec.md`; `verify:navigation`; capturas de portada en móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-8 Corregir el contraste de los pares gris sobre blanco con tokens aprobados, añadir `verify:contrast` con Playwright y crear el workflow de CI que lo ejecute.
   Prueba: escenarios «Contraste AA verificable» de `specs/web-ui/spec.md`; capturas claras y oscuras en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-9 Hacer real «Iniciar sesión» y construir `/account/trips` con reservas de `GET /api/v1/bookings`, estados accesibles y nota honesta sobre documentos.

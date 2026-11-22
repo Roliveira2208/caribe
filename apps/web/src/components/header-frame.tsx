@@ -48,12 +48,25 @@ export function HeaderFrame({
         {brand}
         <button
           type="button"
-          className="site-menu ms-auto h-11 rounded-full border border-bone/30 px-4 text-sm font-medium text-bone transition-colors duration-300 hover:bg-bone/10 lg:hidden"
+          className="site-menu ms-auto inline-flex size-11 items-center justify-center rounded-full border border-bone/30 text-bone transition-colors duration-300 hover:bg-bone/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber lg:hidden"
+          aria-label={menuLabel}
           aria-expanded={menuOpen}
           aria-controls="site-tools"
+          data-open={menuOpen ? "true" : "false"}
           onClick={() => setMenuOpen((open) => !open)}
         >
-          {menuLabel}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="site-menu-icon size-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <line x1="4" y1="8" x2="20" y2="8" />
+            <line x1="4" y1="16" x2="20" y2="16" />
+          </svg>
         </button>
         <div
           id="site-tools"

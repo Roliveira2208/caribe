@@ -67,7 +67,15 @@ La cabecera deja de ser una franja anclada al borde: `HeaderFrame` centra una ba
 transparent)` y `backdrop-filter: blur(20px)`. El wordmark queda a la izquierda; a la derecha se
 agrupan los enlaces de productos, el badge, el selector y la sesión. En móvil el botón «Menú»
 despliega el mismo contenido debajo de la barra. El `scroll-margin-top` de las anclas se mantiene
-para que la barra flotante no tape los encabezados.
+para que la barra flotante no tape los encabezados. La barra conserva `inset-inline` en móvil para
+no pegarse a los bordes; el botón móvil pasa a un SVG de hamburgesa con `aria-label` traducido y
+`aria-expanded`, y el icono se transforma en cruz al abrir. El contenido desplegado sigue apilado en
+vertical. La superficie añade un borde de 1px con mayor opacidad y un realce interior (`inset 0 1px
+0`) tipo glass de iOS; el fondo se mantiene sobre `ink` para no romper el contraste AA.
+
+Las flechas de sección mantienen el ancla nativa y `scroll-behavior: smooth`, pero añaden un estado
+`:active` visible y una animación suave del icono que se detiene con `prefers-reduced-motion`. El
+tamaño mínimo es 44x44px y la separación inferior respeta `env(safe-area-inset-bottom)`.
 
 `LanguageSwitcher` es un desplegable accesible (`button[role=combobox]` + `ul[role=listbox]`)
 con dos banderas SVG locales en `public/images/flags/` (Venezuela para `es`, Estados Unidos para

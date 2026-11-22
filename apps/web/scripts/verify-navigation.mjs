@@ -135,6 +135,8 @@ try {
         background: style.backgroundColor,
         blur: style.backdropFilter || style.webkitBackdropFilter || "",
         transition: style.transitionDuration,
+        border: style.borderTopWidth,
+        shadow: style.boxShadow,
       };
     });
     const problems = [];
@@ -145,6 +147,9 @@ try {
     if (shape.background === "rgb(14, 42, 61)") problems.push("fondo opaco");
     if (!shape.blur.includes("blur")) problems.push("sin desenfoque");
     if (shape.transition === "0s") problems.push("sin transicion suave");
+    if (shape.border !== "1px" || !shape.shadow.includes("inset")) {
+      problems.push("glass sin borde o realce interior");
+    }
 
     const expectedTypes = ["hotel", "tour", "package", "flight"];
     const productLinks = page.locator(".site-products a");
@@ -172,6 +177,41 @@ try {
       console.log(`OK   /${locale}: barra flotante centrada con cuatro productos y acciones`);
     }
     await page.close();
+
+    // Menú móvil: hamburgesa accesible, opciones apiladas y barra sin pegarse al borde.
+    const mobile = await browser.newPage({ viewport: { width: 360, height: 640 } });
+    await mobile.goto(`${baseUrl}/${locale}`, { waitUntil: "domcontentloaded" });
+    const mobileBar = mobile.locator(".site-bar");
+    await mobileBar.waitFor();
+    const mobileBox = await mobileBar.boundingBox();
+    const menu = mobile.locator(".site-menu");
+    await menu.waitFor();
+    const hamburger = await menu.locator("svg.site-menu-icon line").count();
+    const menuLabel = await menu.getAttribute("aria-label");
+    if (!mobileBox || mobileBox.x < 4 || 360 - (mobileBox.x + mobileBox.width) < 4) {
+      failures.push(`/${locale}: barra móvil pegada al borde`);
+    } else if (hamburger !== 2 || !menuLabel) {
+      failures.push(`/${locale}: falta icono de hamburgesa accesible (${hamburger}, ${menuLabel})`);
+    } else if ((await menu.getAttribute("aria-expanded")) !== "false") {
+      failures.push(`/${locale}: menú no empieza cerrado`);
+    } else {
+      await menu.click();
+      await mobile.locator('#site-tools[data-open="true"]').waitFor();
+      const tools = await mobile.locator("#site-tools").evaluate((node) => ({
+        direction: getComputedStyle(node).flexDirection,
+        visible: getComputedStyle(node).visibility,
+      }));
+      const childTops = await mobile.locator("#site-tools > *").evaluateAll((nodes) =>
+        nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+      );
+      const stacked = childTops.every((top, index) => index === 0 || top > childTops[index - 1]);
+      if ((await menu.getAttribute("aria-expanded")) !== "true" || tools.direction !== "column" || tools.visible !== "visible" || !stacked) {
+        failures.push(`/${locale}: menú móvil no se abre en vertical`);
+      } else {
+        console.log(`OK   /${locale}: cabecera móvil con hamburgesa y menú vertical`);
+      }
+    }
+    await mobile.close();
   }
 
   // Selector de idioma: desplegable con banderas VE/US y activo anunciado.

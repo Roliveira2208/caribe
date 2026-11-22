@@ -187,6 +187,49 @@ productos, acceso a sesión, selector de idioma y badge BCV.
 - WHEN se renderiza
 - THEN aparecen el badge BCV, el selector de idioma y «Iniciar sesión» (o «Mis viajes» con sesión) junto a los enlaces de productos
 
+### Requirement: Cabecera responsiva con glass definido
+
+La cabecera SHALL conservar un margen lateral en todos los anchos, SHALL usar un botón de menú con
+icono de hamburgesa en móvil y SHALL mostrar sus opciones en vertical al abrirlo. La superficie
+SHALL ser semitransparente con desenfoque, borde visible y realce interior para distinguirse de un
+fondo de color parecido, sin perder contraste AA.
+
+#### Scenario: Cabecera estrecha
+- GIVEN una ventana de 360px o menos de ancho
+- WHEN se renderiza la cabecera
+- THEN la barra no toca los bordes del viewport y conserva esquinas redondeadas
+- THEN el botón de menú muestra un icono de hamburgesa con etiqueta accesible
+
+#### Scenario: Menú vertical
+- GIVEN el menú móvil cerrado
+- WHEN se activa el botón de hamburgesa
+- THEN las opciones de producto, sesión, idioma y tasa aparecen apiladas en vertical
+- THEN el botón cambia su estado accesible y el icono pasa a cerrar
+
+#### Scenario: Borde de glass
+- GIVEN la cabecera sobre un fondo del mismo color
+- WHEN se renderiza
+- THEN el fondo es translúcido con desenfoque y el borde de 1px con realce interior es visible
+- THEN el texto sigue cumpliendo los escenarios de contraste AA
+
+### Requirement: Gesto de cambio de sección animado
+
+Las flechas de bajada SHALL ofrecer una respuesta visual al pulsarlas y SHALL desplazarse a la
+sección destino con una transición suave cuando el usuario no pide movimiento reducido. En pantallas
+pequeñas SHALL permanecer dentro del viewport y por encima de la zona segura inferior.
+
+#### Scenario: Pulsación de la flecha
+- GIVEN una flecha de bajada visible
+- WHEN se pulsa
+- THEN el control cambia de estado visual y el desplazamiento hacia la sección es gradual
+- THEN con movimiento reducido el salto es inmediato pero el estado pulsado sigue siendo visible
+
+#### Scenario: Flecha en móvil
+- GIVEN una ventana de 360x640
+- WHEN se muestra una flecha de bajada
+- THEN el control mide al menos 44x44px y queda dentro del viewport
+- THEN no queda tapado por la zona segura inferior del dispositivo
+
 ### Requirement: Contraste AA verificable
 
 Todos los textos visibles de la web pública SHALL cumplir WCAG AA en tema claro y oscuro usando

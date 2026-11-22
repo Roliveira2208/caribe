@@ -100,6 +100,7 @@ const mockBookingRow = {
 
 const screens = [
   { name: "header", path: "/es" },
+  { name: "header-menu", path: "/es" },
   { name: "home", path: "/es" },
   { name: "featured", path: "/es" },
   { name: "search", path: "/es/search" },
@@ -218,6 +219,11 @@ async function waitForReadyContent(page, screen) {
     // El catálogo llega por API: esperar a una tarjeta o al error evita
     // documentar el estado de carga como si fuera la pantalla final.
     await page.locator("article, [role='alert']").first().waitFor();
+  }
+  if (screen.name === "header-menu" && (page.viewportSize()?.width ?? 0) < 1024) {
+    await page.locator(".site-menu").click();
+    await page.locator('#site-tools[data-open="true"]').waitFor();
+    await page.waitForTimeout(450);
   }
   if (screen.name === "login") {
     await page.locator("#login-email").waitFor();
