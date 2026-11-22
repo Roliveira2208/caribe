@@ -81,13 +81,15 @@ composición cinética y el relleno vertical de las secciones, de modo que la CT
 la flecha y los encabezados no se tapen al navegar con las anclas. `scroll-margin-top` sigue
 compensando la cabecera en los destinos de las flechas.
 
-Las flechas de sección mantienen el ancla nativa y `scroll-behavior: smooth`. Al pulsarlas, el
-control baja unos píxeles mediante una transición de `transform: translateY` con la curva compartida
-y vuelve a subir al liberarse; no se usa `scale`, onda de impacto ni ningún cambio brusco de tamaño.
-El timer del estado pulsado dura más que la transición para que el descenso se complete antes de
-volver. Con `prefers-reduced-motion` se conserva solo el cambio de fondo del estado pulsado, sin
-desplazamiento. El tamaño mínimo es 44x44px y la separación inferior respeta
-`env(safe-area-inset-bottom)`.
+Las flechas de sección conservan el `<a href="#...">` para accesibilidad y degradación sin JS, pero
+intercetan el clic y animan el desplazamiento con `requestAnimationFrame`: 760ms con
+`easeInOutCubic`, usando `scrollTo({ behavior: "instant" })` en cada fotograma para que ni el CSS ni
+una transición de ruta de Next puedan convertirlo en un salto. La posición destino resta el
+`scroll-margin-top` calculado del elemento, y `history.pushState` conserva el ancla sin provocar un
+segundo salto. La animación se cancela ante `wheel`, `touchstart` o `keydown` y al desmontar.
+Con `prefers-reduced-motion` se llama a `scrollTo` sin interpolación. El control baja 8px en 140ms
+con `ease-out` y vuelve en 320ms: temporización asimétrica, sin `scale` ni onda. El tamaño mínimo es
+44x44px y la separación inferior respeta `env(safe-area-inset-bottom)`.
 
 `LanguageSwitcher` es un desplegable accesible (`button[role=combobox]` + `ul[role=listbox]`)
 con dos banderas SVG locales en `public/images/flags/` (Venezuela para `es`, Estados Unidos para

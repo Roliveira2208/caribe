@@ -215,15 +215,23 @@ fondo de color parecido, sin perder contraste AA.
 ### Requirement: Gesto de cambio de sección animado
 
 Las flechas de bajada SHALL ofrecer una respuesta visual al pulsarlas y SHALL desplazarse a la
-sección destino con una transición suave cuando el usuario no pide movimiento reducido. En pantallas
-pequeñas SHALL permanecer dentro del viewport y por encima de la zona segura inferior.
+sección destino con una animación explícita y continua cuando el usuario no pide movimiento
+reducido. En pantallas pequeñas SHALL permanecer dentro del viewport y por encima de la zona segura
+inferior.
 
 #### Scenario: Pulsación de la flecha
 - GIVEN una flecha de bajada visible
 - WHEN se pulsa
-- THEN el control desciende de forma gradual con una transición de transform, sin escalas bruscas ni ondas de impacto, y vuelve a su sitio con la misma suavidad
-- THEN el desplazamiento hacia la sección sigue siendo gradual
-- THEN con movimiento reducido el salto es inmediato, el control no se desplaza pero el estado pulsado sigue siendo visible mediante el fondo
+- THEN el control desciende 8px en 140ms con una curva ease-out y vuelve a su sitio en 320ms, sin escalas bruscas ni ondas de impacto
+- THEN con movimiento reducido el control no se desplaza pero el estado pulsado sigue siendo visible mediante el fondo
+
+#### Scenario: Bajada gradual entre secciones
+- GIVEN una flecha de bajada visible y movimiento normal
+- WHEN se pulsa
+- THEN el desplazamiento se interpola fotograma a fotograma desde la posición actual hasta el destino durante 760ms con una curva ease-in-out cúbica
+- THEN el destino respeta el `scroll-margin-top` de la cabecera flotante y la URL conserva el ancla de la sección
+- THEN una acción del usuario con rueda, táctil o teclado cancela la animación y deja el scroll en la posición alcanzada
+- THEN con movimiento reducido el destino se alcanza de inmediato, sin interpolación
 
 #### Scenario: Flecha en móvil
 - GIVEN una ventana de 360x640

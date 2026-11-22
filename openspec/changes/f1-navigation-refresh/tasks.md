@@ -45,7 +45,9 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenario «Menú vertical» de `specs/web-ui/spec.md`; `verify:navigation` comprobando posiciones; capturas de cabecera abierta en móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-21 Ajustar el contenido de las secciones al viewport: hero sin solapamiento con la cabecera ni la flecha y espaciado compacto en pantallas bajas.
   Prueba: escenarios «Hero sin solapamiento» y «Secciones en pantalla baja» de `specs/web-ui/spec.md`; `verify:navigation` con 390x844 y 360x640; capturas de portada en móvil; lint, typecheck y tests en verde.
-- [ ] T-NAV-11 Verificación final de la change: revisar capturas, ejecutar los verificadores de navegación y contraste, lint, typecheck y tests completos, y documentar la evidencia en `verify.md`.
+- [x] T-NAV-22 Animar explícitamente la bajada entre secciones con `requestAnimationFrame` (760ms, ease-in-out cúbica, cancelable) y ajustar la pulsación asimétrica de la flecha.
+  Prueba: escenarios «Pulsación de la flecha» y «Bajada gradual entre secciones» de `specs/web-ui/spec.md`; `verify:navigation` midiendo posiciones intermedias; capturas de portada en móvil; lint, typecheck y tests en verde.
+- [x] T-NAV-11 Verificación final de la change: revisar capturas, ejecutar los verificadores de navegación y contraste, lint, typecheck y tests completos, y documentar la evidencia en `verify.md`.
   Prueba: todos los escenarios de `specs/web-ui/spec.md` con evidencia; `node scripts/check-specs.mjs` en verde.
 
 ## Notas
