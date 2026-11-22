@@ -1,8 +1,8 @@
 # Alcance de f1-hotels-e2e
 
-Clasificación de los escenarios de los diez deltas de `f1-hotels-e2e`, alineada con el contenido
+Clasificación de los escenarios de los once deltas de `f1-hotels-e2e`, alineada con el contenido
 actual de `openspec/changes/f1-hotels-e2e/specs/*/spec.md` (conteo real de `#### Scenario:` por spec)
-el 2026-11-16 como parte de la remediación de T-F1-10b.
+el 2026-11-16 como parte de la remediación de T-F1-10b, con `web-ui` incorporado al cierre de F1.
 
 ## Criterio
 
@@ -28,18 +28,21 @@ el 2026-11-16 como parte de la remediación de T-F1-10b.
 | notifications | 13 | 2 | 11 | 0 |
 | payments | 35 | 26 | 9 | 0 |
 | tenant-isolation | 33 | 30 | 3 | 0 |
-| **Total** | **288** | **192** | **96** | **0** |
+| web-ui | 3 | 2 | 1 | 0 |
+| **Total** | **291** | **194** | **97** | **0** |
 
 Los aplazables no son escenarios de estos deltas: se listan al final como capacidades movidas a F2.
 
-**Regla de cierre:** solo los **192 escenarios obligatorios** bloquean el cierre de F1. Los
-**96 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota en `tasks.md`. Ningún
+**Regla de cierre:** solo los **194 escenarios obligatorios** bloquean el cierre de F1. Los
+**97 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota en `tasks.md`. Ningún
 obligatorio se recorta para meter un deseable.
 
 > Nota de alineación (2026-11-16): esta tabla y las listas por spec sustituyen los conteos/títulos
 > anteriores (281/188/93) para reflejar los escenarios y títulos reales presentes en los deltas actuales.
-> Algunos escenarios aparecen duplicados en los deltas (p. ej. en `auth-access` y `booking`); se
-> conservan y clasifican tal como existen para mantener trazabilidad 1:1 con los specs.
+> El 2026-11-22 se añadió `web-ui` (3 escenarios) y se recalculó el total a 291/194/97; la matriz final
+> de evidencia está en `verification-final.md`. Algunos escenarios aparecen duplicados en los deltas
+> (p. ej. en `auth-access` y `booking`); se conservan y clasifican tal como existen para mantener
+> trazabilidad 1:1 con los specs.
 
 ## api-errors (17)
 
@@ -178,6 +181,13 @@ escenarios funcionales de entrega son deseables y no bloquean el cierre.
   rol que ignore RLS · Rol de aplicación sin contexto no ve nada · Tabla nueva sin RLS · RLS forzada
   también para el dueño · `rates_global` probado como el rol de aplicación.
 - **Deseable (3)**: Contexto de plataforma ve todas las agencias · Un fallo en A no detiene B.
+
+## web-ui (3)
+
+- **Obligatorio (2)**: Página sin datos de la reserva · Código con caracteres especiales (ambos
+  protegen la privacidad y evitan interpretar el código como HTML).
+- **Deseable (1)**: QR abre una página real en ambos idiomas (ruta ya verificada por los tests de
+  enrutamiento y el e2e de navegación).
 
 ## Aplazados a F2 (no cuentan en los deltas)
 

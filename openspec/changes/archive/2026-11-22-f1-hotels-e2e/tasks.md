@@ -5,9 +5,9 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 > cambios (inventario por noche, alcance reducido, idempotencia mínima, 422 estricto, `rates_global` y
 > PDFs, `minimumReleaseAge`). El alcance por escenario está en `scope.md`.
 >
-> **Regla de alcance (2026-11-12):** solo los **188 escenarios obligatorios** bloquean el cierre de F1.
-> Los **93 deseables** se implementan si son baratos y, si no, pasan a F2 con una nota aquí. Los
-> aplazables ya están listados en `scope.md` y no cuentan en los deltas.
+> **Regla de alcance (actualizada 2026-11-22):** solo los **194 escenarios obligatorios** de
+> `scope.md` bloquean el cierre de F1. Los **97 deseables** se implementan si son baratos y, si no,
+> pasan a F2 con una nota aquí. Los aplazables ya están listados en `scope.md` y no cuentan en los deltas.
 
 - [x] T-F1-0 Endurecer el inventario de rutas (primera tarea, antes de tocar catálogo; análisis en
   `docs/plans/inventory-hardening-f0.md`).
@@ -166,8 +166,8 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Prueba: exchange-rates › "Fuente disponible", "Fuente caída", "Segundo login del mismo día no
   consulta" y "Alta de pago asegura la tasa del día"; jobs › sin trabajo de tasa. Unitarios del
   proveedor Cotizave y de `ensureTodayRate`.
-  Nota: reemplaza el proveedor de T-F1-5 y la programación diaria de T-F1-8; `scope.md` suma dos
-  escenarios obligatorios (281/188/93).
+  Nota: reemplaza el proveedor de T-F1-5 y la programación diaria de T-F1-8; en su momento `scope.md`
+  sumó dos escenarios obligatorios. El conteo final, con `web-ui`, es 291/194/97.
 - [x] T-F1-10b Pausa planificada: verificación independiente y revisión de seguridad en sesión limpia
   con reservas y pagos ya cerrados (T-F1-7 a T-F1-10), antes de documentos (T-F1-11) y del resto del
   panel y la web (T-F1-13/T-F1-14).
@@ -262,8 +262,16 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Concurrencia real: `apps/api/test/bookings.e2e.ts` › «crea exactamente una reserva cuando dos
   clientes compiten por el último cupo». `scripts/k6/f1-hotels-e2e.js` entregado para carga manual;
   k6 no está instalado en este entorno y su ejecución queda documentada, no simulada.
-- [ ] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.
-  Prueba: informe de verificación con semáforo y M1/M2 anotados.
+- [x] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.
+  Prueba: `openspec/changes/f1-hotels-e2e/verification-final.md` con semáforo, matriz de evidencia,
+  resultado de `/verify` y `/security-review`, y riesgos abiertos. Verificación independiente: todo en
+  verde salvo `pnpm test`, que fallaba porque Vitest recogía `apps/web/e2e/f1-hotels-e2e.spec.ts`;
+  corregido en `apps/web/vitest.config.ts` (`include: test/**`) y confirmado 18 archivos / 122 pruebas.
+  Seguridad: sin hallazgos críticos ni altos; tres riesgos medios nuevos (alcance de `provider` sobre
+  documentos, sin rate limit de negocio y reembolso externo dentro de la transacción) y M1/M2 heredados,
+  todos registrados en `verification-final.md` y condicionantes de una demo pública, no del cierre local.
+  Repetición final de `pnpm test`: 5/5 tareas, 48/48 archivos API y 18/18 archivos web en verde con
+  `hookTimeout: 60_000`. Archivado con `pnpm exec openspec archive f1-hotels-e2e --yes --json`.
 - [x] T-F1-17 Actualizar `docs/sdd/SDD.md` con las nueve desviaciones canónicas de `design.md` §15
   Evidencia: §5 (`tenant_settings`, `availability` por noche, `hotel_key`, `idempotency_keys`, estados de
   pago), §6 (Cotizave y refresco perezoso), §7 (rutas `/admin/payments`, firma de `InvoiceProvider` y
@@ -279,13 +287,16 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 
 ## Notas de F1
 
-- **Flake a vigilar (2026-11-17):** `apps/api/test/api-errors.e2e.ts` falló una vez con
-  `Hook timed out in 30000ms` durante el `app.listen(0)` del arranque (`beforeAll`). El mismo archivo
-  pasó 13/13 aislado y en la repetición completa de la suite. No hay un fallo funcional asociado;
-  si reaparece, repetir primero el archivo aislado y vigilar el tiempo de arranque de `createApp()`
-  cuando la suite corre en paralelo.
-- La demo de F1 es local. Una demo pública exige M1 y M2.
+- **Flake de arranque cerrado (2026-11-22):** `Hook timed out in 30000ms` en el `beforeAll` de
+  `api-errors.e2e.ts`, `notifications.e2e.ts` y, en la última corrida, `tenant-settings.e2e.ts`; el
+  archivo aislado pasó 24/24 y la repetición completa anterior pasó 48/48. No había fallo funcional:
+  `createApp()`/`app.listen(0)` superaba 30 s bajo carga. `apps/api/vitest.config.mts` eleva
+  `hookTimeout` a 60 s sin relajar los timeouts de las pruebas.
+- La demo de F1 es local. Una demo pública exige M1, M2 y los tres riesgos medios del cierre (detalle en
+  `verification-final.md`): limitar los documentos que ve `provider`, añadir rate limit a rutas de
+  negocio y mover el reembolso externo fuera de la transacción con un `refundId` idempotente/outbox.
 - Las nueve desviaciones respecto del SDD están en `design.md` §15 y se aplican al SDD en T-F1-17.
 - OpenAPI/Swagger y los proveedores externos quedan diferidos.
-- Cierre de F1: solo bloquean los 188 escenarios obligatorios de `scope.md`. Si un deseable no entra,
-  se mueve a F2 con una nota en la tarea correspondiente; no se recorta un obligatorio.
+- Cierre de F1: solo bloquean los 194 escenarios obligatorios de `scope.md` (291/194/97 con `web-ui`).
+  Si un deseable no entra, se mueve a F2 con una nota en la tarea correspondiente; no se recorta un
+  obligatorio.

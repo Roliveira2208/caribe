@@ -7,6 +7,11 @@ import { defineConfig } from "vitest/config";
  * necesita el runtime automático de React y los mismos alias que la app.
  */
 export default defineConfig({
+  // Los e2e de Playwright viven en `e2e/` y usan el runner de Playwright;
+  // Vitest solo ejecuta las pruebas unitarias de `test/`.
+  test: {
+    include: ["test/**/*.test.{ts,tsx}"],
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
