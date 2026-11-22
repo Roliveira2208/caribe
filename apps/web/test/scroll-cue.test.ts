@@ -43,6 +43,19 @@ describe("gesto de bajada", () => {
     expect(cue).not.toContain("scale(");
   });
 
+  it("alinea la sección destino con el viewport al seguir un ancla", () => {
+    const css = read("src/app/globals.css");
+    const target = css.slice(css.indexOf(".scroll-target"), css.indexOf(".scroll-cue"));
+    expect(target).toContain("scroll-margin-top: 0");
+    expect(target).not.toContain("scroll-margin-top: 7rem");
+
+    const page = read("src/app/[locale]/page.tsx");
+    const featured = read("src/components/featured-stays.tsx");
+    expect(page).toContain('id="search" className="search-stage scroll-target relative py-16');
+    expect(page).toContain("scroll-target flex min-h-dvh flex-col");
+    expect(featured).toContain("scroll-target relative flex min-h-dvh flex-col");
+  });
+
   it("interpola el desplazamiento y lo cancela ante una acción del usuario", () => {
     const source = read("src/components/scroll-cue.tsx");
     expect(source).toContain("const SCROLL_DURATION_MS = 760");

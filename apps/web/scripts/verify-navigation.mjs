@@ -21,6 +21,25 @@ const notFoundTitles = ["Página no encontrada", "Page not found"];
 const browser = await chromium.launch();
 const failures = [];
 
+/** El destino del ancla no debe dejar ver la sección anterior bajo la cabecera. */
+async function checkAnchorLanding(page, id, label) {
+  const landing = await page.evaluate((target) => {
+    const section = document.getElementById(target);
+    const strip = document.elementFromPoint(innerWidth / 2, 8)?.closest("section");
+    const heading = section.querySelector("h2");
+    return {
+      top: Math.round(section.getBoundingClientRect().top),
+      strip: strip ? strip.id || "hero" : "ninguna",
+      headingTop: heading ? Math.round(heading.getBoundingClientRect().top) : -1,
+    };
+  }, id);
+  if (Math.abs(landing.top) > 8 || landing.strip !== id || landing.headingTop < 88) {
+    failures.push(`${label}: ancla #${id} mal alineada (${JSON.stringify(landing)})`);
+    return;
+  }
+  console.log(`OK   ${label}: ancla #${id} alineada, sin sección anterior bajo la cabecera`);
+}
+
 try {
   for (const locale of locales) {
     const context = await browser.newContext();
@@ -374,9 +393,12 @@ try {
         cue: box('.scroll-cue[href="#search"]'),
         hero: box(".hero-section"),
         viewport: window.innerHeight,
-        anchorMargin: Number.parseFloat(
-          getComputedStyle(document.querySelector("#search")).scrollMarginTop,
-        ),
+        anchorHeadingTop: (() => {
+          const search = document.querySelector("#search");
+          const top = search.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({ top, behavior: "instant" });
+          return Math.round(search.querySelector("h2").getBoundingClientRect().top);
+        })(),
       };
     });
     const problems = [];
@@ -390,7 +412,9 @@ try {
       if (layout.hero.height > layout.viewport + 1) {
         problems.push(` hero de ${layout.hero.height}px supera ${layout.viewport}px`);
       }
-      if (layout.anchorMargin < layout.bar.bottom) problems.push(" ancla sin margen para la cabecera");
+      if (layout.anchorHeadingTop <= layout.bar.bottom) {
+        problems.push(" encabezado del ancla bajo la cabecera");
+      }
     }
     if (problems.length > 0) {
       failures.push(`/es ${viewport.width}x${viewport.height}:${problems.join(",")}`);
@@ -494,6 +518,7 @@ try {
   }
   await home.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
   console.log("OK   /es: flecha al buscador");
+  await checkAnchorLanding(home, "search", "/es");
 
   await home.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });
   let focusedArrow = false;
@@ -639,12 +664,8 @@ try {
   await home.waitForFunction(() => location.hash === "#destacados");
   // El ancla ya no salta: hay que esperar a que termine la bajada animada.
   await home.waitForTimeout(900);
-  const featuredTop = await home.locator("#destacados").evaluate((node) => node.getBoundingClientRect().top);
-  if (Math.abs(featuredTop) > 120) {
-    failures.push(`/es: la flecha a destacados no llegó a la sección (top=${featuredTop})`);
-  } else {
-    console.log("OK   /es: flecha a destacados");
-  }
+  await checkAnchorLanding(home, "destacados", "/es");
+  console.log("OK   /es: flecha a destacados");
   await home.locator('[data-featured-status="ready"]').waitFor();
   const cards = home.locator("#destacados article");
   const cardCount = await cards.count();
@@ -681,12 +702,19 @@ try {
   await closingCue.click();
   await home.waitForFunction(() => location.hash === "#cierre");
   await home.waitForTimeout(900);
-  const closingTop = await home.locator("#cierre").evaluate((node) => node.getBoundingClientRect().top);
-  if (Math.abs(closingTop) > 120) {
-    failures.push(`/es: la flecha al cierre no llegó (top=${closingTop})`);
-  } else {
-    console.log("OK   /es: flecha al cierre");
+  await checkAnchorLanding(home, "cierre", "/es");
+  console.log("OK   /es: flecha al cierre");
+
+  const anchorMobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await anchorMobile.goto(`${baseUrl}/es`, { waitUntil: "networkidle" });
+  for (const id of ["search", "destacados", "cierre"]) {
+    await anchorMobile.evaluate((target) => {
+      const node = document.getElementById(target);
+      window.scrollTo({ top: node.getBoundingClientRect().top + window.scrollY, behavior: "instant" });
+    }, id);
+    await checkAnchorLanding(anchorMobile, id, "/es 390x844");
   }
+  await anchorMobile.close();
   if ((await home.locator('#cierre a[href="/es/search"]').count()) !== 1) {
     failures.push("/es: falta el CTA del cierre hacia el buscador");
   } else {

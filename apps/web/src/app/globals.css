@@ -83,9 +83,10 @@ body {
   @apply bg-bone font-body text-ink antialiased;
 }
 
-/* Compensa la barra flotante al llegar a una sección con ancla. */
+/* El ancla alinea el borde de la sección con el viewport: la barra flotante cae
+   sobre el relleno propio de la sección y no deja ver la sección anterior. */
 .scroll-target {
-  scroll-margin-top: 7rem;
+  scroll-margin-top: 0;
 }
 
 /* En pantallas bajas se compacta el contenido para que nada quede tapado. */
