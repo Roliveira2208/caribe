@@ -3,9 +3,8 @@ import { cookies } from "next/headers";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@caribe/shared";
 import { alternateLinks } from "@/i18n/metadata";
-import { Link } from "@/i18n/navigation";
 import { AuditLogPanel } from "@/components/audit-log-panel";
-import { OrganizationSelector } from "@/components/organization-selector";
+import { PanelAccessNotice } from "@/components/panel-access-notice";
 import { loadPanelAccess } from "@/lib/panel-access";
 
 interface PanelPageProps {
@@ -41,36 +40,8 @@ export default async function PanelPage({ params }: PanelPageProps) {
     origin: process.env["ADMIN_URL"] ?? "http://localhost:3001",
   });
 
-  if (access.status === "login") {
-    return (
-      <section style={{ maxWidth: 520 }}>
-        <h1 style={{ margin: "0 0 8px", fontSize: 24 }}>{tOrg("loginTitle")}</h1>
-        <p style={{ color: "#6b7280" }}>{tOrg("loginDescription")}</p>
-        <Link href="/login">{tOrg("loginAction")}</Link>
-      </section>
-    );
-  }
-
-  if (access.status === "error") {
-    return (
-      <p role="alert" style={{ color: "#b42318" }}>
-        {tOrg("loadError")}
-      </p>
-    );
-  }
-
-  if (access.status === "choose") {
-    return <OrganizationSelector organizations={access.organizations} />;
-  }
-
-  if (access.status === "no-membership") {
-    return (
-      <section style={{ maxWidth: 520, border: "1px solid #d1d5db", borderRadius: 8, padding: 24 }}>
-        <h1 style={{ margin: "0 0 8px", fontSize: 24 }}>{tOrg("noMembershipTitle")}</h1>
-        <p style={{ color: "#6b7280" }}>{tOrg("noMembershipDescription")}</p>
-        <Link href="/">{tOrg("webLink")}</Link>
-      </section>
-    );
+  if (access.status !== "platform" && access.status !== "ready") {
+    return <PanelAccessNotice access={access} />;
   }
 
   const isPlatform = access.status === "platform";

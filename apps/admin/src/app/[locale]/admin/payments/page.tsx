@@ -1,0 +1,46 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@caribe/shared";
+import { alternateLinks } from "@/i18n/metadata";
+import { PanelAccessNotice } from "@/components/panel-access-notice";
+import { PaymentsPanel } from "@/components/payments-panel";
+import { loadPanelAccess } from "@/lib/panel-access";
+
+interface PaymentsPageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: PaymentsPageProps): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale: Locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
+  const t = await getTranslations({ locale, namespace: "payments" });
+  return {
+    title: t("title"),
+    description: t("description"),
+    alternates: alternateLinks(locale, "/admin/payments"),
+  };
+}
+
+/** Revisión de pagos del panel (T-F1-9c, desviación §15-8 del SDD). */
+export default async function PaymentsPage({ params }: PaymentsPageProps) {
+  const { locale: raw } = await params;
+  const locale: Locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
+  setRequestLocale(locale);
+
+  const cookieStore = await cookies();
+  const access = await loadPanelAccess({
+    cookieHeader: cookieStore.toString(),
+    origin: process.env["ADMIN_URL"] ?? "http://localhost:3001",
+  });
+
+  if (access.status !== "platform" && access.status !== "ready") {
+    return <PanelAccessNotice access={access} />;
+  }
+
+  return (
+    <div style={{ width: "100%" }}>
+      <PaymentsPanel locale={locale} />
+    </div>
+  );
+}

@@ -7,7 +7,8 @@
     "security": "Security",
     "language": "Language",
     "spanish": "Español",
-    "english": "English"
+    "english": "English",
+    "payments": "Payments"
   },
   "metadata": {
     "title": "Caribe · Agency dashboard",
@@ -96,6 +97,46 @@
     "platformTitle": "Platform dashboard",
     "platformDescription": "You are in platform mode, with no active agency. Access is read-only.",
     "activeAgency": "Active agency: {agency}"
+  },
+  "payments": {
+    "title": "Payment review",
+    "description": "Payments reported by customers and waiting for review by an agency admin.",
+    "statusLabel": "Status",
+    "methodLabel": "Method",
+    "all": "All",
+    "colPayment": "Payment",
+    "colBooking": "Booking",
+    "colCustomer": "Customer",
+    "colMethod": "Method",
+    "colAmountUsd": "Amount USD",
+    "colAmountVes": "VES · rate",
+    "colStatus": "Status",
+    "colActions": "Actions",
+    "methodMobile": "Mobile payment",
+    "methodCard": "Card",
+    "status": {
+      "pending": "Pending",
+      "inreview": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "refunded": "Refunded",
+      "partiallyrefunded": "Partially refunded"
+    },
+    "approveTitle": "Approve payment",
+    "approveDescription": "The booking will be confirmed and the action will be audited.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancel": "Cancel",
+    "rejectTitle": "Reject payment",
+    "reasonLabel": "Rejection reason",
+    "empty": "No payments match these filters.",
+    "forbidden": "Your role cannot review payments for this agency.",
+    "genericError": "Could not load the payment list. Please try again.",
+    "alreadyReviewed": "Someone else already reviewed this payment. The list has been refreshed.",
+    "holdExpired": "The booking expired before the payment was approved; it stays under review.",
+    "validationError": "Check the entered data and try again.",
+    "approvedNotice": "Payment approved and booking confirmed.",
+    "rejectedNotice": "Payment rejected with the given reason."
   },
   "notFound": {
     "title": "Page not found",

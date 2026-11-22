@@ -7,7 +7,8 @@
     "security": "Seguridad",
     "language": "Idioma",
     "spanish": "Español",
-    "english": "English"
+    "english": "English",
+    "payments": "Pagos"
   },
   "metadata": {
     "title": "Caribe · Panel de agencia",
@@ -96,6 +97,46 @@
     "platformTitle": "Panel de plataforma",
     "platformDescription": "Estás en modo plataforma, sin una agencia activa. El acceso es de solo lectura.",
     "activeAgency": "Agencia activa: {agency}"
+  },
+  "payments": {
+    "title": "Revisión de pagos",
+    "description": "Pagos reportados por los clientes que esperan revisión de un admin de la agencia.",
+    "statusLabel": "Estado",
+    "methodLabel": "Método",
+    "all": "Todos",
+    "colPayment": "Pago",
+    "colBooking": "Reserva",
+    "colCustomer": "Cliente",
+    "colMethod": "Método",
+    "colAmountUsd": "Monto USD",
+    "colAmountVes": "VES · tasa",
+    "colStatus": "Estado",
+    "colActions": "Acciones",
+    "methodMobile": "Pago Móvil",
+    "methodCard": "Tarjeta",
+    "status": {
+      "pending": "Pendiente",
+      "inreview": "En revisión",
+      "approved": "Aprobado",
+      "rejected": "Rechazado",
+      "refunded": "Reembolsado",
+      "partiallyrefunded": "Reembolsado parcialmente"
+    },
+    "approveTitle": "Aprobar pago",
+    "approveDescription": "La reserva pasará a confirmada y la acción quedará auditada.",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "cancel": "Cancelar",
+    "rejectTitle": "Rechazar pago",
+    "reasonLabel": "Motivo del rechazo",
+    "empty": "No hay pagos con estos filtros.",
+    "forbidden": "Tu rol no puede revisar pagos de esta agencia.",
+    "genericError": "No se pudo cargar la lista de pagos. Inténtalo de nuevo.",
+    "alreadyReviewed": "Otra persona ya revisó este pago. La lista se ha actualizado.",
+    "holdExpired": "La reserva venció antes de aprobar el pago; sigue en revisión.",
+    "validationError": "Revisa los datos introducidos e inténtalo de nuevo.",
+    "approvedNotice": "Pago aprobado y reserva confirmada.",
+    "rejectedNotice": "Pago rechazado con el motivo indicado."
   },
   "notFound": {
     "title": "Página no encontrada",

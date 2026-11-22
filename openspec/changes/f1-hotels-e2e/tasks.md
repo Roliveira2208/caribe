@@ -141,7 +141,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
 - [x] T-F1-9b Admin: organización activa (una membresía auto, varias selector, cero sin panel, Super
   Admin plataforma). Wireframe del selector aprobado antes de construir.
   Prueba: auth-access › "Organización activa en el panel".
-- [ ] T-F1-9c Admin: pantalla mínima de aprobación de pagos (`IN_REVIEW`, aprobar/rechazar con motivo).
+- [x] T-F1-9c Admin: pantalla mínima de aprobación de pagos (`IN_REVIEW`, aprobar/rechazar con motivo).
   Wireframe aprobado antes de construir.
   Prueba: payments › "Modo MANUAL aprobado" y "Modo MANUAL rechazado".
 - [x] T-F1-10 Cancelación y reembolso con `policy_snapshot` y tasa congelada (sin nota de reembolso,

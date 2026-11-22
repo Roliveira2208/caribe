@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { LanguageSwitcher } from "./language-switcher";
 import { SessionNav } from "./session-nav";
 
@@ -24,11 +25,16 @@ export async function SiteHeader() {
           padding: "12px 16px",
         }}
       >
-        <div>
-          <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1f2937" }}>
-            {t("appName")}
-          </p>
-          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{t("tagline")}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <Link href="/" style={{ textDecoration: "none" }}>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1f2937" }}>
+              {t("appName")}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{t("tagline")}</p>
+          </Link>
+          <Link href="/admin/payments" style={{ fontSize: 14, color: "#1f2937" }}>
+            {t("payments")}
+          </Link>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LanguageSwitcher />
