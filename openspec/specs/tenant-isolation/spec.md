@@ -230,3 +230,23 @@ nueva sin RLS habilitada y forzada SHALL hacer fallar la suite de aislamiento.
 - GIVEN el contexto `rates_global`
 - WHEN la suite ejecuta lecturas y escrituras como `caribe_app`
 - THEN solo puede escribir filas globales de `exchange_rates` y el resto se rechaza o devuelve cero filas
+
+## Casos límite
+
+- El catálogo es la única excepción pública y solo expone productos publicados y su disponibilidad.
+- Una membresía revocada o una agencia distinta de la activa no concede contexto de tenant.
+- Un cliente sin agencia activa opera solo con el contexto `owner` sobre sus propias filas.
+- Las políticas RLS se prueban con el rol no bypasseado `caribe_app`, nunca con el dueño de la base.
+
+## Acceptance
+
+- Toda tabla de negocio lleva `tenant_id` y RLS forzada; sin GUC explícito no se devuelven filas.
+- Los contextos `public`, `tenant`, `owner`, `tenant`+`owner`, `platform` y `rates_global` están
+  implementados y cubiertos por pruebas de aislamiento.
+- El personal de una agencia no ve datos de otra; un cliente no ve reservas ajenas.
+
+## Out of scope
+
+- Compartir catálogo entre agencias (es el comportamiento público previsto).
+- Acceso de plataforma a datos de una agencia fuera de la lectura permitida y del override global.
+- Conceder acceso por simple pertenencia a una organización sin el contexto activo correspondiente.

@@ -16,7 +16,7 @@
 | Tests | 🟢 | `pnpm test` final: **5/5 tareas**, API 48 archivos / 640 pruebas en 339,83 s y web 18 archivos / 122 pruebas. Antes apareció `Hook timed out in 30000ms` en `tenant-settings.e2e.ts`; aislado pasó 24/24 y con `hookTimeout: 60_000` la suite completa quedó limpia. |
 | E2E de negocio | 🟢 | `pnpm --filter @caribe/web test:e2e` → 2/2; `docs/plans/f1-hotels-e2e-verification.md`. Concurrencia real en `apps/api/test/bookings.e2e.ts` › «crea exactamente una reserva cuando dos clientes compiten por el último cupo». |
 | Trazabilidad specs ↔ tests | 🟢 | Matriz por dominio abajo; matriz escenario a escenario de `verification-10b.md` actualizada con los tres deltas posteriores y los archivos de prueba reales. Conteo final: 291 escenarios, 194 obligatorios y 97 deseables (`scope.md`). |
-| Seguridad | 🟡 | Sin hallazgos críticos ni altos. Tres riesgos medios nuevos y M1/M2 heredados: cierre local seguro, demo pública condicionada. |
+| Seguridad | 🟡 | Revisión limpia: 0 críticos/altos, 4 medios (F-FINAL-001/002/003 + NUEVO-01) y M1/M2 heredados. Cierre local no bloqueado; demo pública condicionada. |
 | k6 | 🟢 | `scripts/k6/f1-hotels-e2e.js` entregado; ejecución manual documentada. El binario k6 no está instalado en este entorno, por lo que no se simuló su resultado. |
 
 ## Correcciones realizadas durante la verificación
@@ -58,8 +58,10 @@ primeros diez deltas; se considera actualizada por las sustituciones de esta tab
 
 ## Revisión de seguridad final
 
-Ejecutada como `/security-review` en conversación limpia y solo de lectura. **Sin hallazgos críticos ni
-altos.** Controles confirmados: SQL parametrizado con `Prisma.sql`, RLS forzada y GUC con fallo cerrado,
+Reejecutada el 2026-11-22 en **sesión limpia** (subagente con contexto fresco, igual que las rondas
+anteriores) y solo de lectura; confirmó lo obtenido en `/security-review`. Foco explícito: autorización
+de «Mis viajes», rutas es/en y `t.raw()` del detalle de reserva. **Sin hallazgos críticos ni altos.**
+Controles confirmados: SQL parametrizado con `Prisma.sql`, RLS forzada y GUC con fallo cerrado,
 `SELECT ... FOR UPDATE` para cupo, `Prisma.Decimal`/`ROUND_HALF_UP` y cálculo en servidor, esquemas
 Zod sin tarjeta/montos/tasas del cliente, idempotencia transaccional, guard global de `/admin`, TOTP,
 descarga autenticada sin `file_url`, secretos solo en `process.env`, auditoría inmutable y sanitizada,
@@ -69,9 +71,10 @@ sin XSS/innerHTML, y `minimatch >= 11.0.1` ya resuelto en el lockfile.
 
 | ID | Riesgo | Ubicación | Disposición |
 | --- | --- | --- | --- |
-| F-FINAL-001 | `provider` recibe `tenantId` en el guard de documentos y puede listar/descargar PDFs de cualquier reserva de la agencia; no hay cruce entre agencias, pero sí más alcance que «solo los suyos» en la matriz aprobada. | `apps/api/src/documents/documents.guard.ts:69-75`, `apps/api/src/access.ts:104-108`, `document-list.service.ts:47-62`, `document-download.service.ts:33-49`. | Documentado como pendiente de decisión; no bloquea el cierre local. Filtrar por `product_id` del proveedor o quitar `tenantId` en una change con su escenario GIVEN/WHEN/THEN. |
-| F-FINAL-002 | Sin rate limiting en rutas de negocio (`POST /bookings`, pagos, descargas); solo Better Auth tiene límites. | `apps/api/src/auth.ts:153-161`; controladores sin `@Throttle`. | Registrar `ThrottlerModule` o reglas de firewall antes de demo pública. |
-| F-FINAL-003 | El reembolso en el proveedor se confirma antes de persistirlo dentro de la transacción; con un proveedor real, un rollback dejaría un reembolso externo sin registro. | `apps/api/src/payments/payments.service.ts:630-660`, `bookings.service.ts:552`. | Seguro hoy porque el proveedor es simulado. Llevar a outbox o `refundId` idempotente con reconciliación al conectar un proveedor real. |
+| F-FINAL-001 | `provider` recibe `tenantId` en el guard de documentos y puede listar/descargar PDFs de cualquier reserva de su agencia. **Matiz confirmado en la revisión limpia:** no viola el spec (`documents/spec.md:76-82` autoriza a personal con `booking:read`, que `provider` sí tiene); es ambigüedad de mínimo privilegio frente al comentario de `access.ts:104`. Sin cruce entre agencias. | `apps/api/src/documents/documents.guard.ts:41-46,69-75`, `apps/api/src/access.ts:104-108`, `document-list.service.ts:47-62`, `document-download.service.ts:33-49`. | Pendiente de decisión de spec; no bloquea cierre local. Filtrar por `product_id` o quitar `tenantId` en una change con escenario GIVEN/WHEN/THEN. Falta test con rol `provider`. |
+| F-FINAL-002 | Sin rate limiting en rutas de negocio (`POST /bookings`, pagos, descargas); solo Better Auth tiene límites (10/min login, 5/min sign-up y forget-password). | `apps/api/src/auth.ts:153-161`; 0 coincidencias de `@Throttle`/`ThrottlerModule` en `apps/api/src`. | Registrar `ThrottlerModule` o reglas de firewall antes de demo pública. No bloquea cierre local. |
+| F-FINAL-003 | El reembolso en el proveedor se confirma antes de persistirlo dentro de la transacción; con un proveedor real, un rollback dejaría un reembolso externo sin registro. Latente hoy. | `apps/api/src/payments/payments.service.ts:619-660` (628-630), `bookings.service.ts:552`, `simulated-payment.provider.ts:31-32`. | Seguro hoy porque `refund` es local y simulado. Outbox o `refundId` idempotente con reconciliación al conectar pasarela real. No bloquea cierre local. |
+| NUEVO-01 | Un `member` sin `booking:read` puede listar/ver reservas de su agencia activa: `GET /bookings` y `GET /bookings/:id` exigen sesión + membresía, no el permiso. Sin cruce de tenant ni viajeros/PII en la respuesta, pero expone código, estado, total y fechas. | `apps/api/src/bookings/bookings.controller.ts:56,76-101`, `bookings.service.ts:421-433,659-687`, `access.ts:17-18,110-115`, `active-membership.ts:43-64`. | Ambigüedad entre `booking spec:275-319` y `auth-access spec:20-25`; requiere change (spec primero). No bloquea cierre local; sí demo pública. Falta test con `member`/`agent`/`provider`. |
 | Bajo | La aprobación manual no captura en pasarela. | `apps/api/src/payments/payments.service.ts:450-474`. | Límite explícito del MVP de pagos simulados. |
 
 ### Heredados, siguen abiertos
@@ -82,7 +85,8 @@ sin XSS/innerHTML, y `minimatch >= 11.0.1` ya resuelto en el lockfile.
 
 ## Veredicto
 
-**`f1-hotels-e2e` archivada el 2026-11-22 como `2026-11-22-f1-hotels-e2e`; F1 cerrado en entorno local.** No hay regresiones críticas ni altas,
-los invariantes del SDD se cumplen y las gates están en verde. La demo pública queda condicionada a M1,
-M2, F-FINAL-001, F-FINAL-002 y F-FINAL-003; este último se resuelve al sustituir el proveedor simulado.
+**Cierre local en espera:** la change se archivó el 2026-11-22 y se **reabrió** para atender la revisión
+del dueño: causa raíz del flake, 10 corridas limpias y CI de GitHub. No hay regresiones críticas ni
+altas y los invariantes del SDD se cumplen, pero **F1 no se da por cerrado hasta que pase la CI**.
+La demo pública queda condicionada a M1, M2, F-FINAL-001, F-FINAL-002, F-FINAL-003 y NUEVO-01.
 OpenAPI/Swagger siguen diferidos y k6 queda como ejecución manual documentada.

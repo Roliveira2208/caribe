@@ -139,3 +139,25 @@ existencia.
 #### Scenario: Sin traza en la respuesta
 - WHEN ocurre un error
 - THEN la respuesta no contiene `stack`, `sql`, nombres de tabla ni rutas del servidor
+
+## Casos límite
+
+- Una clave desconocida en cuerpo, query o parámetros se rechaza con 422 antes de cualquier efecto.
+- Un campo calculado por el servidor nunca se acepta del cliente, aunque el valor sea correcto.
+- Los errores de `/api/auth/*` conservan el formato de Better Auth; solo `TWO_FACTOR_REQUIRED` se
+  documenta como excepción.
+- Un recurso de otra agencia o de otro usuario responde 404, no 403.
+
+## Acceptance
+
+- Todo error de `/api/v1/*` usa `application/problem+json` con `type`, `title`, `status`, `detail`,
+  `instance` y `code`.
+- La tabla de códigos es la única fuente de códigos estables; ningún código cambia de significado.
+- Los esquemas Zod compartidos son estrictos y validan antes de la lógica de negocio.
+- Dinero y tasas se serializan como cadenas decimales; nunca como punto flotante.
+
+## Out of scope
+
+- Contratos de errores de Proveedores externos o de Better Auth distintos de `TWO_FACTOR_REQUIRED`.
+- Documentación OpenAPI/Swagger y catálogo público de códigos para terceros.
+- Cálculo de montos o tasas a partir de datos enviados por el cliente.
