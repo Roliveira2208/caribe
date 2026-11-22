@@ -89,6 +89,12 @@ jobs:
       - name: Aplicar migraciones
         run: pnpm db:migrate:deploy
 
+      # setup-env.ts fuerza DATABASE_URL a caribe_test; sin este paso los e2e
+      # fallan con `database "caribe_test" does not exist` (web-checks.yml ya lo
+      # hacía, ci.yml no).
+      - name: Preparar base de pruebas
+        run: pnpm db:test:prepare
+
       - name: Tests
         run: pnpm test
 
