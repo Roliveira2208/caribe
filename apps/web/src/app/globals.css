@@ -66,9 +66,12 @@
 /* Ritmo compartido de la portada: una sola curva y duraciones moderadas. */
 :root {
   --ease-caribe: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --duration-enter: 700ms;
   --duration-reveal: 650ms;
   --duration-cue: 400ms;
+  --duration-press: 140ms;
+  --duration-return: 320ms;
   --duration-chrome: 400ms;
 }
 
@@ -120,8 +123,8 @@ body {
   transform: translate(-50%, calc(var(--cue-y) + var(--cue-press-y)));
   transition:
     opacity var(--duration-cue) var(--ease-caribe),
-    transform var(--duration-cue) var(--ease-caribe),
-    background-color var(--duration-cue) var(--ease-caribe),
+    transform var(--duration-return) var(--ease-out),
+    background-color var(--duration-return) var(--ease-out),
     visibility var(--duration-cue) var(--ease-caribe);
 }
 
@@ -132,9 +135,15 @@ body {
   --cue-y: 0px;
 }
 
+/* Bajada rápida y subida pausada: temporización asimétrica, sin golpe. */
 .scroll-cue[data-pressed="true"] {
-  --cue-press-y: 6px;
-  background-color: color-mix(in srgb, currentColor 10%, transparent);
+  --cue-press-y: 8px;
+  background-color: color-mix(in srgb, currentColor 12%, transparent);
+  transition:
+    opacity var(--duration-cue) var(--ease-caribe),
+    transform var(--duration-press) var(--ease-out),
+    background-color var(--duration-press) var(--ease-out),
+    visibility var(--duration-cue) var(--ease-caribe);
 }
 
 .scroll-cue-icon {

@@ -443,6 +443,15 @@ try {
     const restingY = await activeHandle.evaluate((node) =>
       getComputedStyle(node).getPropertyValue("--cue-press-y").trim(),
     );
+    await home.evaluate(() => {
+      window.__scrollSamples = [];
+      const until = performance.now() + 1000;
+      const sample = () => {
+        window.__scrollSamples.push(Math.round(window.scrollY));
+        if (performance.now() < until) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
     await home.mouse.move(arrowBox.x + arrowBox.width / 2, arrowBox.y + arrowBox.height / 2);
     await home.mouse.down();
     await home.mouse.up();
@@ -459,7 +468,7 @@ try {
     if (
       restingY !== "0px" ||
       pressed.state !== "true" ||
-      pressed.descent !== "6px" ||
+      pressed.descent !== "8px" ||
       pressed.scale !== "" ||
       pressed.ripple !== "none" ||
       !pressed.transition.includes("transform")
@@ -467,6 +476,20 @@ try {
       failures.push(`/es: flecha sin descenso suave al pulsar (${JSON.stringify(pressed)})`);
     } else {
       console.log("OK   /es: flecha con descenso suave al pulsar, sin golpe");
+    }
+
+    await home.waitForTimeout(1000);
+    const scrollSamples = await home.evaluate(() => window.__scrollSamples);
+    const positions = [...new Set(scrollSamples)];
+    if (positions.length < 4 || positions[0] !== 0) {
+      failures.push(`/es: bajada entre secciones sin interpolación (${positions.slice(0, 8)})`);
+    } else {
+      const monotonic = positions.every((value, index) => index === 0 || value > positions[index - 1]);
+      if (!monotonic) {
+        failures.push(`/es: bajada entre secciones no monótona (${positions.slice(0, 8)})`);
+      } else {
+        console.log(`OK   /es: bajada interpolada en ${positions.length} posiciones hasta ${positions.at(-1)}px`);
+      }
     }
   }
   await home.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
@@ -614,6 +637,8 @@ try {
   await featuredCue.waitFor({ state: "visible" });
   await featuredCue.click();
   await home.waitForFunction(() => location.hash === "#destacados");
+  // El ancla ya no salta: hay que esperar a que termine la bajada animada.
+  await home.waitForTimeout(900);
   const featuredTop = await home.locator("#destacados").evaluate((node) => node.getBoundingClientRect().top);
   if (Math.abs(featuredTop) > 120) {
     failures.push(`/es: la flecha a destacados no llegó a la sección (top=${featuredTop})`);
@@ -655,6 +680,7 @@ try {
   await closingCue.waitFor({ state: "visible" });
   await closingCue.click();
   await home.waitForFunction(() => location.hash === "#cierre");
+  await home.waitForTimeout(900);
   const closingTop = await home.locator("#cierre").evaluate((node) => node.getBoundingClientRect().top);
   if (Math.abs(closingTop) > 120) {
     failures.push(`/es: la flecha al cierre no llegó (top=${closingTop})`);

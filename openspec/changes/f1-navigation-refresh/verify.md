@@ -8,9 +8,9 @@
   `975d459` (T-NAV-12), `666e2e4` (T-NAV-5), `78dfd07` (T-NAV-13), `b3f205f` (T-NAV-6),
   `bfaf709` (T-NAV-7), `6c2cf49` (T-NAV-14), `bd43a8f` (T-NAV-15), `4649503` (T-NAV-16),
   `d8be0ce` (T-NAV-8), `e8de458` (T-NAV-9), `a4285ec` (T-NAV-10), `abb7b0d` (T-NAV-17),
-  `0dc11b4` (T-NAV-18) y el ajuste de T-NAV-19/20/21 (flecha con descenso suave, menú móvil apilado
-  y contenido ajustado al viewport). Los commits `b44ae72` y `9ac4623` actualizan la spec antes del
-  código.
+  `0dc11b4` (T-NAV-18), `e380293` (T-NAV-19/20/21: flecha con descenso suave, menú móvil apilado y
+  contenido ajustado al viewport) y T-NAV-22 (bajada interpolada entre secciones). Los commits
+  `b44ae72`, `9ac4623` y `321f562` actualizan la spec antes del código.
   `0bd9916` es el arreglo del lock de BullMQ acordado aparte: no cambia esta spec ni su comportamiento.
 - **Entorno:** web en `:3000` (`pnpm --filter @caribe/web dev`), API en `:3002`
   (`pnpm --filter @caribe/api dev`), PostgreSQL y Redis locales, datos de demostración sembrados y
@@ -79,7 +79,8 @@ final queda a criterio del dueño con las capturas adjuntas.
 | Cabecera estrecha | `verify:navigation` a 360x640: barra con margen lateral y «icono de hamburgesa accesible»; `header-menu-mobile.png`. |
 | Menú vertical | `verify:navigation`: «cabecera móvil con hamburgesa y 7 ítems apilados» comprueba `aria-expanded`, `flex-direction: column`, siete filas con `top` distinto y ancho mayor de 200px; icono de cruz en `globals.css`; `header-menu-mobile.png`. |
 | Borde de glass | El verificador de barra exige `border: 1px` y `box-shadow` con `inset`; `verify:contrast` en claro y oscuro. |
-| Pulsación de la flecha | `verify:navigation`: «flecha con descenso suave al pulsar, sin golpe» comprueba `--cue-press-y: 6px` al pulsar, ausencia de `--cue-scale` y de `::after` con onda, y transición de `transform`; con movimiento reducido «salto inmediato» y `--cue-press-y: 0px` con el fondo visible. `test/scroll-cue.test.ts` › «baja suavemente al pulsarse, sin escalas ni ondas de impacto»; `home-arrow-pressed-*.png`. |
+| Pulsación de la flecha | `verify:navigation`: «flecha con descenso suave al pulsar, sin golpe» comprueba `--cue-press-y: 8px` al pulsar en 140ms y vuelta en 320ms, ausencia de `--cue-scale` y de `::after` con onda, y transición de `transform`; con movimiento reducido `--cue-press-y: 0px` con el fondo visible. `test/scroll-cue.test.ts` › «baja rápido y vuelve despacio...»; `home-arrow-pressed-*.png`. |
+| Bajada gradual entre secciones | `verify:navigation`: «bajada interpolada en 21 posiciones hasta 616px» muestrea `scrollY` fotograma a fotograma tras pulsar; además «flecha al buscador», «flecha a destacados» y «flecha al cierre». `test/scroll-cue.test.ts` › «interpola el desplazamiento y lo cancela ante una acción del usuario». |
 | Hero sin solapamiento | `verify:navigation` a 390x844 y 360x640: «hero sin solapamiento y ancho útil respetado» comprueba que título y subtítulo empiezan bajo la barra, la CTA queda sobre la flecha, el hero no supera el viewport y el ancla compensa la cabecera. |
 | Secciones en pantalla baja | `verify:navigation` a 360x640 verifica los destinos de búsqueda, destacados y cierre; `globals.css` compacta espaciados y alturas con `@media (max-height: 700px)`. |
 | Flecha en móvil | `verify:navigation` a 360x640: «flecha de sección dentro del viewport» mide 48x48 y respeta `env(safe-area-inset-bottom)`. |
@@ -96,9 +97,9 @@ final queda a criterio del dueño con las capturas adjuntas.
 | --- | --- |
 | `pnpm lint` | Verde: 4 tareas, 0 errores. |
 | `pnpm typecheck` | Verde: 5 tareas, 0 errores. |
-| `pnpm test` | Verde en todos los paquetes; web 16 archivos y 95 pruebas, API en caché. |
+| `pnpm test` | Verde en todos los paquetes; web 16 archivos y 96 pruebas, API en caché. |
 | `node scripts/check-specs.mjs` | `OK: 8 specs válidas`. |
-| `pnpm --filter @caribe/web verify:navigation` | Verde: 63 comprobaciones, 14 rutas en `es`/`en`, menú móvil apilado, geometría del hero, flechas y reservas. |
+| `pnpm --filter @caribe/web verify:navigation` | Verde: 64 comprobaciones, 14 rutas en `es`/`en`, menú móvil apilado, geometría del hero, bajada interpolada, flechas y reservas. |
 | `pnpm --filter @caribe/web verify:contrast` | Verde: «texto visible con contraste AA en claro y oscuro (8 rutas x 2 esquemas)». |
 | `pnpm --filter @caribe/web capture:screenshots ...` | Verde; 50 PNG válidos en claro y oscuro. |
 

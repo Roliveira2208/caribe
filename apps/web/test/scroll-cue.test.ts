@@ -30,14 +30,27 @@ describe("gesto de bajada", () => {
     expect(cue).toContain("transition: none");
   });
 
-  it("baja suavemente al pulsarse, sin escalas ni ondas de impacto", () => {
+  it("baja rápido y vuelve despacio, sin escalas ni ondas de impacto", () => {
     const css = read("src/app/globals.css");
     const cue = css.slice(css.indexOf(".scroll-cue"), css.indexOf(".search-glass"));
     expect(cue).toContain("--cue-press-y: 0px");
     expect(cue).toContain('data-pressed="true"');
+    expect(cue).toContain("--cue-press-y: 8px");
     expect(cue).toContain("translate(-50%, calc(var(--cue-y) + var(--cue-press-y)))");
-    expect(cue).toContain("transform var(--duration-cue) var(--ease-caribe)");
+    expect(cue).toContain("transform var(--duration-return) var(--ease-out)");
+    expect(cue).toContain("transform var(--duration-press) var(--ease-out)");
     expect(cue).not.toContain("@keyframes cue-press");
     expect(cue).not.toContain("scale(");
+  });
+
+  it("interpola el desplazamiento y lo cancela ante una acción del usuario", () => {
+    const source = read("src/components/scroll-cue.tsx");
+    expect(source).toContain("const SCROLL_DURATION_MS = 760");
+    expect(source).toContain("function easeInOutCubic");
+    expect(source).toContain('behavior: "instant"');
+    expect(source).toContain('["wheel", "touchstart", "keydown"]');
+    expect(source).toContain("prefers-reduced-motion: reduce");
+    expect(source).toContain("scrollMarginTop");
+    expect(source).toContain("history.pushState");
   });
 });
