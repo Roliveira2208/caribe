@@ -233,10 +233,25 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   IN_REVIEW); `apps/api/test/documents-list.e2e.ts` y `two-factor.e2e.ts` (listado autenticado e
   inventario de rutas); `verify:navigation` en es/en para IN_REVIEW y APPROVED; capturas
   `checkout-success-*.png` y `checkout-dark-success-*.png` en claro/oscuro y escritorio/móvil.
-- [ ] T-F1-14a Web: "Mis reservas" (lista/detalle). Wireframe aprobado antes de construir.
+- [x] T-F1-14a Web: "Mis reservas" (lista/detalle). Wireframe aprobado antes de construir.
   Prueba: booking › "Mis reservas entre agencias".
-- [ ] T-F1-14b Web: cancelación y descarga de documentos. Wireframe aprobado antes de construir.
+  Evidencia: wireframes aprobados `docs/wireframes/mis-reservas.svg` y `cancelacion-descarga.svg`
+  (índice en `docs/wireframes/README.md`); `apps/web/src/components/trips-experience.tsx` (filtro por
+  estado, selección y estados carga/error/vacío) y `booking-detail-view.tsx` (vista pura); contrato
+  estricto en `apps/web/src/lib/booking-detail-view.ts` (importes como texto, política congelada y
+  `refundEstimate` calculado en servidor, sin cálculo en la web); `apps/web/test/booking-detail-view.test.ts`
+  y `trips-view.test.ts` en verde; `apps/api/test/cancellations.e2e.ts` › "el detalle expone la política
+  congelada y el reembolso estimado del servidor"; `pnpm --filter @caribe/web lint/typecheck/test` y
+  `pnpm exec openspec validate --all` en verde.
+- [x] T-F1-14b Web: cancelación y descarga de documentos. Wireframe aprobado antes de construir.
   Prueba: booking › "Cliente cancela reserva confirmada"; documents › "Descarga autenticada".
+  Evidencia: `apps/web/src/components/booking-detail-panel.tsx` y `booking-detail-view.tsx` (confirmación
+  con `alertdialog`, 409 `PAYMENT_IN_REVIEW` traducido, reembolso mostrado desde la respuesta y sin
+  recálculo); solo se ofrece `downloadPath` de documentos `READY` y se mantiene la leyenda
+  "Documento no fiscal"; textos nuevos en `messages/es.json` y `messages/en.json` (`account.trips*`).
+  Pruebas: `apps/web/test/booking-detail-view.test.ts` (7 casos, incluidos confirmación, bloqueo por
+  pago en revisión, sin enlaces falsos y sin acciones en error), e2e de API `cancellations.e2e.ts` y
+  `documents-download.e2e.ts`/`two-factor.e2e.ts` ya cubiertos; web lint/typecheck/test en verde.
 - [ ] T-F1-15 Prueba e2e del flujo completo (Playwright) y prueba k6 de búsqueda y reserva.
   Prueba: recorrido buscar → reservar → pagar → descargar, más concurrencia de cupo.
 - [ ] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.

@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
-import { stayRangeSchema, todayInCaracas, z } from "@caribe/shared";
-import type { RefundResponse } from "../payments/payments.schemas.js";
+import {
+  stayRangeSchema,
+  todayInCaracas,
+  z,
+  type PaymentStatusValue,
+} from "@caribe/shared";
+import type {
+  RefundEstimateResponse,
+  RefundResponse,
+} from "../payments/payments.schemas.js";
 
 /**
  * Contrato de creacion de reservas (T-F1-7, specs/booking "Datos del viajero",
@@ -93,6 +101,19 @@ export interface BookingNightPrice {
   priceUsd: string;
 }
 
+/** Regla guardada en `policy_snapshot`, tal como la devuelve la API. */
+export interface CancellationRuleSnapshot {
+  hours_before: number;
+  percentage: number;
+}
+
+/** Política congelada al reservar, sin leer el catálogo actual. */
+export interface PolicySnapshotResponse {
+  policyId: string | null;
+  name: string | null;
+  rules: CancellationRuleSnapshot[];
+}
+
 /** Linea de la reserva tal como se devuelve al cliente. */
 export interface BookingItemResponse {
   productId: string;
@@ -104,11 +125,13 @@ export interface BookingItemResponse {
   quantity: number;
   nightlyPrices: BookingNightPrice[];
   subtotalUsd: string;
+  policySnapshot: PolicySnapshotResponse;
 }
 
 /**
  * Detalle completo de una reserva. El mismo esquema sirve para
- * `GET /bookings/:id` (T-F1-7b).
+ * `GET /bookings/:id` (T-F1-7b) y para la vista "Mis reservas" (T-F1-14a).
+ * `refund_estimate` se calcula en el servidor; nunca es un reembolso emitido.
  */
 export interface BookingDetailResponse {
   id: string;
@@ -116,6 +139,8 @@ export interface BookingDetailResponse {
   status: BookingStatusValue;
   expiresAt: string;
   totalUsd: string;
+  paymentStatus: PaymentStatusValue | null;
+  refundEstimate: RefundEstimateResponse | null;
   items: BookingItemResponse[];
 }
 

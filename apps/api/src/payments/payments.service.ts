@@ -51,6 +51,7 @@ import {
   hashPaymentRequest,
   parseStoredPaymentResponse,
   type BookingPaymentsResponse,
+  type BookingRefundEstimate,
   type ListPaymentsQuery,
   type PaymentPage,
   type PaymentResponse,
@@ -509,6 +510,51 @@ export class PaymentsService {
         reviewedAt: updated.reviewedAt ? formatTimestamp(updated.reviewedAt) : null,
         rejectionReason: updated.rejectionReason,
         bookingStatus: input.action === "approve" ? "CONFIRMED" : booking.status,
+      },
+    };
+  }
+
+  /**
+   * Estimación de reembolso para el detalle de la reserva (T-F1-14a). Lee el
+   * pago y el `policy_snapshot` congelados y calcula con `Decimal`; no escribe
+   * filas, no llama a la pasarela y no cambia estados. La web solo muestra el
+   * resultado: no recalcula montos ni tasas.
+   */
+  async estimateRefundForCancellation(
+    tx: Prisma.TransactionClient,
+    params: { tenantId: string; bookingId: string },
+  ): Promise<BookingRefundEstimate> {
+    const payments = await tx.payment.findMany({
+      where: { bookingId: params.bookingId, tenantId: params.tenantId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    const payment =
+      payments.find((candidate) => candidate.status === "APPROVED") ??
+      payments.find((candidate) => candidate.status === "IN_REVIEW") ??
+      payments.find((candidate) => candidate.status === "PENDING") ??
+      null;
+    if (!payment) return { paymentStatus: null, refundEstimate: null };
+
+    const item = await tx.bookingItem.findFirst({
+      where: { bookingId: params.bookingId, tenantId: params.tenantId },
+      orderBy: { checkIn: "asc" },
+      select: { checkIn: true, policySnapshot: true },
+    });
+    if (!item) return { paymentStatus: payment.status, refundEstimate: null };
+
+    const snapshot = parsePolicySnapshot(item.policySnapshot);
+    const percentage = refundPercentage(snapshot.rules, formatValueDate(item.checkIn), new Date());
+    if (percentage <= 0) return { paymentStatus: payment.status, refundEstimate: null };
+
+    const amounts = refundAmounts(payment.amountUsd, percentage, payment.rate);
+    return {
+      paymentStatus: payment.status,
+      refundEstimate: {
+        amountUsd: amounts.amountUsd,
+        amountVes: amounts.amountVes,
+        rate: formatRate(payment.rate),
+        valueDate: formatValueDate(payment.valueDate),
+        percentage,
       },
     };
   }

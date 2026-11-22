@@ -36,6 +36,7 @@ describe("vista de Mis viajes", () => {
 
   it("usa la ruta de primera parte y distingue el 401 del resto de errores", () => {
     expect(tripsApiUrl()).toBe("/api/v1/bookings");
+    expect(tripsApiUrl("CONFIRMED")).toBe("/api/v1/bookings?status=CONFIRMED");
     expect(tripsErrorKind(401)).toBe("unauthenticated");
     expect(tripsErrorKind(500)).toBe("generic");
   });

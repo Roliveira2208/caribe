@@ -9,6 +9,7 @@ import {
 } from "@caribe/shared";
 import { AuditService } from "../audit/audit.service.js";
 import { toLocalized } from "../catalog/catalog.mappers.js";
+import { parsePolicySnapshot } from "./cancellation-policy.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { Prisma } from "../generated/prisma/client.js";
 import {
@@ -19,7 +20,10 @@ import {
   requireIdempotencyKey,
 } from "../idempotency/idempotency.js";
 import { PaymentsService } from "../payments/payments.service.js";
-import type { RefundResponse } from "../payments/payments.schemas.js";
+import type {
+  BookingRefundEstimate,
+  RefundResponse,
+} from "../payments/payments.schemas.js";
 import { TENANT_SETTINGS_DEFAULTS } from "../tenant-settings/tenant-settings.schemas.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import {
@@ -37,6 +41,7 @@ import {
   type BookingItemResponse,
   type BookingNightPrice,
   type BookingPage,
+  type PolicySnapshotResponse,
   type BookingStatusValue,
   type BookingSummaryResponse,
   type CancelBookingResponse,
@@ -337,8 +342,11 @@ export class BookingsService {
             priceUsd: night.price_usd,
           })),
           subtotalUsd: totalUsd,
+          policySnapshot: toPolicySnapshot(policySnapshot),
         },
       ],
+      paymentStatus: null,
+      refundEstimate: null,
     };
   }
 
@@ -389,30 +397,47 @@ export class BookingsService {
     bookingId: string;
   }): Promise<BookingDetailResponse> {
     const agencyId = input.activeOrganizationId;
-    const booking = agencyId
-      ? await this.tenantService.withOwnerTenant(input.userId, agencyId, (tx) =>
-          tx.booking.findFirst({
-            where: {
-              id: input.bookingId,
-              OR: [{ userId: input.userId }, { tenantId: agencyId }],
-            },
-            include: { items: true },
-          }),
-        )
-      : await this.tenantService.withOwner(input.userId, (tx) =>
-          tx.booking.findFirst({
-            where: { id: input.bookingId, userId: input.userId },
-            include: { items: true },
-          }),
-        );
-    if (
-      !booking ||
-      (booking.userId !== input.userId &&
-        (agencyId === null || booking.tenantId !== agencyId))
-    ) {
+    const read = (tx: Prisma.TransactionClient) =>
+      this.readDetailInTx(tx, input.userId, agencyId, input.bookingId);
+    const found = agencyId
+      ? await this.tenantService.withOwnerTenant(input.userId, agencyId, read)
+      : await this.tenantService.withOwner(input.userId, read);
+    if (!found) {
       throw new ApiProblemException("NOT_FOUND", "La reserva no existe.");
     }
-    return toBookingDetail(booking);
+    return toBookingDetail(found.booking, found.estimate);
+  }
+
+  /** Detalle, pago y estimación leídos en el mismo contexto RLS. */
+  private async readDetailInTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    agencyId: string | null,
+    bookingId: string,
+  ): Promise<{
+    booking: BookingRowWithItems;
+    estimate: BookingRefundEstimate;
+  } | null> {
+    const booking = agencyId
+      ? await tx.booking.findFirst({
+          where: {
+            id: bookingId,
+            OR: [{ userId }, { tenantId: agencyId }],
+          },
+          include: { items: true },
+        })
+      : await tx.booking.findFirst({
+          where: { id: bookingId, userId },
+          include: { items: true },
+        });
+    if (!booking || (booking.userId !== userId && (agencyId === null || booking.tenantId !== agencyId))) {
+      return null;
+    }
+    const estimate = await this.paymentsService.estimateRefundForCancellation(tx, {
+      tenantId: booking.tenantId,
+      bookingId: booking.id,
+    });
+    return { booking, estimate };
   }
 
   /**
@@ -696,13 +721,18 @@ interface BookingRowWithItems {
 }
 
 /** Detalle completo de una reserva leída de la base. */
-function toBookingDetail(booking: BookingRowWithItems): BookingDetailResponse {
+function toBookingDetail(
+  booking: BookingRowWithItems,
+  estimate: BookingRefundEstimate,
+): BookingDetailResponse {
   return {
     id: booking.id,
     code: booking.code,
     status: booking.status,
     expiresAt: formatTimestamp(booking.expiresAt),
     totalUsd: formatAmount(booking.totalUsd),
+    paymentStatus: estimate.paymentStatus,
+    refundEstimate: estimate.refundEstimate,
     items: booking.items.map(toBookingItem),
   };
 }
@@ -737,6 +767,7 @@ function toBookingItem(item: {
   quantity: number;
   nightlyPrices: unknown;
   subtotalUsd: DecimalValue;
+  policySnapshot: unknown;
 }): BookingItemResponse {
   return {
     productId: item.productId,
@@ -748,6 +779,20 @@ function toBookingItem(item: {
     quantity: item.quantity,
     nightlyPrices: toNightlyPrices(item.nightlyPrices),
     subtotalUsd: formatAmount(item.subtotalUsd),
+    policySnapshot: toPolicySnapshot(item.policySnapshot),
+  };
+}
+
+/** Política inmutable guardada en la línea, nunca la del catálogo actual. */
+function toPolicySnapshot(value: unknown): PolicySnapshotResponse {
+  const snapshot = parsePolicySnapshot(value);
+  return {
+    policyId: snapshot.policyId,
+    name: snapshot.name,
+    rules: snapshot.rules.map((rule) => ({
+      hours_before: rule.hours_before,
+      percentage: rule.percentage,
+    })),
   };
 }
 

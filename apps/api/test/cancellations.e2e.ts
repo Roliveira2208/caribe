@@ -284,6 +284,29 @@ describe("cancellations (cancelación y reembolso)", () => {
     errors?: Array<{ path: string; message: string }>;
   }
 
+  interface DetailBody {
+    id: string;
+    code: string;
+    status: string;
+    expiresAt: string;
+    totalUsd: string;
+    paymentStatus: string | null;
+    refundEstimate: null | {
+      amountUsd: string;
+      amountVes: string;
+      rate: string;
+      valueDate: string;
+      percentage: number;
+    };
+    items: Array<{
+      policySnapshot: {
+        policyId: string | null;
+        name: string | null;
+        rules: Array<{ hours_before: number; percentage: number }>;
+      };
+    }>;
+  }
+
   async function product(params: {
     id: string;
     tenantId: string;
@@ -367,6 +390,7 @@ describe("cancellations (cancelación y reembolso)", () => {
     totalUsd?: string;
     expiresInMinutes?: number;
     rules?: Array<{ hours_before: number; percentage: number }>;
+    policyId?: string | null;
     hold?: boolean;
   }): Promise<string> {
     const id = randomUUID();
@@ -415,7 +439,7 @@ describe("cancellations (cancelación y reembolso)", () => {
         total,
         JSON.stringify(title),
         JSON.stringify({
-          policyId: null,
+          policyId: params.policyId ?? null,
           name: params.rules ? "Flexible" : null,
           rules: params.rules ?? [],
         }),
@@ -505,6 +529,14 @@ describe("cancellations (cancelación y reembolso)", () => {
     const headers: Record<string, string> = { origin: authOrigin };
     if (cookie) headers["cookie"] = cookie;
     return fetch(url(`/bookings/${bookingId}/cancel`), { method: "POST", headers });
+  }
+
+  async function bookingDetail(cookie: string, bookingId: string): Promise<DetailBody> {
+    const res = await fetch(url(`/bookings/${bookingId}`), {
+      headers: { cookie, origin: authOrigin },
+    });
+    expect(res.status).toBe(200);
+    return jsonOf<DetailBody>(res);
   }
 
   async function jsonOf<T>(res: Response): Promise<T> {
@@ -604,6 +636,59 @@ describe("cancellations (cancelación y reembolso)", () => {
         where: { entityId: refundId, action: "booking.refund" },
       });
       expect(refundAudit.after).toMatchObject({ amountUsd: "100.00", bookingId });
+    });
+
+    it("el detalle expone la política congelada y el reembolso estimado del servidor", async () => {
+      const policyId = randomUUID();
+      await owner.query(
+        `INSERT INTO "cancellation_policies" (id, tenant_id, name, rules, created_at, updated_at)
+         VALUES ($1, $2, 'Flexible', $3::jsonb, now(), now())`,
+        [policyId, orgA, JSON.stringify(flexibleRules)],
+      );
+      await owner.query(`UPDATE "products" SET "cancellation_policy_id" = $1 WHERE "id" = $2`, [
+        policyId,
+        pA,
+      ]);
+
+      const bookingId = await createBooking({
+        tenantId: orgA,
+        userId: clientA,
+        productId: pA,
+        hotelKey: hotelA,
+        roomType: "standard",
+        status: "CONFIRMED",
+        rules: flexibleRules,
+        policyId,
+      });
+      const paymentId = await createPaymentFixture({
+        tenantId: orgA,
+        bookingId,
+        reportedBy: clientA,
+        status: "APPROVED",
+        reviewedBy: adminA,
+      });
+
+      // La política vigente cambia: el detalle debe seguir usando el snapshot.
+      await owner.query(
+        `UPDATE "cancellation_policies" SET "rules" = $1::jsonb WHERE "id" = $2`,
+        [JSON.stringify([{ hours_before: 24, percentage: 0 }]), policyId],
+      );
+
+      const detail = await bookingDetail(cookieA, bookingId);
+      expect(detail.items[0]?.policySnapshot).toEqual({
+        policyId,
+        name: "Flexible",
+        rules: flexibleRules,
+      });
+      expect(detail.paymentStatus).toBe("APPROVED");
+      expect(detail.refundEstimate).toMatchObject({
+        amountUsd: "100.00",
+        amountVes: "90000.00",
+        rate: "900.0000",
+        valueDate: today,
+        percentage: 100,
+      });
+      await expect(refundCount(paymentId)).resolves.toBe(0);
     });
 
     it("aplica la política flexible con 100 % sobre el pago original", async () => {

@@ -9,10 +9,12 @@ import {
   formatTripDate,
   parseTripsPage,
   tripsApiUrl,
+  TRIP_STATUSES,
   type TripStatus,
   type TripsPageView,
 } from "@/lib/trips-view";
 import { Button } from "@/components/ui/button";
+import { BookingDetailPanel } from "./booking-detail-panel";
 
 type TripsState =
   | { kind: "loading" }
@@ -39,9 +41,12 @@ export function TripsExperience({ locale }: { locale: Locale }) {
   const router = useRouter();
   const [state, setState] = useState<TripsState>({ kind: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<TripStatus | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const tripsPath = localizedPath(locale, "/account/trips");
   const loginHref = `${localizedPath(locale, "/login")}?redirectTo=${encodeURIComponent(tripsPath)}`;
+  const listUrl = tripsApiUrl(statusFilter ?? undefined);
 
   useEffect(() => {
     let active = true;
@@ -54,7 +59,7 @@ export function TripsExperience({ locale }: { locale: Locale }) {
           router.replace(loginHref);
           return;
         }
-        const response = await fetch(tripsApiUrl(), {
+        const response = await fetch(listUrl, {
           cache: "no-store",
           credentials: "same-origin",
         });
@@ -83,11 +88,41 @@ export function TripsExperience({ locale }: { locale: Locale }) {
     return () => {
       active = false;
     };
-  }, [loginHref, reloadKey, router]);
+  }, [listUrl, loginHref, reloadKey, router]);
 
   return (
     <div className="space-y-6">
       <h1 className="font-display text-h2 text-ink">{t("tripsTitle")}</h1>
+
+      <div role="group" aria-label={t("tripsFilterLabel")} className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant={statusFilter === null ? "secondary" : "outline"}
+          size="sm"
+          aria-pressed={statusFilter === null}
+          onClick={() => {
+            setStatusFilter(null);
+            setSelectedId(null);
+          }}
+        >
+          {t("tripsFilterAll")}
+        </Button>
+        {TRIP_STATUSES.map((status) => (
+          <Button
+            key={status}
+            type="button"
+            variant={statusFilter === status ? "secondary" : "outline"}
+            size="sm"
+            aria-pressed={statusFilter === status}
+            onClick={() => {
+              setStatusFilter(status);
+              setSelectedId(null);
+            }}
+          >
+            {statusLabel(t, status)}
+          </Button>
+        ))}
+      </div>
 
       {state.kind === "loading" ? (
         <p role="status" aria-live="polite" className="text-body-lg text-ink">
@@ -135,6 +170,22 @@ export function TripsExperience({ locale }: { locale: Locale }) {
                 </div>
               </dl>
               <p className="mt-4 text-sm text-ink">{t("tripsDocumentsNote")}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                aria-expanded={selectedId === trip.id}
+                aria-controls={`booking-detail-${trip.id}`}
+                onClick={() => setSelectedId((current) => (current === trip.id ? null : trip.id))}
+              >
+                {selectedId === trip.id ? t("tripsDetailHide") : t("tripsDetail")}
+              </Button>
+              {selectedId === trip.id ? (
+                <div id={`booking-detail-${trip.id}`} className="mt-4 border-t border-ink/15 pt-4">
+                  <BookingDetailPanel bookingId={trip.id} locale={locale} />
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

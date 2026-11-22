@@ -93,6 +93,24 @@ export interface RefundResponse {
 }
 
 /**
+ * Estimación leída por el detalle de la reserva (T-F1-14a): la calcula la API
+ * con la política y la tasa congeladas. La web solo la muestra; nunca envía ni
+ * recalcula montos. No es un reembolso emitido y no crea filas ni auditoría.
+ */
+export interface RefundEstimateResponse {
+  amountUsd: string;
+  amountVes: string;
+  rate: string;
+  valueDate: string;
+  percentage: number;
+}
+
+export interface BookingRefundEstimate {
+  paymentStatus: PaymentStatusValue | null;
+  refundEstimate: RefundEstimateResponse | null;
+}
+
+/**
  * Hash estable del alta de pago: reserva + cuerpo ya validado. Dos solicitudes
  * equivalentes producen el mismo hash; la misma clave con otra reserva u otro
  * cuerpo se detecta como reutilización.

@@ -78,8 +78,9 @@ export function parseTripsPage(body: unknown): TripsPageView | null {
 }
 
 /** El rewrite de primera parte de Next sirve esta ruta sin CORS. */
-export function tripsApiUrl(): string {
-  return "/api/v1/bookings";
+export function tripsApiUrl(status?: TripStatus): string {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return `/api/v1/bookings${query}`;
 }
 
 export function tripsErrorKind(status: number): TripsErrorKind {
