@@ -3,17 +3,18 @@
 - **Fecha:** 2026-11-22.
 - **Alcance:** cierre de F1 en conversación limpia: verificación independiente, revisión de seguridad,
   trazabilidad de specs y archivado. No se leyó ni imprimió `.env` (solo `.env.example`).
-- **Código revisado:** `main`, commits `9add12c` (e2e/k6), `738db38` (SDD) y los cambios de cierre de
-  esta tarea. Sin `git push`.
+- **Código revisado:** `main`, desde `c47a01e` hasta el cierre; push realizado el 2026-11-22
+  (`a035d16..63d094b`). workflows `CI` (`45082946899`) y `web-checks` (`45082946898`) en verde.
 
 ## Semáforo
 
 | Área | Estado | Evidencia |
 | --- | --- | --- |
 | Tareas | 🟢 | `tasks.md`: `T-F1-0`…`T-F1-17` marcadas `[x]`, con evidencia por tarea. |
-| OpenSpec | 🟢 | `pnpm exec openspec archive f1-hotels-e2e --yes --json` → `specsUpdated: true` (+42, ~23). Tras el archivado, `pnpm exec openspec validate --all` → `Totals: 12 passed, 0 failed (12 items)`. Solo warnings no bloqueantes por secciones que no se conservan al archivar. |
-| Lint y typecheck | 🟢 | `pnpm lint` (4/4 tareas) y `pnpm typecheck` (5/5 tareas). |
-| Tests | 🟢 | `pnpm test` final: **5/5 tareas**, API 48 archivos / 640 pruebas en 339,83 s y web 18 archivos / 122 pruebas. Antes apareció `Hook timed out in 30000ms` en `tenant-settings.e2e.ts`; aislado pasó 24/24 y con `hookTimeout: 60_000` la suite completa quedó limpia. |
+| OpenSpec | 🟢 | `node scripts/check-specs.mjs` → `OK: 12 specs válidas`; `pnpm exec openspec validate --all` → `Totals: 13 passed, 0 failed` con la change abierta y 12/0 tras archivarla. Solo warnings no bloqueantes de extensión de requisitos. |
+| Lint y typecheck | 🟢 | `pnpm lint` (4/4 tareas) y `pnpm typecheck` (5/5 tareas), antes y después del fix del flake. |
+| Tests | 🟢 | **10 corridas forzadas** de `pnpm test` con `TURBO_FORCE=true`: 10/10 exit 0, 10/10 `Cached: 0 cached, 5 total`, 10/10 API 48 archivos / 640 pruebas y web 18 archivos / 122 pruebas, **0** `Hook timed out`. Duraciones 260–282 s salvo una corrida de 1477 s por lentitud de imports (90% del tiempo), sin fallos. `hookTimeout` definitivo: **30 s**. |
+| CI de GitHub | 🟢 | `CI` (`45082946899`, 2 min): lint, typecheck, migrate diff, migraciones, `db:test:prepare`, tests, build y check-specs. `web-checks` (`45082946898`, 4 min 19 s): specs, lint, typecheck, BD, tests, seed, build, Chromium, navegación y contraste. |
 | E2E de negocio | 🟢 | `pnpm --filter @caribe/web test:e2e` → 2/2; `docs/plans/f1-hotels-e2e-verification.md`. Concurrencia real en `apps/api/test/bookings.e2e.ts` › «crea exactamente una reserva cuando dos clientes compiten por el último cupo». |
 | Trazabilidad specs ↔ tests | 🟢 | Matriz por dominio abajo; matriz escenario a escenario de `verification-10b.md` actualizada con los tres deltas posteriores y los archivos de prueba reales. Conteo final: 291 escenarios, 194 obligatorios y 97 deseables (`scope.md`). |
 | Seguridad | 🟡 | Revisión limpia: 0 críticos/altos, 4 medios (F-FINAL-001/002/003 + NUEVO-01) y M1/M2 heredados. Cierre local no bloqueado; demo pública condicionada. |
@@ -31,10 +32,21 @@
    `auth-access.e2e.ts` (inexistente) y marcaba documentos y notificaciones como «no evaluables» por ser
    posteriores a T-F1-10b. En el cierre ya están implementados y probados; la correspondencia final
    está en la matriz siguiente.
-4. **Flake de arranque de la suite API.** `Hook timed out in 30000ms` apareció en `beforeAll` de
-   `api-errors.e2e.ts`, `notifications.e2e.ts` y `tenant-settings.e2e.ts` en corridas completas
-   sucesivas; cada archivo pasó aislado. `apps/api/vitest.config.mts` usa `hookTimeout: 60_000` para
-   absorber la carga sin relajar `testTimeout`.
+4. **Causa raíz del `Hook timed out in 30000ms`.** No era fuga de recursos ni lentitud genérica:
+   `apps/api/test/setup-env.ts` cargaba `.env` y después usaba `??=` para `COTIZAVE_API_URL`, así que
+   las credenciales reales ganaban al stub. Cada `signIn()` lanzaba un refresco HTTP real (5 s +
+   reintento + circuit breaker) durante los `beforeAll` pesados de `api-errors`, `notifications` y
+   `tenant-settings`. Descartado como fuga: `pg_stat_activity` mostró 3 idle + 1 active con
+   `max_connections=100`, `fileParallelism: false`, cierre de `pg.Client`/`app.close()`/`$disconnect()`
+   en los tres archivos y ningún proceso colgante. El A/B con los 3 archivos bajó de 29,85 s con el
+   proveedor real a 25,55 s forzando el stub. Fix: asignación directa (`=`) al stub en `setup-env.ts`
+   y `hookTimeout: 30_000` en `apps/api/vitest.config.mts`. Los e2e que levantan su propio servidor
+   de tasas siguen sobreescribiendo la variable.
+5. **CI roja antes del push.** Los 5 runs anteriores fallaban en `pnpm test` con
+   `database "caribe_test" does not exist`: `ci.yml` aplicaba migraciones a `caribe_ci` pero no creaba
+   la base de pruebas que `setup-env.ts` fuerza. Añadido `pnpm db:test:prepare`. Además, `check-specs`
+   rechazaba `api-errors` y `tenant-isolation` por falta de los bloques `Casos límite`, `Acceptance` y
+   `Out of scope`; se añadieron y ahora ambas specs sobreviven al archivado de la change.
 
 ## Matriz final por delta
 
@@ -85,8 +97,9 @@ sin XSS/innerHTML, y `minimatch >= 11.0.1` ya resuelto en el lockfile.
 
 ## Veredicto
 
-**Cierre local en espera:** la change se archivó el 2026-11-22 y se **reabrió** para atender la revisión
-del dueño: causa raíz del flake, 10 corridas limpias y CI de GitHub. No hay regresiones críticas ni
-altas y los invariantes del SDD se cumplen, pero **F1 no se da por cerrado hasta que pase la CI**.
-La demo pública queda condicionada a M1, M2, F-FINAL-001, F-FINAL-002, F-FINAL-003 y NUEVO-01.
-OpenAPI/Swagger siguen diferidos y k6 queda como ejecución manual documentada.
+**F1 cerrado el 2026-11-22:** causa raíz del flake corregida, `hookTimeout` en 30 s, 10 corridas
+forzadas en verde y ambos workflows de GitHub en verde tras el push. La change se archiva de nuevo
+solo ahora que se cumplieron todas las puertas exigidas. No hay regresiones críticas ni altas y los
+invariantes del SDD se cumplen. La demo pública queda condicionada a M1, M2, F-FINAL-001,
+F-FINAL-002, F-FINAL-003 y NUEVO-01. OpenAPI/Swagger siguen diferidos y k6 queda como ejecución
+manual documentada.
