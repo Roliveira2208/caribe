@@ -93,12 +93,17 @@ const mockBooking = {
   expiresAt: `${checkOut}T15:00:00.000Z`,
   totalUsd: mockTotalUsd,
 };
+const mockBookingRow = {
+  ...mockBooking,
+  createdAt: "2026-11-21T15:00:00.000Z",
+};
 
 const screens = [
   { name: "header", path: "/es" },
   { name: "home", path: "/es" },
   { name: "featured", path: "/es" },
   { name: "search", path: "/es/search" },
+  { name: "login", path: "/es/login" },
   { name: "detail", path: `/es/hotels/${productId}` },
   {
     name: "checkout",
@@ -129,6 +134,16 @@ async function load(page, path) {
 
 async function mockBookingApi(page) {
   await page.route("**/api/v1/bookings", async (route) => {
+    // El listado "Mis viajes" se captura con datos de demostración: no hay
+    // sesión real ni reservas nuevas en la base local.
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [mockBookingRow], nextCursor: null }),
+      });
+      return;
+    }
     if (route.request().method() !== "POST") {
       await route.continue();
       return;
@@ -203,6 +218,12 @@ async function waitForReadyContent(page, screen) {
     // El catálogo llega por API: esperar a una tarjeta o al error evita
     // documentar el estado de carga como si fuera la pantalla final.
     await page.locator("article, [role='alert']").first().waitFor();
+  }
+  if (screen.name === "login") {
+    await page.locator("#login-email").waitFor();
+  }
+  if (screen.name === "account") {
+    await page.getByText(mockBooking.code).waitFor();
   }
   if (screen.name === "detail") {
     // El marcador lo emite la vista, no el Suspense: `form` también aparece en

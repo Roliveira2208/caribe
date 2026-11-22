@@ -443,6 +443,144 @@ try {
   } else {
     console.log("OK   /es: CTA del cierre hacia el buscador");
   }
+
+  // Acceso real y "Mis viajes" con datos y estados traducidos (T-NAV-9).
+  const bookingRow = {
+    id: "nav-booking-1",
+    code: "CRB-CARIBE01",
+    status: "PENDING_PAYMENT",
+    expiresAt: "2026-11-25T15:00:00.000Z",
+    totalUsd: "245.80",
+    createdAt: "2026-11-21T15:00:00.000Z",
+  };
+  const labelsByLocale = {
+    es: {
+      submit: "Entrar",
+      status: "Pendiente de pago",
+      empty: "Todavía no tienes reservas.",
+      error: "No pudimos cargar tus reservas. Inténtalo de nuevo.",
+      documents: "Los documentos se publican al confirmar el pago.",
+    },
+    en: {
+      submit: "Sign in",
+      status: "Pending payment",
+      empty: "You don't have any bookings yet.",
+      error: "We couldn't load your bookings. Please try again.",
+      documents: "Documents are issued once payment is confirmed.",
+    },
+  };
+
+  for (const locale of locales) {
+    const publicContext = await browser.newContext();
+    const publicPage = await publicContext.newPage();
+    await publicPage.goto(`${baseUrl}/${locale}`, { waitUntil: "domcontentloaded" });
+    const loginLink = publicPage.locator(`.site-header a[href="/${locale}/login"]`);
+    await loginLink.waitFor();
+    await loginLink.click();
+    await publicPage.waitForURL(`${baseUrl}/${locale}/login`);
+    await publicPage.locator("#login-email").waitFor();
+    console.log(`OK   /${locale}: «Iniciar sesión» lleva al formulario real`);
+    await publicContext.close();
+  }
+
+  for (const locale of locales) {
+    const labels = labelsByLocale[locale];
+    const tripsPath = `/${locale}/account/trips`;
+    let signInCalls = 0;
+    let bookingsCalls = 0;
+    const context = await browser.newContext();
+    await context.route("**/api/auth/get-session", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(session),
+      }),
+    );
+    await context.route("**/api/auth/sign-in/email", (route) => {
+      signInCalls += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ user: session.user }),
+      });
+    });
+    await context.route("**/api/v1/bookings", (route) => {
+      bookingsCalls += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [bookingRow], nextCursor: null }),
+      });
+    });
+    const page = await context.newPage();
+    await page.goto(
+      `${baseUrl}/${locale}/login?redirectTo=${encodeURIComponent(tripsPath)}`,
+      { waitUntil: "domcontentloaded" },
+    );
+    // La cabecera de sesión se pinta tras la hidratación: esperarla evita que
+    // el clic llegue antes del handler y provoque un submit nativo.
+    await page.locator(`.site-header a[href="${tripsPath}"]`).waitFor();
+    await page.locator("#login-email").fill("cliente@example.com");
+    await page.locator("#login-password").fill("demo-password");
+    await page.getByRole("button", { name: labels.submit }).click();
+    await page.waitForURL(`${baseUrl}${tripsPath}`);
+    await page.getByText(bookingRow.code).waitFor();
+
+    if (signInCalls !== 1 || bookingsCalls < 1) {
+      failures.push(`/${locale}: login o listado no llamaron a la API (${signInCalls}, ${bookingsCalls})`);
+    } else {
+      console.log(`OK   /${locale}: login real y reservas desde GET /api/v1/bookings`);
+    }
+    if (
+      (await page.getByText(labels.status).count()) < 1 ||
+      (await page.locator('time[datetime="' + bookingRow.expiresAt + '"]').count()) !== 1 ||
+      (await page.getByText("245.80 USD").count()) < 1 ||
+      (await page.getByText(labels.documents).count()) !== 1
+    ) {
+      failures.push(`/${locale}: falta código, estado, caducidad, total o nota de documentos`);
+    } else {
+      console.log(`OK   /${locale}: reserva con estado, caducidad, total y nota honesta`);
+    }
+    if ((await page.locator('a[href*="download"]').count()) !== 0) {
+      failures.push(`/${locale}: aparece un enlace de descarga sin identificador real`);
+    } else {
+      console.log(`OK   /${locale}: sin enlaces de documentos inventados`);
+    }
+    await context.close();
+
+    for (const [caseName, status, expected] of [
+      ["vacío", 200, labels.empty],
+      ["error", 500, labels.error],
+    ]) {
+      const stateContext = await browser.newContext();
+      await stateContext.route("**/api/auth/get-session", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(session),
+        }),
+      );
+      await stateContext.route("**/api/v1/bookings", (route) =>
+        route.fulfill({
+          status,
+          contentType: "application/json",
+          body: status === 200 ? JSON.stringify({ items: [], nextCursor: null }) : "{}",
+        }),
+      );
+      const statePage = await stateContext.newPage();
+      await statePage.goto(`${baseUrl}${tripsPath}`, { waitUntil: "domcontentloaded" });
+      await statePage.getByText(expected).waitFor({ timeout: 8000 });
+      if (
+        caseName === "error" &&
+        (await statePage.locator('section [role="alert"]').count()) !== 1
+      ) {
+        failures.push(`/${locale}: el error de reservas no es accesible`);
+      } else {
+        console.log(`OK   /${locale}: estado ${caseName} de reservas traducido y accesible`);
+      }
+      await stateContext.close();
+    }
+  }
 } finally {
   await browser.close();
 }
@@ -453,5 +591,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `\nOK: ${locales.length * routes.length} rutas y la navegación de cuenta verificadas en es y en.`,
+  `\nOK: ${locales.length * routes.length} rutas, acceso real, estados de reservas y navegación de cuenta verificados en es y en.`,
 );

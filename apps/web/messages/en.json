@@ -203,6 +203,19 @@
   "account": {
     "title": "My account",
     "tripsTitle": "My trips",
-    "tripsPlaceholder": "Your bookings will appear here."
+    "tripsLoading": "Loading your bookings…",
+    "tripsError": "We couldn't load your bookings. Please try again.",
+    "tripsRetry": "Retry",
+    "tripsEmpty": "You don't have any bookings yet.",
+    "tripsCode": "Booking code",
+    "tripsStatus": "Status",
+    "statusPendingPayment": "Pending payment",
+    "statusConfirmed": "Confirmed",
+    "statusCancelled": "Cancelled",
+    "statusExpired": "Expired",
+    "tripsExpiry": "Expires on",
+    "tripsTotalLabel": "Total",
+    "tripsTotalUsd": "{amount} USD",
+    "tripsDocumentsNote": "Documents are issued once payment is confirmed."
   }
 }

@@ -203,6 +203,19 @@
   "account": {
     "title": "Mi cuenta",
     "tripsTitle": "Mis viajes",
-    "tripsPlaceholder": "Tus reservas aparecerán aquí."
+    "tripsLoading": "Cargando tus reservas…",
+    "tripsError": "No pudimos cargar tus reservas. Inténtalo de nuevo.",
+    "tripsRetry": "Reintentar",
+    "tripsEmpty": "Todavía no tienes reservas.",
+    "tripsCode": "Código de reserva",
+    "tripsStatus": "Estado",
+    "statusPendingPayment": "Pendiente de pago",
+    "statusConfirmed": "Confirmada",
+    "statusCancelled": "Cancelada",
+    "statusExpired": "Caducada",
+    "tripsExpiry": "Caduca el",
+    "tripsTotalLabel": "Total",
+    "tripsTotalUsd": "{amount} USD",
+    "tripsDocumentsNote": "Los documentos se publican al confirmar el pago."
   }
 }
