@@ -87,29 +87,95 @@ body {
 
 /* Gesto de bajada: fijo al viewport y retirado del tabulado fuera de su sección. */
 .scroll-cue {
+  --cue-y: 8px;
+  --cue-scale: 1;
   position: fixed;
-  inset-block-end: 1rem;
+  inset-block-end: calc(1rem + env(safe-area-inset-bottom, 0px));
   inset-inline-start: 50%;
   z-index: 40;
   opacity: 0;
   visibility: hidden;
-  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transform: translate(-50%, var(--cue-y)) scale(var(--cue-scale));
   transition:
     opacity var(--duration-cue) var(--ease-caribe),
     transform var(--duration-cue) var(--ease-caribe),
+    background-color var(--duration-cue) var(--ease-caribe),
     visibility var(--duration-cue) var(--ease-caribe);
 }
 
 .scroll-cue[data-visible="true"] {
   opacity: 1;
   visibility: visible;
-  transform: translate(-50%, 0);
+  pointer-events: auto;
+  --cue-y: 0px;
+}
+
+.scroll-cue[data-pressed="true"] {
+  --cue-scale: 0.9;
+  background-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.scroll-cue::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid currentColor;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scroll-cue[data-pressed="true"]::after {
+  animation: cue-press 450ms var(--ease-caribe);
+}
+
+@keyframes cue-press {
+  from {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+.scroll-cue-icon {
+  animation: cue-nudge 1.8s var(--ease-caribe) infinite;
+}
+
+@keyframes cue-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+@media (max-width: 639px) {
+  .scroll-cue {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue {
-    transform: translate(-50%, 0);
+    --cue-y: 0px;
+    transform: translate(-50%, 0) scale(var(--cue-scale));
     transition: none;
+  }
+
+  .scroll-cue[data-pressed="true"] {
+    --cue-scale: 1;
+  }
+
+  .scroll-cue::after,
+  .scroll-cue-icon {
+    animation: none;
   }
 }
 

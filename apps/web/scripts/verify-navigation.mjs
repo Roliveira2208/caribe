@@ -333,16 +333,57 @@ try {
   console.log("OK   /es: tipos preseleccionados y categorías próximamente honestas");
   await stagePage.close();
 
+  // Flecha en móvil: dentro del viewport y por encima de la zona segura.
+  const arrowMobile = await browser.newPage({ viewport: { width: 360, height: 640 } });
+  await arrowMobile.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });
+  const mobileArrow = arrowMobile.locator('a[href="#search"]');
+  await mobileArrow.waitFor();
+  const arrowRect = await mobileArrow.boundingBox();
+  if (
+    !arrowRect ||
+    arrowRect.x < 0 ||
+    arrowRect.y < 0 ||
+    arrowRect.x + arrowRect.width > 360 ||
+    arrowRect.y + arrowRect.height > 640 ||
+    arrowRect.height < 44
+  ) {
+    failures.push(`/es: flecha móvil fuera del viewport (${JSON.stringify(arrowRect)})`);
+  } else {
+    console.log("OK   /es 360x640: flecha de sección dentro del viewport");
+  }
+  await arrowMobile.close();
+
   // Flecha del hero: ancla, foco por teclado y movimiento reducido.
   const home = await browser.newPage();
   await home.goto(`${baseUrl}/es`, { waitUntil: "domcontentloaded" });
   const arrow = home.locator('a[href="#search"]');
   await arrow.waitFor();
+  // Todas las flechas arrancan visibles hasta que el IntersectionObserver las
+  // resuelve: esperar a una sola evita pulsar la flecha de otra sección.
+  await home.waitForFunction(() => document.querySelectorAll('.scroll-cue[data-visible="true"]').length === 1);
+  const activeArrow = home.locator('.scroll-cue[data-visible="true"]');
   const smooth = await home.evaluate(
     () => getComputedStyle(document.documentElement).scrollBehavior,
   );
   if (smooth !== "smooth") failures.push(`/es: scroll-behavior=${smooth}`);
-  await arrow.click();
+  const arrowBox = await activeArrow.boundingBox();
+  const activeHandle = await activeArrow.elementHandle();
+  if (!arrowBox || !activeHandle) {
+    failures.push("/es: flecha sin geometría");
+  } else {
+    await home.mouse.move(arrowBox.x + arrowBox.width / 2, arrowBox.y + arrowBox.height / 2);
+    await home.mouse.down();
+    await home.mouse.up();
+    const pressed = await activeHandle.evaluate((node) => ({
+      state: node.getAttribute("data-pressed"),
+      ripple: getComputedStyle(node, "::after").animationName,
+    }));
+    if (pressed.state !== "true" || pressed.ripple !== "cue-press") {
+      failures.push(`/es: flecha sin animación al pulsar (${JSON.stringify(pressed)})`);
+    } else {
+      console.log("OK   /es: flecha con estado pulsado y onda animada");
+    }
+  }
   await home.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
   console.log("OK   /es: flecha al buscador");
 
@@ -412,7 +453,29 @@ try {
   } else {
     console.log("OK   /es: animaciones desactivadas con movimiento reducido");
   }
-  await reducedPage.locator('a[href="#search"]').click();
+  const reducedArrow = reducedPage.locator('a[href="#search"]');
+  await reducedArrow.waitFor();
+  await reducedPage.waitForFunction(
+    () => document.querySelectorAll('.scroll-cue[data-visible="true"]').length === 1,
+  );
+  const reducedActive = reducedPage.locator('.scroll-cue[data-visible="true"]');
+  const reducedBox = await reducedActive.boundingBox();
+  const reducedHandle = await reducedActive.elementHandle();
+  if (reducedBox && reducedHandle) {
+    await reducedPage.mouse.move(
+      reducedBox.x + reducedBox.width / 2,
+      reducedBox.y + reducedBox.height / 2,
+    );
+    await reducedPage.mouse.down();
+    await reducedPage.mouse.up();
+    const reducedPress = await reducedHandle.evaluate((node) => ({
+      state: node.getAttribute("data-pressed"),
+      icon: getComputedStyle(node.querySelector("svg")).animationName,
+    }));
+    if (reducedPress.state !== "true" || reducedPress.icon !== "none") {
+      failures.push(`/es: pulsación con movimiento reducido no degradada (${JSON.stringify(reducedPress)})`);
+    }
+  }
   await reducedPage.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
   console.log("OK   /es: salto inmediato con movimiento reducido");
   await reduced.close();

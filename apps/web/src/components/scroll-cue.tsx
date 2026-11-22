@@ -10,12 +10,15 @@ interface ScrollCueProps {
 }
 
 /**
- * Gesto de bajada siempre dentro del viewport. Se muestra mientras su sección
- * ocupa la parte alta de la pantalla y se retira del tabulado al salir de ella.
+ * Gesto de bajada siempre dentro del viewport. Muestra un estado pulsado
+ * breve para que el salto de sección tenga respuesta visual incluso cuando el
+ * desplazamiento es inmediato (movimiento reducido).
  */
 export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps) {
   const sentinel = useRef<HTMLSpanElement>(null);
+  const timer = useRef<number | null>(null);
   const [visible, setVisible] = useState(true);
+  const [pressed, setPressed] = useState(false);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -28,10 +31,21 @@ export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps)
     return () => observer.disconnect();
   }, []);
 
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  function markPressed() {
+    setPressed(true);
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setPressed(false), 450);
+  }
+
   const colors =
-    tone === "on-dark"
-      ? "text-bone hover:bg-bone/10"
-      : "text-ink hover:bg-ink/10";
+    tone === "on-dark" ? "text-bone hover:bg-bone/10" : "text-ink hover:bg-ink/10";
 
   return (
     <>
@@ -40,12 +54,14 @@ export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps)
         href={`#${targetId}`}
         aria-label={label}
         data-visible={visible}
-        className={`scroll-cue inline-flex size-12 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber ${colors}`}
+        data-pressed={pressed}
+        onClick={markPressed}
+        className={`scroll-cue inline-flex size-12 min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber ${colors}`}
       >
         <svg
           aria-hidden="true"
           viewBox="0 0 24 24"
-          className="size-6"
+          className="scroll-cue-icon size-6"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
