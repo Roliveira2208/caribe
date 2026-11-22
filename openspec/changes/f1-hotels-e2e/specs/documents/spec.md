@@ -72,6 +72,32 @@ y SHALL permitir emitir el voucher sin pago y el comprobante con pago.
 
 ## ADDED Requirements
 
+### Requirement: Listado autenticado de documentos de una reserva
+La API SHALL exponer `GET /api/v1/bookings/:id/documents` para que el dueño de la reserva o el
+personal de la agencia con permiso `booking:read` descubra los documentos que puede descargar. Cada
+fila SHALL incluir solo `id`, `type`, `number`, `status`, `issuedAt` y `downloadPath`. `downloadPath`
+SHALL ser la ruta autenticada `/api/v1/documents/:id/download` y SHALL estar presente solo cuando
+`status = READY`. La respuesta SHALL NOT exponer `file_url`, rutas de disco, `tenantId`, importes ni
+datos personales. Una reserva ajena SHALL responder 404; una petición sin sesión SHALL responder 401.
+
+#### Scenario: Dueño consulta los documentos de su reserva
+- GIVEN una reserva con un voucher `READY` y un comprobante `PENDING`
+- WHEN el dueño consulta `GET /bookings/:id/documents`
+- THEN recibe ambas filas y solo el voucher tiene `downloadPath`
+
+#### Scenario: Sin rutas de disco ni datos internos
+- WHEN el dueño consulta los documentos de su reserva
+- THEN ninguna fila incluye `file_url`, `tenantId`, importes ni datos del viajero
+
+#### Scenario: Reserva ajena
+- GIVEN una reserva de otro cliente o de otra agencia
+- WHEN se consulta su listado de documentos
+- THEN 404 sin revelar la existencia de la reserva
+
+#### Scenario: Sin sesión
+- WHEN un visitante anónimo consulta el listado
+- THEN 401
+
 ### Requirement: Almacenamiento y descarga
 El PDF SHALL guardarse en un directorio local configurable por variable de entorno, fuera del
 repositorio. El nombre del archivo SHALL ser un identificador no adivinable (UUID) generado por el

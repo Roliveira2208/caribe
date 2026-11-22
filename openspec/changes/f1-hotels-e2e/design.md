@@ -546,7 +546,8 @@ Cada pantalla empieza por un SVG de baja fidelidad en `docs/wireframes/`, indexa
 aprobado por el dueño antes de implementarla. Pantallas F1:
 
 - Web: búsqueda/resultados, detalle, checkout (viajero + moneda), pago (métodos + cuenta regresiva),
-  confirmación (voucher/comprobante), "Mis reservas" (lista/detalle), cancelación y descarga.
+  confirmación (voucher/comprobante), "Mis reservas" (lista/detalle), cancelación, descarga y la
+  página pública `/reservas/:code` que abre el QR del voucher (solo el código; sin datos de la reserva).
 - Admin: selector de organización, aprobación mínima de pagos.
 - Cada wireframe muestra USD + VES con tasa y fecha valor, cuenta regresiva, estados del pago, campos
   por método, leyenda "Documento no fiscal", estados vacío/carga/error y orden de foco por teclado.
