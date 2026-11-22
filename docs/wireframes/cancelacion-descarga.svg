@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1390" width="1200" height="1390" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="1200" height="1390" fill="#ffffff"/>
+
+  <title id="wf-title">Cancelación y descarga de documentos — escritorio</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad de la confirmación de cancelación con la política y el reembolso guardados, del bloqueo cuando el pago está en revisión, y del panel de documentos con descargas solo para filas READY y estados PENDING y FAILED sin enlaces falsos.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 20px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 700; }
+    .lbl { font-size: 12px; fill: #555; }
+    .val { font-size: 12px; fill: #333; }
+    .price { font-size: 17px; font-weight: 700; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1.2; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1.2; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .ph { fill: #f2f2f2; stroke: #bbb; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1.2; }
+    .btn { font-size: 12.5px; font-weight: 600; fill: #333; }
+    .chip { fill: #fff; stroke: #777; stroke-width: 1; }
+    .mark { fill: #fff; stroke: #666; stroke-width: 1.2; }
+    .marktxt { font-size: 12px; font-weight: 700; }
+    .sep { stroke: #ddd; stroke-width: 1; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+  </style>
+
+  <!-- Encabezado del wireframe -->
+  <text x="16" y="28" class="cap">Caribe · Web — Cancelación y documentos · escritorio · desde /account/trips · wireframe de baja fidelidad · es / en</text>
+
+  <!-- 1 · Confirmación de cancelación -->
+  <rect x="16" y="44" width="1168" height="372" class="box"/>
+  <text x="32" y="74" class="h2">1 · Confirmar cancelación</text>
+  <circle cx="1140" cy="70" r="11" class="mark"/>
+  <text x="1140" y="74" class="marktxt" text-anchor="middle">1</text>
+  <text x="32" y="100" class="note">Diálogo con foco inicial en «Mantener reserva»; la cancelación nunca ocurre con un solo clic.</text>
+
+  <rect x="32" y="116" width="700" height="284" class="panel"/>
+  <text x="48" y="144" class="h2">Hotel Cayo Mar · CR-2026-0002</text>
+  <text x="48" y="168" class="val">Estado actual: Confirmada · agencia B</text>
+  <text x="48" y="192" class="lbl">Política guardada al reservar</text>
+  <text x="48" y="214" class="note">Flexible: reembolso completo hasta 48 h antes del check-in.</text>
+  <text x="48" y="234" class="note">Se aplica policy_snapshot de la línea, no la política actual del producto.</text>
+  <text x="48" y="258" class="lbl">Reembolso estimado (calculado en el servidor)</text>
+  <text x="48" y="286" class="price">$180,00 USD</text>
+  <text x="232" y="284" class="val">· 162.000,00 Bs</text>
+  <text x="48" y="310" class="note">Tasa congelada del pago 10/11/2026; el cliente no envía montos ni tasas.</text>
+  <text x="48" y="334" class="note">Horas de la regla contadas desde las 15:00 de America/Caracas del check-in.</text>
+  <text x="48" y="358" class="note">Al confirmar: cupo liberado una vez por noche, reserva CANCELLED y reembolso iniciado.</text>
+  <text x="48" y="382" class="note">Si la reserva ya está CANCELLED o EXPIRED, la acción no tiene efecto y devuelve el reembolso previo.</text>
+
+  <rect x="752" y="116" width="416" height="284" class="panel"/>
+  <text x="768" y="144" class="h2">Confirmación</text>
+  <rect x="768" y="164" width="384" height="76" class="field"/>
+  <text x="784" y="188" class="val">¿Cancelar esta reserva?</text>
+  <text x="784" y="210" class="note">No se puede deshacer. Revisa la política y el reembolso antes de continuar.</text>
+  <text x="784" y="228" class="note">role=alertdialog · foco inicial en «Mantener reserva».</text>
+  <rect x="768" y="256" width="176" height="36" class="btnbox"/>
+  <text x="856" y="279" class="btn" text-anchor="middle">Mantener reserva</text>
+  <rect x="960" y="256" width="192" height="36" class="btnbox"/>
+  <text x="1056" y="279" class="btn" text-anchor="middle">Confirmar cancelación</text>
+  <text x="768" y="324" class="note">Pago en revisión: la cancelación se bloquea con 409 PAYMENT_IN_REVIEW.</text>
+  <text x="768" y="346" class="note">En ese caso se explica el estado y se ofrece volver a Mis reservas.</text>
+  <text x="768" y="372" class="note">Sin diálogo de confirmación para estados terminales.</text>
+
+  <!-- 2 · Resultado de la cancelación -->
+  <rect x="16" y="436" width="1168" height="228" class="box"/>
+  <text x="32" y="466" class="h2">2 · Resultado y estados</text>
+  <circle cx="1140" cy="462" r="11" class="mark"/>
+  <text x="1140" y="466" class="marktxt" text-anchor="middle">2</text>
+  <rect x="32" y="484" width="560" height="160" class="panel"/>
+  <text x="48" y="512" class="h2">Cancelada con reembolso</text>
+  <text x="48" y="536" class="val">CR-2026-0002 · CANCELLED</text>
+  <text x="48" y="558" class="note">Reembolso 180,00 USD · 162.000,00 Bs · tasa 10/11/2026</text>
+  <text x="48" y="580" class="note">Estado del reembolso: Pendiente / Aprobado / Rechazado (según respuesta).</text>
+  <text x="48" y="602" class="note">Repetir la cancelación muestra el mismo reembolso, sin duplicarlo.</text>
+  <text x="48" y="626" class="note">El cupo queda liberado en todas las noches de la reserva.</text>
+  <rect x="608" y="484" width="560" height="160" class="panel"/>
+  <text x="624" y="512" class="h2">Cancelada sin reembolso</text>
+  <text x="624" y="536" class="val">CR-2026-0003 · PENDING_PAYMENT sin pago</text>
+  <text x="624" y="558" class="note">Cupos liberados, sin reembolso y sin comprobante de reembolso.</text>
+  <text x="624" y="580" class="note">Estado terminal: no aparece el botón de cancelar en el detalle.</text>
+  <text x="624" y="602" class="note">Los errores de propiedad devuelven 404 sin revelar la reserva ajena.</text>
+  <text x="624" y="626" class="note">La política se muestra siempre como copia guardada, nunca como texto fijo.</text>
+
+  <!-- 3 · Documentos y descarga -->
+  <rect x="16" y="684" width="1168" height="386" class="box"/>
+  <text x="32" y="714" class="h2">3 · Documentos de la reserva</text>
+  <circle cx="1140" cy="710" r="11" class="mark"/>
+  <text x="1140" y="714" class="marktxt" text-anchor="middle">3</text>
+  <text x="32" y="738" class="note">Listado desde GET /api/v1/bookings/:id/documents con sesión; sin rutas de disco ni datos del viajero.</text>
+
+  <rect x="32" y="754" width="372" height="248" class="field"/>
+  <text x="48" y="782" class="val">Voucher · listo</text>
+  <text x="48" y="804" class="note">Número 1 · emitido 15/11/2026</text>
+  <text x="48" y="826" class="note">Vista previa: leyenda «Documento no fiscal» y QR de referencia en el PDF.</text>
+  <rect x="48" y="842" width="200" height="34" class="btnbox"/>
+  <text x="148" y="864" class="btn" text-anchor="middle">Descargar PDF</text>
+  <text x="48" y="900" class="note">Solo con downloadPath devuelto por la API.</text>
+  <text x="48" y="922" class="note">Descarga autenticada: application/pdf y attachment.</text>
+  <text x="48" y="944" class="note">QR hacia /reservas/CR-2026-0001 sin datos personales.</text>
+  <text x="48" y="982" class="note">El enlace público del QR no sustituye a Mis reservas.</text>
+
+  <rect x="420" y="754" width="372" height="248" class="field"/>
+  <text x="436" y="782" class="val">Comprobante de pago · en preparación</text>
+  <text x="436" y="804" class="note">Número 1 · PENDING</text>
+  <text x="436" y="826" class="note">Sin botón de descarga: todavía no hay PDF.</text>
+  <rect x="436" y="842" width="200" height="34" class="btnbox"/>
+  <text x="536" y="864" class="btn" text-anchor="middle">Actualizar documentos</text>
+  <text x="436" y="900" class="note">Si sigue PENDING, la descarga responde 409 DOCUMENT_PENDING.</text>
+  <text x="436" y="922" class="note">Si falla tras 3 intentos: FAILED y mensaje traducido.</text>
+  <text x="436" y="944" class="note">FAILED no ofrece descarga: responde 503 DOCUMENT_UNAVAILABLE.</text>
+  <text x="436" y="982" class="note">El botón solo consulta de nuevo el listado.</text>
+
+  <rect x="808" y="754" width="360" height="248" class="field"/>
+  <text x="824" y="782" class="h2">Reglas de descarga</text>
+  <text x="824" y="808" class="note">[1] Ningún botón aparece si la fila no tiene downloadPath.</text>
+  <text x="824" y="830" class="note">[2] El nombre del archivo en disco es un UUID del servidor.</text>
+  <text x="824" y="852" class="note">[3] No se sirve el PDF desde una URL pública.</text>
+  <text x="824" y="874" class="note">[4] Solo dueño, agente propio o admin de la agencia pueden descargar.</text>
+  <text x="824" y="896" class="note">Documento de otra agencia: 404 sin pistas.</text>
+  <text x="824" y="918" class="note">Toda la leyenda del PDF dice «Documento no fiscal»; nunca factura fiscal.</text>
+  <text x="824" y="940" class="note">Los comprobantes de reembolso siguen el mismo ciclo.</text>
+  <text x="824" y="968" class="note">Foco visible, etiquetas asociadas y contraste AA en cada estado.</text>
+  <text x="824" y="990" class="note">Textos en es/en desde claves, sin cadenas fijas.</text>
+
+  <!-- Reglas visibles -->
+  <rect x="16" y="1090" width="1168" height="186" class="notes"/>
+  <text x="32" y="1114" class="notetitle">Reglas visibles en esta pantalla</text>
+  <text x="32" y="1136" class="note">La cancelación usa la política congelada y calcula el reembolso en el servidor; la web nunca envía montos ni tasas.</text>
+  <text x="32" y="1154" class="note">Pago en revisión: no se puede cancelar hasta que se apruebe o rechace; se explica el motivo sin inventar acciones.</text>
+  <text x="32" y="1172" class="note"> Cancelar de nuevo una reserva ya cancelada o vencida es idempotente: 200 sin efecto y sin segundo reembolso.</text>
+  <text x="32" y="1190" class="note">Descarga solo desde downloadPath de documentos READY; estados PENDING y FAILED muestran su mensaje y un botón de actualizar.</text>
+  <text x="32" y="1208" class="note">Sin enlaces falsos, sin importes recalculados, sin tarjetas de reembolso inventadas y sin facturas fiscales.</text>
+  <text x="32" y="1226" class="note">Las acciones sobre pago, tasa, reserva y rol quedan registradas en audit_logs (inmutable).</text>
+  <text x="32" y="1244" class="note">La confirmación de cancelación pertenece a cancelacion-descarga.svg; el listado es mis-reservas.svg.</text>
+
+  <!-- Textos es/en -->
+  <rect x="16" y="1296" width="1168" height="80" class="notes"/>
+  <text x="32" y="1320" class="notetitle">Textos es / en (mismas claves, sin cadenas fijas en componentes)</text>
+  <text x="32" y="1342" class="note">es: Confirmar cancelación · Mantener reserva · Reembolso estimado · Descargar PDF · Actualizar documentos · En preparación · Documento no fiscal</text>
+  <text x="32" y="1362" class="note">en: Confirm cancellation · Keep booking · Estimated refund · Download PDF · Refresh documents · Preparing · Non-tax document</text>
+</svg>

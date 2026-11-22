@@ -14,6 +14,8 @@ Bocetos SVG de estructura, contenido y reglas visibles del MVP. Se conservan los
 | `detalle-movil.svg` | Detalle en columna única: contenido del producto y reserva con disponibilidad | Web · móvil |
 | `checkout.svg` | Checkout en tres pasos: viajero y resumen, pago con temporizador, confirmación | Web · escritorio |
 | `checkout-movil.svg` | Pasos de pago y confirmación en columna única | Web · móvil |
+| `mis-reservas.svg` | Mis reservas: listado entre agencias, detalle con política congelada y estados vacío/error | Web · escritorio |
+| `cancelacion-descarga.svg` | Confirmación de cancelación, reembolso, bloqueo por pago en revisión y descargas solo de documentos `READY` | Web · escritorio |
 | `panel-pagos.svg` | Panel de administración de reservas y pagos | Admin · escritorio |
 
 ## Decisiones del nuevo inicio

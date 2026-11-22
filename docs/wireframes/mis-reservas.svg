@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1390" width="1200" height="1390" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="1200" height="1390" fill="#ffffff"/>
+
+  <title id="wf-title">Mis reservas — escritorio</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad de la pantalla Mis reservas: listado de reservas propias de todas las agencias con filtro por estado, detalle con copia del producto y de la política, y estados vacío y de error sin enlaces falsos.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 20px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 700; }
+    .lbl { font-size: 12px; fill: #555; }
+    .val { font-size: 12px; fill: #333; }
+    .price { font-size: 17px; font-weight: 700; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1.2; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1.2; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .ph { fill: #f2f2f2; stroke: #bbb; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1.2; }
+    .btn { font-size: 12.5px; font-weight: 600; fill: #333; }
+    .chip { fill: #fff; stroke: #777; stroke-width: 1; }
+    .mark { fill: #fff; stroke: #666; stroke-width: 1.2; }
+    .marktxt { font-size: 12px; font-weight: 700; }
+    .sep { stroke: #ddd; stroke-width: 1; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+  </style>
+
+  <!-- Encabezado del wireframe -->
+  <text x="16" y="28" class="cap">Caribe · Web — Mis reservas · escritorio · ruta /account/trips · wireframe de baja fidelidad · es / en</text>
+
+  <!-- 1 · Listado -->
+  <rect x="16" y="44" width="1168" height="360" class="box"/>
+  <text x="32" y="74" class="h2">1 · Mis reservas</text>
+  <circle cx="1140" cy="70" r="11" class="mark"/>
+  <text x="1140" y="74" class="marktxt" text-anchor="middle">1</text>
+  <text x="32" y="100" class="note">Sesión de cliente requerida. Datos desde GET /api/v1/bookings: solo reservas propias, de todas las agencias.</text>
+
+  <text x="32" y="128" class="lbl">Filtro por estado</text>
+  <rect x="120" y="112" width="112" height="30" class="chip"/>
+  <text x="176" y="131" class="lbl" text-anchor="middle">Todas</text>
+  <rect x="242" y="112" width="136" height="30" class="chip"/>
+  <text x="310" y="131" class="lbl" text-anchor="middle">Pendiente de pago</text>
+  <rect x="388" y="112" width="108" height="30" class="chip"/>
+  <text x="442" y="131" class="lbl" text-anchor="middle">Confirmada</text>
+  <rect x="506" y="112" width="100" height="30" class="chip"/>
+  <text x="556" y="131" class="lbl" text-anchor="middle">Cancelada</text>
+  <rect x="616" y="112" width="84" height="30" class="chip"/>
+  <text x="658" y="131" class="lbl" text-anchor="middle">Vencida</text>
+
+  <!-- Fila A -->
+  <rect x="32" y="156" width="1136" height="76" class="panel"/>
+  <text x="48" y="182" class="lbl">Agencia A · Hotel Cayo Mar · CR-2026-0001</text>
+  <text x="48" y="204" class="val">15/11/2026 · 2 noches · 2 adultos</text>
+  <text x="48" y="222" class="note">Vence: 15/11/2026 15:00 (America/Caracas)</text>
+  <rect x="784" y="170" width="128" height="26" class="chip"/>
+  <text x="848" y="187" class="lbl" text-anchor="middle">En revisión</text>
+  <text x="944" y="188" class="price">$240,00 USD</text>
+  <rect x="1064" y="170" width="88" height="30" class="btnbox"/>
+  <text x="1108" y="189" class="btn" text-anchor="middle">Ver detalle</text>
+
+  <!-- Fila B -->
+  <rect x="32" y="242" width="1136" height="76" class="panel"/>
+  <text x="48" y="268" class="lbl">Agencia B · Tour Los Roques · CR-2026-0002</text>
+  <text x="48" y="290" class="val">20/11/2026 · 1 día · 2 adultos</text>
+  <text x="48" y="308" class="note">Vence: — · reserva confirmada</text>
+  <rect x="784" y="256" width="128" height="26" class="chip"/>
+  <text x="848" y="273" class="lbl" text-anchor="middle">Confirmada</text>
+  <text x="944" y="274" class="price">$180,00 USD</text>
+  <rect x="1064" y="256" width="88" height="30" class="btnbox"/>
+  <text x="1108" y="275" class="btn" text-anchor="middle">Ver detalle</text>
+
+  <!-- Fila C -->
+  <rect x="32" y="328" width="1136" height="60" class="panel"/>
+  <text x="48" y="352" class="lbl">Agencia A · Hotel Cayo Mar · CR-2026-0003</text>
+  <text x="48" y="372" class="note">Cancelada · documentos disponibles según su estado · sin enlaces inventados</text>
+  <rect x="784" y="342" width="128" height="26" class="chip"/>
+  <text x="848" y="359" class="lbl" text-anchor="middle">Cancelada</text>
+  <text x="944" y="360" class="price">$95,00 USD</text>
+
+  <!-- 2 · Detalle -->
+  <rect x="16" y="424" width="1168" height="444" class="box"/>
+  <text x="32" y="454" class="h2">2 · Detalle de la reserva</text>
+  <circle cx="1140" cy="450" r="11" class="mark"/>
+  <text x="1140" y="454" class="marktxt" text-anchor="middle">2</text>
+  <text x="32" y="478" class="note">La tarjeta conserva el producto y la política al reservar: no se lee el catálogo actual.</text>
+
+  <rect x="32" y="496" width="552" height="352" class="panel"/>
+  <text x="48" y="524" class="h2">Hotel Cayo Mar · CR-2026-0001</text>
+  <text x="48" y="548" class="val">Estado: Pendiente de pago · Agencia A</text>
+  <text x="48" y="568" class="val">Check-in 15/11/2026 · check-out 17/11/2026 · habitación doble</text>
+  <text x="48" y="588" class="val">Viajero: María Pérez</text>
+  <line x1="48" y1="604" x2="568" y2="604" class="sep"/>
+  <text x="48" y="628" class="lbl">Subtotal</text>
+  <text x="568" y="628" class="val" text-anchor="end">$240,00 USD</text>
+  <text x="48" y="648" class="lbl">Total guardado</text>
+  <text x="568" y="648" class="price" text-anchor="end">$240,00 USD</text>
+  <text x="48" y="672" class="lbl">Pago</text>
+  <text x="568" y="672" class="val" text-anchor="end">En revisión · $240,00 USD · tasa 10/11/2026</text>
+  <line x1="48" y1="688" x2="568" y2="688" class="sep"/>
+  <text x="48" y="712" class="lbl">Política de cancelación (congelada al reservar)</text>
+  <text x="48" y="732" class="note">Flexible: reembolso completo hasta 48 h antes del check-in.</text>
+  <text x="48" y="752" class="note">Horas contadas desde las 15:00 de America/Caracas del día de check-in.</text>
+  <text x="48" y="780" class="note">El título, las fechas y la política son copias guardadas en la reserva.</text>
+  <text x="48" y="800" class="note">No se muestra un precio recalculado ni una tasa distinta de la congelada.</text>
+  <text x="48" y="828" class="note">Los importes y la tasa son texto desde el servidor; nunca se envían en el cuerpo.</text>
+
+  <rect x="600" y="496" width="568" height="352" class="panel"/>
+  <text x="616" y="524" class="h2">Documentos y acciones</text>
+  <text x="616" y="552" class="note">Disponibles solo cuando hay un identificador real devuelto por la API.</text>
+  <rect x="616" y="568" width="536" height="56" class="field"/>
+  <text x="632" y="590" class="val">Voucher · pendiente</text>
+  <text x="632" y="610" class="note">Se publica al aprobar el pago. Sin botón de descarga.</text>
+  <rect x="616" y="636" width="536" height="56" class="field"/>
+  <text x="632" y="658" class="val">Comprobante de pago · pendiente</text>
+  <text x="632" y="678" class="note">Se publica al aprobar el pago. Sin botón de descarga.</text>
+  <rect x="616" y="704" width="240" height="34" class="btnbox"/>
+  <text x="736" y="726" class="btn" text-anchor="middle">Actualizar documentos</text>
+  <text x="616" y="760" class="note">Cuando el estado es READY, aparece «Descargar PDF» solo con downloadPath.</text>
+  <text x="616" y="780" class="note">La leyenda «Documento no fiscal» se muestra en cada PDF y en la lista.</text>
+  <rect x="616" y="800" width="240" height="34" class="btnbox"/>
+  <text x="736" y="822" class="btn" text-anchor="middle">Cancelar reserva</text>
+  <text x="868" y="822" class="note">Detalle de la cancelación: cancelacion-descarga.svg</text>
+
+  <!-- 3 · Estados vacío y de error -->
+  <rect x="16" y="888" width="1168" height="184" class="box"/>
+  <text x="32" y="918" class="h2">3 · Estados sin tarjetas</text>
+  <circle cx="1140" cy="914" r="11" class="mark"/>
+  <text x="1140" y="918" class="marktxt" text-anchor="middle">3</text>
+  <rect x="32" y="936" width="560" height="116" class="panel"/>
+  <text x="48" y="964" class="h2">Sin reservas</text>
+  <text x="48" y="990" class="note">Mensaje traducido y accesible: todavía no tienes reservas.</text>
+  <text x="48" y="1012" class="note">Sin tarjetas, sin enlaces falsos y sin datos de ejemplo.</text>
+  <text x="48" y="1036" class="note">Acceso al buscador como única acción.</text>
+  <rect x="608" y="936" width="560" height="116" class="panel"/>
+  <text x="624" y="964" class="h2">Error de carga</text>
+  <text x="624" y="990" class="note">Mensaje traducido con role=alert y botón «Reintentar».</text>
+  <text x="624" y="1012" class="note">La sesión caducada lleva a /login, sin mostrar tarjetas vacías.</text>
+  <text x="624" y="1036" class="note">Ningún bloque inventa documentos ni estados de pago.</text>
+
+  <!-- Reglas visibles -->
+  <rect x="16" y="1092" width="1168" height="184" class="notes"/>
+  <text x="32" y="1116" class="notetitle">Reglas visibles en esta pantalla</text>
+  <text x="32" y="1138" class="note">[1] Solo reservas propias; aparecen las de todas las agencias del cliente, nunca las de otras personas.</text>
+  <text x="32" y="1156" class="note">[2] Filtro por estado con los cuatro valores traducidos; sin recalcular importes ni tasas.</text>
+  <text x="32" y="1174" class="note">[3] El detalle usa el producto y la política guardados en la reserva, no los del catálogo actual.</text>
+  <text x="32" y="1192" class="note">[4] Sin enlaces de descarga mientras el documento esté PENDING o FAILED; solo downloadPath de una fila READY.</text>
+  <text x="32" y="1210" class="note">Foco visible, etiquetas asociadas y contraste AA. Textos visible en es y en desde claves de mensajes.</text>
+  <text x="32" y="1228" class="note">El botón de cancelación abre la confirmación de cancelacion-descarga.svg; no cancela con un solo clic.</text>
+  <text x="32" y="1246" class="note">Ruta fija /account/trips con prefijo de idioma; el código QR público no muestra datos de la reserva.</text>
+
+  <!-- Textos es/en -->
+  <rect x="16" y="1296" width="1168" height="80" class="notes"/>
+  <text x="32" y="1320" class="notetitle">Textos es / en (mismas claves, sin cadenas fijas en componentes)</text>
+  <text x="32" y="1342" class="note">es: Mis reservas · Todas · Pendiente de pago · Confirmada · Cancelada · Vencida · Ver detalle · Actualizar documentos</text>
+  <text x="32" y="1362" class="note">en: My bookings · All · Awaiting payment · Confirmed · Cancelled · Expired · View details · Refresh documents</text>
+</svg>
