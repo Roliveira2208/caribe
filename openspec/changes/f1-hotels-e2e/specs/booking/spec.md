@@ -275,7 +275,10 @@ Los datos personales SHALL NOT aparecer en logs ni en la auditoría.
 SHALL listar las reservas del usuario autenticado —de todas las agencias donde tenga reservas— o, para
 el personal, las de su agencia activa. La lista SHALL aceptar filtro por estado y paginación por cursor.
 Una reserva ajena o de otra agencia SHALL responder 404, nunca 403. El detalle SHALL usar el título del
-producto guardado en la línea al reservar, no el estado ni el título actual del producto.
+producto guardado en la línea al reservar, no el estado ni el título actual del producto. El detalle
+SHALL exponer también la política guardada en `policy_snapshot` y, cuando exista un pago, un
+`refund_estimate` calculado en el servidor con esa política y la tasa congelada del pago. La web SHALL
+mostrar ese texto decimal sin recalcular montos ni tasas.
 
 #### Scenario: Dueño consulta su reserva
 - GIVEN una reserva del cliente
@@ -286,6 +289,12 @@ producto guardado en la línea al reservar, no el estado ni el título actual de
 - GIVEN una reserva confirmada cuyo producto se despublica
 - WHEN el cliente consulta su reserva o descarga el voucher
 - THEN ve el título guardado al crear la reserva
+
+#### Scenario: Detalle congelado y reembolso estimado
+- GIVEN una reserva confirmada con un pago aprobado y una política guardada
+- WHEN el cliente consulta su reserva
+- THEN el detalle devuelve la política guardada y un `refund_estimate` calculado con esa política y la
+  tasa congelada del pago, sin consultar la política actual del producto ni recalcular en la web
 
 #### Scenario: Personal consulta una reserva de su agencia
 - GIVEN una reserva de la agencia A
