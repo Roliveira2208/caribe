@@ -97,6 +97,15 @@ const mockBookingRow = {
   ...mockBooking,
   createdAt: "2026-11-21T15:00:00.000Z",
 };
+const mockPayment = {
+  id: "55555555-5555-4555-8555-555555555555",
+  status: "IN_REVIEW",
+  amountUsd: mockTotalUsd,
+  amountVes: "15300.00",
+  rate: "45.0000",
+};
+const paymentRequestKeys = ["bank", "method", "phone", "reference"];
+const paymentRequests = [];
 
 const screens = [
   { name: "header", path: "/es" },
@@ -189,11 +198,46 @@ async function mockBookingApi(page) {
   });
 }
 
-function assertLastBookingRequest() {
-  const sent = bookingRequests[bookingRequests.length - 1];
+async function mockPaymentApi(page) {
+  await page.route("**/api/v1/bookings/*/payments", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    let body = null;
+    try {
+      body = JSON.parse(route.request().postData() ?? "null");
+    } catch {
+      // body sigue siendo null: la petición no trae un JSON válido.
+    }
+    paymentRequests.push({
+      body,
+      idempotencyKey: route.request().headers()["idempotency-key"],
+    });
+    const keys = body && typeof body === "object" && !Array.isArray(body) ? Object.keys(body).sort() : [];
+    if (
+      keys.join(",") !== paymentRequestKeys.join(",") ||
+      !route.request().headers()["idempotency-key"]
+    ) {
+      await route.fulfill({
+        status: 422,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ code: "VALIDATION_ERROR", detail: "Cuerpo inesperado en la captura" }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(mockPayment),
+    });
+  });
+}
+
+function assertRequestKeys(label, sent, expected) {
   const keys = sent && typeof sent === "object" && !Array.isArray(sent) ? Object.keys(sent).sort() : [];
-  if (keys.join(",") !== bookingRequestKeys.join(",")) {
-    throw new Error(`El checkout envió campos inesperados: ${keys.join(",") || "ninguno"}`);
+  if (keys.join(",") !== expected.join(",")) {
+    throw new Error(`${label} envió campos inesperados: ${keys.join(",") || "ninguno"}`);
   }
 }
 
@@ -253,7 +297,7 @@ async function waitForReadyContent(page, screen) {
   }
   if (screen.name === "checkout") {
     await page
-      .locator('[data-checkout-status="ready"], [data-checkout-status="error"], [data-checkout-status="success"]')
+      .locator('[data-checkout-status="ready"], [data-checkout-status="error"]')
       .first()
       .waitFor();
   }
@@ -270,6 +314,7 @@ for (const viewport of viewports) {
     route.fulfill({ status: 200, contentType: "image/svg+xml", body: mockImage }),
   );
   await mockBookingApi(page);
+  await mockPaymentApi(page);
 
   for (const screen of selected) {
     if (screen.name === "account") {
@@ -296,8 +341,17 @@ for (const viewport of viewports) {
       await page.getByLabel("Nombre completo").fill("Ana Pérez");
       await page.getByLabel("Número de documento").fill("V12345678");
       await page.locator('form button[type="submit"]').click();
+      await page.locator('[data-checkout-status="payment"]').waitFor();
+      assertRequestKeys("El checkout", bookingRequests.at(-1), bookingRequestKeys);
+      await page.screenshot({
+        path: join(outputRoot, `${screen.name}${themeSuffix}-payment-${viewport.name}.png`),
+      });
+      await page.locator("#payment-bank").fill("Banco de Venezuela");
+      await page.locator("#payment-phone").fill("04125551122");
+      await page.locator("#payment-reference").fill("ABC12345");
+      await page.locator('form button[type="submit"]').click();
       await page.locator('[data-checkout-status="success"]').waitFor();
-      assertLastBookingRequest();
+      assertRequestKeys("El pago", paymentRequests.at(-1)?.body, paymentRequestKeys);
       await page.screenshot({
         path: join(outputRoot, `${screen.name}${themeSuffix}-success-${viewport.name}.png`),
       });

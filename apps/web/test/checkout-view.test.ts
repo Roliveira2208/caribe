@@ -13,6 +13,16 @@ import {
   type BookingCreatedView,
   type CheckoutTraveler,
 } from "../src/lib/checkout-view";
+import {
+  buildPaymentBody,
+  EMPTY_PAYMENT_FIELDS,
+  formatHoldRemaining,
+  parseReportedPayment,
+  paymentApiUrl,
+  paymentErrorKind,
+  remainingHoldMs,
+  type ReportedPaymentView,
+} from "../src/lib/payment-view";
 import type {
   CatalogAvailabilityView,
   CatalogProductDetailView,
@@ -52,12 +62,41 @@ const labels: CheckoutViewLabels = {
   reserve: "Reservar",
   reserving: "Creando reserva…",
   login: "Iniciar sesión",
+  paymentTitle: "Completa el pago",
+  paymentSubtitle: "Reporta el pago de tu reserva.",
+  holdLabel: "Cupo retenido",
+  holdPending: "Calculando…",
+  holdExpired: "La retención venció.",
+  holdNote: "Si vence el tiempo, la reserva pasa a EXPIRED.",
+  methodTitle: "Método de pago (simulado)",
+  methodMobile: "Pago Móvil",
+  methodZelle: "Zelle",
+  methodBinance: "Binance Pay",
+  methodCard: "Tarjeta",
+  amountTitle: "Monto a pagar",
+  amountNote: "El total y la tasa se congelan al reportar el pago.",
+  bank: "Banco",
+  reference: "Referencia",
+  senderName: "Nombre del emisor",
+  senderEmail: "Correo del emisor",
+  confirmationNumber: "Número de confirmación",
+  orderId: "Número de orden",
+  last4: "Últimos 4 dígitos",
+  brand: "Marca",
+  reportPayment: "Reportar pago",
+  reporting: "Reportando pago…",
+  paymentRequired: "Completa los datos del método elegido.",
   successTitle: "Reserva creada",
   successCode: "Código de reserva",
   successStatus: "Pago en revisión",
+  paymentStatusLabel: "Estado del pago",
+  statusInReview: "Pago en revisión",
+  statusApproved: "Pago aprobado",
   successTotal: "Total de la reserva",
+  successVes: "Monto en bolívares",
+  successRate: "Tasa congelada",
   successExpires: "Retención hasta",
-  successDescription: "Guarda tu código. El pago se revisará sin otra acción de tu parte.",
+  successDescription: "Guarda tu código.",
 };
 
 const productId = "11111111-1111-4111-8111-111111111111";
@@ -118,6 +157,8 @@ function render(overrides: Partial<Parameters<typeof CheckoutView>[0]> = {}): st
         currency: "USD",
         status: "ready",
         booking: null,
+        payment: null,
+        paymentError: null,
         travelers: [traveler],
         travelerError: null,
         errorMessage: null,
@@ -251,5 +292,121 @@ describe("vista de checkout", () => {
     expect(html).toContain("USD 340,00");
     expect(html).not.toContain("/pago");
     expect(html).not.toContain("/confirmacion");
+  });
+});
+
+describe("contrato del pago", () => {
+  it("envía solo el método y los datos del método elegido", () => {
+    const fields = {
+      bank: "Banco de Venezuela",
+      phone: "04125551122",
+      reference: "ABC12345",
+      senderName: "Ana Pérez",
+      senderEmail: "ana@example.com",
+      confirmationNumber: "ZEL-7788",
+      orderId: "ORD-9900",
+      last4: "1234",
+      brand: "Visa",
+    };
+    expect(buildPaymentBody("PAGO_MOVIL", fields)).toEqual({
+      method: "PAGO_MOVIL",
+      bank: "Banco de Venezuela",
+      phone: "04125551122",
+      reference: "ABC12345",
+    });
+    expect(buildPaymentBody("ZELLE", fields)).toEqual({
+      method: "ZELLE",
+      senderName: "Ana Pérez",
+      senderEmail: "ana@example.com",
+      confirmationNumber: "ZEL-7788",
+    });
+    expect(buildPaymentBody("BINANCE_PAY", fields)).toEqual({
+      method: "BINANCE_PAY",
+      orderId: "ORD-9900",
+    });
+    expect(buildPaymentBody("CARD", fields)).toEqual({
+      method: "CARD",
+      last4: "1234",
+      brand: "Visa",
+    });
+    expect(paymentApiUrl(booking.id)).toBe(
+      `/api/v1/bookings/${booking.id}/payments`,
+    );
+  });
+
+  it("rechaza datos incompletos, extraños y números de tarjeta completos", () => {
+    expect(buildPaymentBody("PAGO_MOVIL", { ...EMPTY_PAYMENT_FIELDS, phone: "123" })).toBeNull();
+    expect(buildPaymentBody("ZELLE", EMPTY_PAYMENT_FIELDS)).toBeNull();
+    expect(buildPaymentBody("CARD", { ...EMPTY_PAYMENT_FIELDS, last4: "12345678" })).toBeNull();
+    const serialized = JSON.stringify(buildPaymentBody("CARD", { ...EMPTY_PAYMENT_FIELDS, last4: "1234", brand: "Visa" }));
+    expect(serialized).not.toContain("cardNumber");
+    expect(serialized).not.toContain("cvv");
+  });
+
+  it("acepta solo pagos con importes y tasa serializados como texto", () => {
+    const payment: ReportedPaymentView = {
+      id: "55555555-5555-4555-8555-555555555555",
+      status: "IN_REVIEW",
+      amountUsd: "340.00",
+      amountVes: "15300.00",
+      rate: "45.0000",
+    };
+    expect(parseReportedPayment(payment)).toEqual(payment);
+    expect(parseReportedPayment({ ...payment, amountUsd: 340 })).toBeNull();
+    expect(parseReportedPayment({ ...payment, rate: 45 })).toBeNull();
+    expect(parseReportedPayment({ ...payment, status: "UNKNOWN" })).toBeNull();
+  });
+
+  it("clasifica los errores del alta de pago", () => {
+    expect(paymentErrorKind(410, { code: "HOLD_EXPIRED" })).toBe("expired");
+    expect(paymentErrorKind(409, { code: "DUPLICATE_PAYMENT_REFERENCE" })).toBe("duplicate");
+    expect(paymentErrorKind(422, { code: "VALIDATION_ERROR" })).toBe("validation");
+    expect(paymentErrorKind(403, {})).toBe("forbidden");
+    expect(paymentErrorKind(500, {})).toBe("generic");
+  });
+
+  it("muestra la retención restante sin valores negativos", () => {
+    const expiresAt = "2026-12-01T15:00:30.000Z";
+    expect(remainingHoldMs(expiresAt, Date.parse("2026-12-01T15:00:00.000Z"))).toBe(30000);
+    expect(remainingHoldMs(expiresAt, Date.parse("2026-12-01T15:01:00.000Z"))).toBe(0);
+    expect(formatHoldRemaining(30000)).toBe("00:30");
+    expect(formatHoldRemaining(90000)).toBe("01:30");
+    expect(formatHoldRemaining(-1)).toBe("00:00");
+  });
+});
+
+describe("vista del pago", () => {
+  it("muestra la retención, los métodos y el total calculado por el servidor", () => {
+    const html = render({ status: "payment", booking });
+    expect(html).toContain('data-checkout-status="payment"');
+    expect(html).toContain('role="timer"');
+    expect(html).toContain("Cupo retenido");
+    expect(html).toContain("Pago Móvil");
+    expect(html).toContain("Zelle");
+    expect(html).toContain("Binance Pay");
+    expect(html).toContain("Tarjeta");
+    expect(html).toContain("USD 340,00");
+    expect(html).toContain("Reportar pago");
+    expect(html).not.toContain("cardNumber");
+    expect(html).not.toContain("cvv");
+  });
+
+  it("muestra el estado y los importes congelados tras reportar el pago", () => {
+    const html = render({
+      status: "success",
+      booking,
+      payment: {
+        id: "55555555-5555-4555-8555-555555555555",
+        status: "IN_REVIEW",
+        amountUsd: "340.00",
+        amountVes: "15300.00",
+        rate: "45.0000",
+      },
+    });
+    expect(html).toContain('data-checkout-status="success"');
+    expect(html).toContain("Estado del pago");
+    expect(html).toContain("Pago en revisión");
+    expect(html).toContain("Bs.S 15.300,00");
+    expect(html).toContain("45.0000");
   });
 });

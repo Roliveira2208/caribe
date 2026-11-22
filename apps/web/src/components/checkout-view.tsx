@@ -1,7 +1,9 @@
 import type { FormEvent } from "react";
-import type { Locale } from "@caribe/shared";
+import type { Locale, PaymentBody } from "@caribe/shared";
 import { localizedPath } from "@/lib/localized-path";
 import { formatUsd, formatValueDate, formatVes, localizedText } from "@/lib/catalog-view";
+import type { ReportedPaymentView } from "@/lib/payment-view";
+import { PaymentForm, type PaymentFormLabels } from "./payment-form";
 import type {
   CatalogAvailabilityView,
   CatalogProductDetailView,
@@ -17,7 +19,7 @@ import type {
  * traducidos y datos validados; la interacción con la API vive en
  * `CheckoutExperience`. Nunca recibe montos calculados por el cliente.
  */
-export interface CheckoutViewLabels {
+export interface CheckoutViewLabels extends PaymentFormLabels {
   loading: string;
   backToDetail: string;
   title: string;
@@ -51,12 +53,17 @@ export interface CheckoutViewLabels {
   successTitle: string;
   successCode: string;
   successStatus: string;
+  paymentStatusLabel: string;
+  statusInReview: string;
+  statusApproved: string;
   successTotal: string;
+  successVes: string;
+  successRate: string;
   successExpires: string;
   successDescription: string;
 }
 
-export type CheckoutStatus = "loading" | "error" | "ready" | "success";
+export type CheckoutStatus = "loading" | "error" | "ready" | "payment" | "success";
 export type SummaryCurrency = "USD" | "VES";
 export type TravelerField =
   | "fullName"
@@ -74,6 +81,8 @@ interface CheckoutViewProps {
   currency: SummaryCurrency;
   status: CheckoutStatus;
   booking: BookingCreatedView | null;
+  payment: ReportedPaymentView | null;
+  paymentError: string | null;
   travelers: CheckoutTraveler[];
   travelerError: string | null;
   errorMessage: string | null;
@@ -86,6 +95,7 @@ interface CheckoutViewProps {
   onAddTraveler?: () => void;
   onRemoveTraveler?: (index: number) => void;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+  onPay?: (body: PaymentBody) => void;
 }
 
 const FIELD_CLASSES =
@@ -105,15 +115,23 @@ function BackToDetail({ href, label }: { href: string; label: string }) {
 
 function Success({
   booking,
+  payment,
   locale,
   labels,
   detailHref,
 }: {
   booking: BookingCreatedView;
+  payment: ReportedPaymentView | null;
   locale: Locale;
   labels: CheckoutViewLabels;
   detailHref: string;
 }) {
+  const paymentStatus =
+    payment?.status === "APPROVED"
+      ? labels.statusApproved
+      : payment?.status === "IN_REVIEW"
+        ? labels.statusInReview
+        : labels.successStatus;
   return (
     <section
       data-checkout-status="success"
@@ -131,13 +149,25 @@ function Success({
           <dd className="font-display text-h4 text-ink">{booking.code}</dd>
         </div>
         <div className="rounded-md bg-amber/15 p-4">
-          <dt className="text-sm text-ink/70">{labels.successStatus}</dt>
-          <dd className="font-semibold text-ink">{labels.successStatus}</dd>
+          <dt className="text-sm text-ink/70">{labels.paymentStatusLabel}</dt>
+          <dd className="font-semibold text-ink">{paymentStatus}</dd>
         </div>
         <div>
           <dt className="text-sm text-ink/70">{labels.successTotal}</dt>
           <dd className="font-display text-h4 text-ink">{formatUsd(booking.totalUsd, locale)}</dd>
         </div>
+        {payment ? (
+          <>
+            <div>
+              <dt className="text-sm text-ink/70">{labels.successVes}</dt>
+              <dd className="font-display text-h4 text-ink">{formatVes(payment.amountVes, locale)}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-ink/70">{labels.successRate}</dt>
+              <dd className="font-medium text-ink">{payment.rate}</dd>
+            </div>
+          </>
+        ) : null}
         <div>
           <dt className="text-sm text-ink/70">{labels.successExpires}</dt>
           <dd className="font-medium text-ink">
@@ -159,6 +189,8 @@ export function CheckoutView({
   currency,
   status,
   booking,
+  payment,
+  paymentError,
   travelers,
   travelerError,
   errorMessage,
@@ -171,6 +203,7 @@ export function CheckoutView({
   onAddTraveler,
   onRemoveTraveler,
   onSubmit,
+  onPay,
 }: CheckoutViewProps) {
   const detailHref = localizedPath(locale, "/hotels/[id]", { id: productId });
 
@@ -187,9 +220,28 @@ export function CheckoutView({
     );
   }
 
+  if (status === "payment" && booking) {
+    return (
+      <PaymentForm
+        locale={locale}
+        booking={booking}
+        labels={labels}
+        busy={busy}
+        errorMessage={paymentError}
+        onPay={(body) => onPay?.(body)}
+      />
+    );
+  }
+
   if (status === "success" && booking) {
     return (
-      <Success booking={booking} locale={locale} labels={labels} detailHref={detailHref} />
+      <Success
+        booking={booking}
+        payment={payment}
+        locale={locale}
+        labels={labels}
+        detailHref={detailHref}
+      />
     );
   }
 

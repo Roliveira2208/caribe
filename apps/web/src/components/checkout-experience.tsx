@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import type { Locale } from "@caribe/shared";
+import type { Locale, PaymentBody } from "@caribe/shared";
 import { useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -15,6 +15,13 @@ import {
   type CheckoutErrorKind,
   type CheckoutTraveler,
 } from "@/lib/checkout-view";
+import {
+  parseReportedPayment,
+  paymentApiUrl,
+  paymentErrorKind as classifyPaymentError,
+  type PaymentErrorKind,
+  type ReportedPaymentView,
+} from "@/lib/payment-view";
 import {
   availabilityApiUrl,
   detailApiUrl,
@@ -83,10 +90,39 @@ export function CheckoutExperience({
     reserve: t("reserve"),
     reserving: t("reserving"),
     login: t("login"),
+    paymentTitle: t("paymentTitle"),
+    paymentSubtitle: t("paymentSubtitle"),
+    holdLabel: t("holdLabel"),
+    holdPending: t("holdPending"),
+    holdExpired: t("holdExpired"),
+    holdNote: t("holdNote"),
+    methodTitle: t("methodTitle"),
+    methodMobile: t("methodMobile"),
+    methodZelle: t("methodZelle"),
+    methodBinance: t("methodBinance"),
+    methodCard: t("methodCard"),
+    amountTitle: t("amountTitle"),
+    amountNote: t("amountNote"),
+    bank: t("bank"),
+    reference: t("reference"),
+    senderName: t("senderName"),
+    senderEmail: t("senderEmail"),
+    confirmationNumber: t("confirmationNumber"),
+    orderId: t("orderId"),
+    last4: t("last4"),
+    brand: t("brand"),
+    reportPayment: t("reportPayment"),
+    reporting: t("reporting"),
+    paymentRequired: t("paymentRequired"),
     successTitle: t("successTitle"),
     successCode: t("successCode"),
     successStatus: t("successStatus"),
+    paymentStatusLabel: t("paymentStatusLabel"),
+    statusInReview: t("statusInReview"),
+    statusApproved: t("statusApproved"),
     successTotal: t("successTotal"),
+    successVes: t("successVes"),
+    successRate: t("successRate"),
     successExpires: t("successExpires"),
     successDescription: t("successDescription"),
   };
@@ -100,16 +136,31 @@ export function CheckoutExperience({
     validation: t("validationError"),
   };
 
+  const paymentErrorMessages: Record<PaymentErrorKind, string> = {
+    generic: t("paymentError"),
+    expired: t("paymentErrorExpired"),
+    duplicate: t("paymentErrorDuplicate"),
+    validation: t("paymentErrorValidation"),
+    forbidden: t("paymentErrorForbidden"),
+    cancelled: t("paymentErrorCancelled"),
+    alreadyPaid: t("paymentErrorAlreadyPaid"),
+    malformed: t("paymentErrorMalformed"),
+  };
+
   const [product, setProduct] = useState<CatalogProductDetailView | null>(null);
   const [availability, setAvailability] = useState<CatalogAvailabilityView | null>(null);
   const [status, setStatus] = useState<CheckoutStatus>("loading");
   const [errorKind, setErrorKind] = useState<CheckoutErrorKind>("generic");
   const [booking, setBooking] = useState<BookingCreatedView | null>(null);
+  const [payment, setPayment] = useState<ReportedPaymentView | null>(null);
+  const [paymentErrorKind, setPaymentErrorKind] = useState<PaymentErrorKind>("generic");
   const [travelers, setTravelers] = useState<CheckoutTraveler[]>(() => initialTravelers(1));
   const [travelerError, setTravelerError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<SummaryCurrency>("USD");
   const [busy, setBusy] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
+  const paymentIdempotencyKey = useRef<string | null>(null);
+  const paymentBodySignature = useRef<string | null>(null);
 
   const query = params.toString();
   const currentPath = `${pathname}${query ? `?${query}` : ""}`;
@@ -122,6 +173,11 @@ export function CheckoutExperience({
   function getIdempotencyKey(): string {
     idempotencyKey.current ??= crypto.randomUUID();
     return idempotencyKey.current;
+  }
+
+  function getPaymentIdempotencyKey(): string {
+    paymentIdempotencyKey.current ??= crypto.randomUUID();
+    return paymentIdempotencyKey.current;
   }
 
   useEffect(() => {
@@ -219,6 +275,10 @@ export function CheckoutExperience({
 
     setBusy(true);
     setTravelerError(null);
+    paymentIdempotencyKey.current = null;
+    paymentBodySignature.current = null;
+    setPayment(null);
+    setPaymentErrorKind("generic");
     try {
       const response = await fetch(bookingApiUrl(), {
         method: "POST",
@@ -241,10 +301,49 @@ export function CheckoutExperience({
         return;
       }
       setBooking(parsedBooking);
-      setStatus("success");
+      setStatus("payment");
     } catch {
       setErrorKind("generic");
       setStatus("error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPay(body: PaymentBody): Promise<void> {
+    if (!booking) return;
+    // Reintentar el mismo cuerpo conserva la clave (evita un segundo pago tras
+    // un fallo de red); corregir los datos genera una clave nueva.
+    const signature = JSON.stringify(body);
+    if (paymentBodySignature.current !== signature) {
+      paymentIdempotencyKey.current = null;
+      paymentBodySignature.current = signature;
+    }
+    setBusy(true);
+    setPaymentErrorKind("generic");
+    try {
+      const response = await fetch(paymentApiUrl(booking.id), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": getPaymentIdempotencyKey(),
+        },
+        body: JSON.stringify(body),
+      });
+      const responseBody: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        setPaymentErrorKind(classifyPaymentError(response.status, responseBody));
+        return;
+      }
+      const reported = parseReportedPayment(responseBody);
+      if (!reported) {
+        setPaymentErrorKind("malformed");
+        return;
+      }
+      setPayment(reported);
+      setStatus("success");
+    } catch {
+      setPaymentErrorKind("generic");
     } finally {
       setBusy(false);
     }
@@ -260,6 +359,8 @@ export function CheckoutExperience({
       currency={currency}
       status={status}
       booking={booking}
+      payment={payment}
+      paymentError={status === "payment" ? paymentErrorMessages[paymentErrorKind] : null}
       travelers={travelers}
       travelerError={travelerError}
       errorMessage={status === "error" ? errorMessages[errorKind] : null}
@@ -272,6 +373,7 @@ export function CheckoutExperience({
       onAddTraveler={addTraveler}
       onRemoveTraveler={removeTraveler}
       onSubmit={(event) => void onSubmit(event)}
+      onPay={(body) => void onPay(body)}
     />
   );
 }
