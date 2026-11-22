@@ -229,7 +229,8 @@ inferior.
 - GIVEN una flecha de bajada visible y movimiento normal
 - WHEN se pulsa
 - THEN el desplazamiento se interpola fotograma a fotograma desde la posición actual hasta el destino durante 760ms con una curva ease-in-out cúbica
-- THEN el destino respeta el `scroll-margin-top` de la cabecera flotante y la URL conserva el ancla de la sección
+- THEN el borde superior de la sección destino queda alineado con el viewport, sin dejar visible ninguna franja de la sección anterior bajo la cabecera flotante, y la URL conserva el ancla
+- THEN el contenido de la sección queda por debajo de la cabecera gracias al padding y al centrado propios de la sección
 - THEN una acción del usuario con rueda, táctil o teclado cancela la animación y deja el scroll en la posición alcanzada
 - THEN con movimiento reducido el destino se alcanza de inmediato, sin interpolación
 

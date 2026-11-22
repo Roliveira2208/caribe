@@ -66,8 +66,8 @@ La cabecera deja de ser una franja anclada al borde: `HeaderFrame` centra una ba
 `max-w-5xl`, `top-4`, esquinas redondeadas, fondo `color-mix(in srgb, var(--color-ink) 70%,
 transparent)` y `backdrop-filter: blur(20px)`. El wordmark queda a la izquierda; a la derecha se
 agrupan los enlaces de productos, el badge, el selector y la sesión. En móvil el botón «Menú»
-despliega el mismo contenido debajo de la barra. El `scroll-margin-top` de las anclas se mantiene
-para que la barra flotante no tape los encabezados. La barra conserva `inset-inline` en móvil para
+despliega el mismo contenido debajo de la barra. Las anclas alinean el borde de la sección con el
+viewport: la barra cae sobre el relleno propio de la sección y no deja ver la anterior. La barra conserva `inset-inline` en móvil para
 no pegarse a los bordes; el botón móvil pasa a un SVG de hamburgesa con `aria-label` traducido y
 `aria-expanded`, y el icono se transforma en cruz al abrir. El contenido desplegado apila cada
 producto, la tasa, el idioma y cada acción de sesión en una fila propia a ancho completo; se anula el
@@ -78,15 +78,15 @@ de iOS; el fondo se mantiene sobre `ink` para no romper el contraste AA.
 El hero reserva `padding-top` suficiente para que el título no quede bajo la barra flotante. En
 viewports de hasta 700px de alto se compactan el espaciado del contenido, la altura de la
 composición cinética y el relleno vertical de las secciones, de modo que la CTA quede por encima de
-la flecha y los encabezados no se tapen al navegar con las anclas. `scroll-margin-top` sigue
-compensando la cabecera en los destinos de las flechas.
+la flecha y los encabezados no se tapen al navegar con las anclas. El padding superior y el centrado propios de cada sección bastan
+para que la cabecera no tape los encabezados sin desplazar el destino.
 
 Las flechas de sección conservan el `<a href="#...">` para accesibilidad y degradación sin JS, pero
 intercetan el clic y animan el desplazamiento con `requestAnimationFrame`: 760ms con
 `easeInOutCubic`, usando `scrollTo({ behavior: "instant" })` en cada fotograma para que ni el CSS ni
-una transición de ruta de Next puedan convertirlo en un salto. La posición destino resta el
-`scroll-margin-top` calculado del elemento, y `history.pushState` conserva el ancla sin provocar un
-segundo salto. La animación se cancela ante `wheel`, `touchstart` o `keydown` y al desmontar.
+una transición de ruta de Next puedan convertirlo en un salto. La posición destino alinea el borde
+superior de la sección con el viewport (`.scroll-target` con `scroll-margin-top: 0`), y
+`history.pushState` conserva el ancla sin provocar un segundo salto. La animación se cancela ante `wheel`, `touchstart` o `keydown` y al desmontar.
 Con `prefers-reduced-motion` se llama a `scrollTo` sin interpolación. El control baja 8px en 140ms
 con `ease-out` y vuelve en 320ms: temporización asimétrica, sin `scale` ni onda. El tamaño mínimo es
 44x44px y la separación inferior respeta `env(safe-area-inset-bottom)`.
