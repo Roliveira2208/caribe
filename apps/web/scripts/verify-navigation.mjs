@@ -619,6 +619,21 @@ try {
   }
   await reducedPage.waitForFunction(() => location.hash === "#search" && window.scrollY > 100);
   console.log("OK   /es: salto inmediato con movimiento reducido");
+
+  await reducedPage.evaluate(() => {
+    const closing = document.getElementById("cierre");
+    window.scrollTo({ top: closing.getBoundingClientRect().top + window.scrollY, behavior: "instant" });
+  });
+  const reducedTop = reducedPage.locator('a[href="#inicio"]');
+  await reducedTop.waitFor({ state: "visible" });
+  await reducedTop.click();
+  await reducedPage.waitForFunction(() => location.hash === "#inicio" && window.scrollY < 5);
+  const reducedIcon = await reducedTop.locator("svg").evaluate((node) => getComputedStyle(node).animationName);
+  if (reducedIcon !== "none") {
+    failures.push(`/es: balanceo de subida activo con movimiento reducido (${reducedIcon})`);
+  } else {
+    console.log("OK   /es: salto inmediato al inicio sin balanceo con movimiento reducido");
+  }
   await reduced.close();
 
   // El gesto no queda fuera de pantalla en viewports bajos y se retira al salir.
@@ -720,6 +735,25 @@ try {
   } else {
     console.log("OK   /es: CTA del cierre hacia el buscador");
   }
+
+  const cueCount = await home.locator(".scroll-cue").count();
+  if (cueCount !== 4) {
+    failures.push(`/es: ${cueCount} gestos de desplazamiento (esperados 4)`);
+  } else {
+    console.log("OK   /es: un gesto por sección, con subida en el cierre");
+  }
+  const topCue = home.locator('a[href="#inicio"]');
+  await topCue.waitFor({ state: "visible" });
+  const topLabel = await topCue.getAttribute("aria-label");
+  const topPath = await topCue.locator("path").getAttribute("d");
+  if (topLabel !== "Volver al inicio" || topPath !== "m6 15 6-6 6 6") {
+    failures.push(`/es: flecha de subida sin etiqueta o trazo correcto (${topLabel}, ${topPath})`);
+  } else {
+    console.log("OK   /es: flecha de subida etiquetada y orientada hacia arriba");
+  }
+  await topCue.click();
+  await home.waitForFunction(() => location.hash === "#inicio" && window.scrollY < 5);
+  console.log("OK   /es: flecha del cierre devuelve al inicio");
 
   // Acceso real y "Mis viajes" con datos y estados traducidos (T-NAV-9).
   const bookingRow = {

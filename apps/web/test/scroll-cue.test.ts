@@ -52,7 +52,7 @@ describe("gesto de bajada", () => {
     const page = read("src/app/[locale]/page.tsx");
     const featured = read("src/components/featured-stays.tsx");
     expect(page).toContain('id="search" className="search-stage scroll-target relative py-16');
-    expect(page).toContain("scroll-target flex min-h-dvh flex-col");
+    expect(page).toContain("scroll-target relative flex min-h-dvh flex-col");
     expect(featured).toContain("scroll-target relative flex min-h-dvh flex-col");
   });
 
@@ -65,5 +65,44 @@ describe("gesto de bajada", () => {
     expect(source).toContain("prefers-reduced-motion: reduce");
     expect(source).toContain("scrollMarginTop");
     expect(source).toContain("history.pushState");
+  });
+
+  it("la flecha de subida apunta al inicio y se etiqueta en el idioma activo", () => {
+    const html = renderToStaticMarkup(
+      createElement(ScrollCue, {
+        targetId: "inicio",
+        label: "Volver al inicio",
+        direction: "up",
+        tone: "on-light",
+      }),
+    );
+    expect(html).toContain('href="#inicio"');
+    expect(html).toContain('aria-label="Volver al inicio"');
+    expect(html).toContain('data-direction="up"');
+    expect(html).toContain('d="m6 15 6-6 6 6"');
+    expect(html).not.toContain('d="m6 9 6 6 6-6"');
+  });
+
+  it("el cierre ofrece la subida y el hero el ancla de inicio", () => {
+    const page = read("src/app/[locale]/page.tsx");
+    expect(page).toContain('id="inicio" className="hero-section');
+    expect(page).toContain('<ScrollCue targetId="inicio" direction="up"');
+    expect(page).toContain('id="cierre"');
+
+    const es = JSON.parse(read("messages/es.json")) as { home: Record<string, string> };
+    const en = JSON.parse(read("messages/en.json")) as { home: Record<string, string> };
+    expect(es.home.scrollToTop).toBe("Volver al inicio");
+    expect(en.home.scrollToTop).toBe("Back to top");
+  });
+
+  it("el balanceo de subida se desactiva con movimiento reducido", () => {
+    const css = read("src/app/globals.css");
+    const cue = css.slice(css.indexOf(".scroll-cue"), css.indexOf(".search-glass"));
+    expect(cue).toContain('[data-direction="up"] .scroll-cue-icon');
+    expect(cue).toContain("animation-name: cue-nudge-up");
+    expect(cue).toContain("@keyframes cue-nudge-up");
+    expect(cue).toContain("translateY(-3px)");
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduced).toContain('[data-direction="up"] .scroll-cue-icon');
   });
 });

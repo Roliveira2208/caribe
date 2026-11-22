@@ -7,6 +7,8 @@ interface ScrollCueProps {
   label: string;
   /** Color del gesto según la sección que lo contiene. */
   tone?: "on-dark" | "on-light";
+  /** Bajada entre secciones o subida al inicio de la portada. */
+  direction?: "down" | "up";
 }
 
 const SCROLL_DURATION_MS = 760;
@@ -29,12 +31,18 @@ function destinationTop(id: string): number | null {
 }
 
 /**
- * Gesto de bajada siempre dentro del viewport. Intercepta el ancla para animar
- * el desplazamiento fotograma a fotograma: `scroll-behavior: smooth` depende del
+ * Gesto de desplazamiento siempre dentro del viewport. Intercepta el ancla para
+ * animar el recorrido fotograma a fotograma: `scroll-behavior: smooth` depende del
  * navegador y Next puede anularlo durante una transición de ruta, mientras que
- * aquí la curva y la duración están bajo nuestro control.
+ * aquí la curva y la duración están bajo nuestro control. La misma curva sirve
+ * para bajar a una sección y para volver al inicio.
  */
-export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps) {
+export function ScrollCue({
+  targetId,
+  label,
+  tone = "on-dark",
+  direction = "down",
+}: ScrollCueProps) {
   const sentinel = useRef<HTMLSpanElement>(null);
   const timer = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
@@ -131,6 +139,7 @@ export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps)
         aria-label={label}
         data-visible={visible}
         data-pressed={pressed}
+        data-direction={direction}
         onClick={handleClick}
         className={`scroll-cue inline-flex size-12 min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber ${colors}`}
       >
@@ -144,7 +153,7 @@ export function ScrollCue({ targetId, label, tone = "on-dark" }: ScrollCueProps)
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="m6 9 6 6 6-6" />
+          <path d={direction === "up" ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} />
         </svg>
       </a>
     </>

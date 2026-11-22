@@ -161,6 +161,21 @@ body {
   }
 }
 
+/* El gesto de subida balancea hacia arriba: la dirección visual coincide con la acción. */
+.scroll-cue[data-direction="up"] .scroll-cue-icon {
+  animation-name: cue-nudge-up;
+}
+
+@keyframes cue-nudge-up {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
 @media (max-width: 639px) {
   .scroll-cue {
     min-width: 44px;
@@ -181,6 +196,10 @@ body {
   }
 
   .scroll-cue-icon {
+    animation: none;
+  }
+
+  .scroll-cue[data-direction="up"] .scroll-cue-icon {
     animation: none;
   }
 }

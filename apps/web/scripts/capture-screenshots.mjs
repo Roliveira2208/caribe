@@ -1,5 +1,5 @@
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { chromium } from "@playwright/test";
 
 /**
@@ -10,15 +10,17 @@ import { chromium } from "@playwright/test";
 const baseUrl = process.env.CARIBE_WEB_URL ?? "http://localhost:3000";
 const colorScheme = process.env.CARIBE_CAPTURE_THEME === "dark" ? "dark" : "light";
 const themeSuffix = colorScheme === "dark" ? "-dark" : "";
-const outputRoot = join(
-  process.cwd(),
-  "..",
-  "..",
-  "docs",
-  "plans",
-  "screenshots",
-  "f1-navigation-refresh",
-);
+const outputRoot = process.env.CARIBE_CAPTURE_OUTPUT_DIR
+  ? resolve(process.env.CARIBE_CAPTURE_OUTPUT_DIR)
+  : join(
+      process.cwd(),
+      "..",
+      "..",
+      "docs",
+      "plans",
+      "screenshots",
+      "f1-navigation-refresh",
+    );
 
 async function fetchJson(path) {
   const response = await fetch(`${baseUrl}${path}`);
@@ -112,6 +114,7 @@ const screens = [
   { name: "header-menu", path: "/es" },
   { name: "home", path: "/es" },
   { name: "home-arrow-pressed", path: "/es" },
+  { name: "home-closing", path: "/es" },
   { name: "featured", path: "/es" },
   { name: "search", path: "/es/search" },
   { name: "login", path: "/es/login" },
@@ -265,6 +268,15 @@ async function waitForReadyContent(page, screen) {
       document.querySelector('.scroll-cue[data-visible="true"]')?.setAttribute("data-pressed", "true");
     });
     await page.waitForTimeout(280);
+  }
+  if (screen.name === "home-closing") {
+    await page.locator('[data-featured-status="ready"]').waitFor();
+    await page.evaluate(() => {
+      const closing = document.getElementById("cierre");
+      window.scrollTo({ top: closing.getBoundingClientRect().top + window.scrollY, behavior: "instant" });
+    });
+    await page.locator('a[href="#inicio"]').waitFor({ state: "visible" });
+    await page.waitForTimeout(500);
   }
   if (screen.name === "featured") {
     await page.locator('[data-featured-status="ready"]').waitFor();

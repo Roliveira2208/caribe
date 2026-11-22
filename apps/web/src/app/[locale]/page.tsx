@@ -39,7 +39,7 @@ export default async function HomePage({ params }: HomePageProps) {
 
   return (
     <div className="w-full">
-      <section className="hero-section relative min-h-dvh overflow-hidden bg-ink pt-28 text-bone">
+      <section id="inicio" className="hero-section relative min-h-dvh overflow-hidden bg-ink pt-28 text-bone">
         <div className="hero-inner mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 pb-16 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-10 lg:pb-24">
           <div className="order-1 max-w-2xl space-y-6 lg:col-start-1 lg:row-start-1">
             <h1 className="hero-enter max-w-3xl font-display text-display text-bone">
@@ -81,7 +81,7 @@ export default async function HomePage({ params }: HomePageProps) {
 
       <section
         id="cierre"
-        className="scroll-target flex min-h-dvh flex-col justify-center border-t border-ink/10 bg-bone py-24"
+        className="scroll-target relative flex min-h-dvh flex-col justify-center border-t border-ink/10 bg-bone py-24"
       >
         <div className="mx-auto w-full max-w-6xl space-y-10 px-5 lg:px-10">
           <div className="max-w-2xl space-y-3">
@@ -103,6 +103,7 @@ export default async function HomePage({ params }: HomePageProps) {
             ))}
           </ul>
         </div>
+        <ScrollCue targetId="inicio" direction="up" label={t("scrollToTop")} tone="on-light" />
       </section>
     </div>
   );
