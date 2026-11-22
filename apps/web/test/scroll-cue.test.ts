@@ -67,6 +67,16 @@ describe("gesto de bajada", () => {
     expect(source).toContain("history.pushState");
   });
 
+  it("retira la bajada cuando su destino llega arriba, sin solapar la subida", () => {
+    const source = read("src/components/scroll-cue.tsx");
+    expect(source).toContain('if (direction !== "down") return false;');
+    expect(source).toContain("const reachedTarget = () => {");
+    expect(source).toContain("intersecting.current && !reachedTarget()");
+    expect(source).toContain('window.addEventListener("scroll", update, { passive: true })');
+    expect(source).toContain("window.removeEventListener(\"scroll\", update)");
+    expect(source).toContain("}, [direction, targetId]);");
+  });
+
   it("la flecha de subida apunta al inicio y se etiqueta en el idioma activo", () => {
     const html = renderToStaticMarkup(
       createElement(ScrollCue, {

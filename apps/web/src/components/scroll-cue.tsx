@@ -44,6 +44,7 @@ export function ScrollCue({
   direction = "down",
 }: ScrollCueProps) {
   const sentinel = useRef<HTMLSpanElement>(null);
+  const intersecting = useRef(false);
   const timer = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
   const removeListeners = useRef<Array<() => void>>([]);
@@ -53,13 +54,36 @@ export function ScrollCue({
   useEffect(() => {
     const node = sentinel.current;
     if (!node || typeof IntersectionObserver === "undefined") return;
+
+    // Las bajadas se retiran en cuanto su destino llega a la zona alta del
+    // viewport. Si no, la última bajada y la subida del cierre quedan ambas
+    // visibles en el mismo punto fijo y se solapan.
+    const reachedTarget = () => {
+      if (direction !== "down") return false;
+      const destination = destinationTop(targetId);
+      return destination !== null && destination <= window.scrollY + 4;
+    };
+    const update = () => setVisible(intersecting.current && !reachedTarget());
+
     const observer = new IntersectionObserver(
-      (entries) => setVisible(entries.some((entry) => entry.isIntersecting)),
+      (entries) => {
+        intersecting.current = entries.some((entry) => entry.isIntersecting);
+        update();
+      },
       { rootMargin: "0px 0px -55% 0px" },
     );
     observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+
+    if (direction === "down") {
+      window.addEventListener("scroll", update, { passive: true });
+      window.addEventListener("resize", update, { passive: true });
+    }
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [direction, targetId]);
 
   useEffect(
     () => () => {

@@ -720,6 +720,34 @@ try {
   await checkAnchorLanding(home, "cierre", "/es");
   console.log("OK   /es: flecha al cierre");
 
+  // Un solo gesto visible por sección: al cierre la bajada se retira y no se
+  // solapa con la subida (spec home-return-to-top-cue, "Un gesto por sección").
+  const expectOnlyTopCue = async (where) => {
+    try {
+      await home.waitForFunction(() => {
+        const shown = [...document.querySelectorAll(".scroll-cue")].filter(
+          (node) => getComputedStyle(node).visibility === "visible",
+        );
+        return shown.length === 1 && shown[0].getAttribute("href") === "#inicio";
+      });
+    } catch {
+      // La comprobación siguiente informa de los gestos que quedaron visibles.
+    }
+    const shown = await home.locator(".scroll-cue").evaluateAll((nodes) =>
+      nodes
+        .filter((node) => getComputedStyle(node).visibility === "visible")
+        .map((node) => node.getAttribute("href")),
+    );
+    if (shown.length !== 1 || shown[0] !== "#inicio") {
+      failures.push(`${where}: gestos visibles ${JSON.stringify(shown)} (esperado solo #inicio)`);
+    } else {
+      console.log(`OK   ${where}: solo la flecha de subida, sin solape`);
+    }
+  };
+  await expectOnlyTopCue("/es: al llegar al cierre");
+  await home.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
+  await expectOnlyTopCue("/es: al final de la página");
+
   const anchorMobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await anchorMobile.goto(`${baseUrl}/es`, { waitUntil: "networkidle" });
   for (const id of ["search", "destacados", "cierre"]) {
