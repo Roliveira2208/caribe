@@ -91,6 +91,37 @@ existir como máximo una fila; para las filas globales la unicidad SHALL aplicar
 - WHEN una agencia sin override propio pide la tasa
 - THEN se usa 920,0000
 
+### Requirement: Congelar al pagar
+Al iniciar un pago SHALL guardarse `exchange_rate_id`, `amount_usd`, `amount_ves` y una copia de
+`rate` y `value_date` en el pago. `amount_usd` SHALL ser el total de la reserva y `amount_ves` SHALL ser
+`round(amount_usd × rate, 2)` con redondeo half-up. Ese par SHALL NOT recalcularse ni modificarse
+después; la base SHALL rechazar cualquier `UPDATE` de esos campos.
+
+#### Scenario: La tasa cambia después
+- GIVEN un pago creado con tasa 897,5383
+- WHEN el BCV publica una tasa nueva
+- THEN el pago conserva 897,5383 y su `amount_ves`
+
+#### Scenario: Cálculo del monto en VES
+- GIVEN una reserva de 100,00 USD y una tasa de 900,0000
+- WHEN se inicia el pago
+- THEN `amount_ves` es 90000,00 y el pago guarda la tasa y la fecha valor
+
+#### Scenario: Redondeo half-up
+- GIVEN un monto en USD que produce 0,005 en VES
+- WHEN se calcula el monto
+- THEN se redondea hacia arriba a 2 decimales
+
+#### Scenario: Modificación directa del par congelado
+- GIVEN un pago guardado
+- WHEN se intenta actualizar `rate`, `amount_usd`, `amount_ves`, `exchange_rate_id` o `value_date`
+- THEN la base rechaza la escritura
+
+#### Scenario: Reembolso con la tasa congelada
+- GIVEN un pago con tasa congelada 900,0000
+- WHEN se reembolsa el 50 %
+- THEN el reembolso usa 900,0000 aunque la tasa vigente sea otra
+
 ## ADDED Requirements
 
 ### Requirement: Refresco perezoso de la tasa
@@ -137,37 +168,6 @@ NOT leer ni escribir overrides de agencia ni ninguna otra tabla.
 - GIVEN el contexto `rates_global`
 - WHEN el refresco intenta escribir una fila con `tenant_id` de una agencia
 - THEN la base rechaza la escritura y el override queda intacto
-
-### Requirement: Congelar al pagar
-Al iniciar un pago SHALL guardarse `exchange_rate_id`, `amount_usd`, `amount_ves` y una copia de
-`rate` y `value_date` en el pago. `amount_usd` SHALL ser el total de la reserva y `amount_ves` SHALL ser
-`round(amount_usd × rate, 2)` con redondeo half-up. Ese par SHALL NOT recalcularse ni modificarse
-después; la base SHALL rechazar cualquier `UPDATE` de esos campos.
-
-#### Scenario: La tasa cambia después
-- GIVEN un pago creado con tasa 897,5383
-- WHEN el BCV publica una tasa nueva
-- THEN el pago conserva 897,5383 y su `amount_ves`
-
-#### Scenario: Cálculo del monto en VES
-- GIVEN una reserva de 100,00 USD y una tasa de 900,0000
-- WHEN se inicia el pago
-- THEN `amount_ves` es 90000,00 y el pago guarda la tasa y la fecha valor
-
-#### Scenario: Redondeo half-up
-- GIVEN un monto en USD que produce 0,005 en VES
-- WHEN se calcula el monto
-- THEN se redondea hacia arriba a 2 decimales
-
-#### Scenario: Modificación directa del par congelado
-- GIVEN un pago guardado
-- WHEN se intenta actualizar `rate`, `amount_usd`, `amount_ves`, `exchange_rate_id` o `value_date`
-- THEN la base rechaza la escritura
-
-#### Scenario: Reembolso con la tasa congelada
-- GIVEN un pago con tasa congelada 900,0000
-- WHEN se reembolsa el 50 %
-- THEN el reembolso usa 900,0000 aunque la tasa vigente sea otra
 
 ## Casos límite
 - Tasa <= 0 o con más de 4 decimales de entrada → se rechaza la respuesta del proveedor.

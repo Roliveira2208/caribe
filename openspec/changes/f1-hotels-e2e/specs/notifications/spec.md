@@ -9,7 +9,7 @@ según la persona, y nunca debe bloquear ni deshacer una reserva ya confirmada. 
 (pago aprobado o rechazado, cancelación con reembolso) se pospone a F2. El envío pasa por una interfaz
 para poder cambiar SMTP por otro canal sin tocar reservas ni pagos.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Proveedor y transporte
 El envío SHALL pasar por `NotificationProvider.send(template, recipient)`. La implementación del MVP

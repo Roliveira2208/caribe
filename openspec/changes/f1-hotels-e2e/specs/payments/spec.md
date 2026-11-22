@@ -18,6 +18,10 @@ por la API. La tasa y los montos congelados SHALL cumplir la spec de tasas. Un m
 - WHEN el cliente reporta Pago Móvil con banco, teléfono y referencia
 - THEN se crea el pago con `amount_ves` 90000,00 y la tasa congelada
 
+#### Scenario: Cliente envía un monto
+- WHEN la solicitud incluye un monto distinto al calculado
+- THEN el monto enviado se ignora y se usa el del servidor
+
 #### Scenario: Cliente envía un monto o una tasa
 - WHEN la solicitud incluye un monto o una tasa distintos a los calculados
 - THEN 422 con código `VALIDATION_ERROR` y el pago no se crea

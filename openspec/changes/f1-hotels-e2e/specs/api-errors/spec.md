@@ -10,7 +10,7 @@ validación, y sin reglas de dinero los montos se cuelan como números de punto 
 el formato, los códigos y la frontera con Better Auth. En F1 se limita a lo que consumen catálogo,
 reservas, pagos, tasas y documentos.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Problem Details
 Los errores de `/api/v1/*` SHALL responder `application/problem+json` con los campos `type`, `title`,

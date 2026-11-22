@@ -9,7 +9,7 @@ propósito; las reservas, pagos, documentos y ajustes no. Un cliente sin membres
 pagar solo lo suyo aunque no tenga agencia activa, y el personal de una agencia no debe ver nada de
 otra. Ningún contexto implícito concede acceso: sin contexto explícito, la base no devuelve filas.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Contextos de datos explícitos
 Toda lectura o escritura sobre una tabla de negocio SHALL ejecutarse en uno de los contextos

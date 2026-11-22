@@ -26,6 +26,16 @@ El orden de bloqueo SHALL ser determinista: al crear se bloquea primero `availab
 expirar o cancelar se bloquea primero `bookings` y después `availability`. Las filas de disponibilidad
 se bloquean siempre en orden ascendente de `night`.
 
+#### Scenario: Hay cupo
+- GIVEN una disponibilidad con capacity 5 y reserved 3
+- WHEN un cliente reserva quantity 2
+- THEN la reserva queda en `PENDING_PAYMENT` y reserved pasa a 5
+
+#### Scenario: No hay cupo suficiente
+- GIVEN una disponibilidad con capacity 5 y reserved 4
+- WHEN un cliente reserva quantity 2
+- THEN la API responde 409 con código `AVAILABILITY_EXHAUSTED` y reserved no cambia
+
 #### Scenario: Hay cupo en todas las noches
 - GIVEN un producto con capacity 5 y reserved 3 en cada una de las 3 noches
 - WHEN un cliente reserva quantity 2
