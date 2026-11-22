@@ -112,13 +112,14 @@ El modelo es relacional en PostgreSQL, con un único tipo `products` que cubre l
 
 | Entidad | Propósito | Campos clave |
 | --- | --- | --- |
-| `organization` | Agencia (tenant), mediante el plugin Organization de Better Auth | `id`, `name`, `slug`, `metadata`, más campos propios: `base_currency` (USD), `payment_mode` (AUTO o MANUAL) y `hold_minutes` |
+| `organization` | Agencia (tenant), mediante el plugin Organization de Better Auth | `id`, `name`, `slug`, `metadata` (sin campos propios: se deja intacto el modelo generado) |
+| `tenant_settings` | Ajustes de la agencia | `tenant_id`, `base_currency` (USD), `payment_mode` (AUTO o MANUAL), `hold_minutes` |
 | `user`, `session` | Cuentas de todos los roles y sus sesiones, gestionadas por Better Auth | `user`: `id`, `email`, `name`, `role`, `banned`, `locale`; `session`: `token`, `expiresAt`, `activeOrganizationId` |
 | `providers` | Proveedores de inventario | `id`, `tenant_id`, `user_id`, `name`, `contact` |
 | `destinations` | Destinos geográficos | `id`, `tenant_id`, `name` (i18n), `country`, `code` |
-| `products` | Hotel, tour, paquete o vuelo | `id`, `tenant_id`, `provider_id`, `type`, `title` y `description` (i18n), `destination_id`, `status`, `base_price_usd`, `cancellation_policy_id`, `source` (OWN, DUFFEL, LITEAPI), `external_ref`, `attributes` (JSONB) |
+| `products` | Hotel, tour, paquete o vuelo; en F1 una fila por tipo de habitación vendible, agrupada por `hotel_key` | `id`, `tenant_id`, `provider_id`, `type`, `title` y `description` (i18n), `destination_id`, `status`, `base_price_usd`, `cancellation_policy_id`, `source` (OWN, DUFFEL, LITEAPI), `external_ref`, `attributes` (JSONB), `hotel_key` |
 | `package_items` | Composición de un paquete | `package_id`, `product_id`, `position` |
-| `availability` | Cupo y precio por fecha | `id`, `product_id`, `starts_on`, `ends_on`, `capacity`, `reserved`, `price_usd` |
+| `availability` | Cupo y precio por noche (una fila por `(product_id, night)`) | `id`, `product_id`, `night`, `capacity`, `reserved`, `price_usd` |
 | `cancellation_policies` | Reglas de penalización | `id`, `tenant_id`, `name`, `rules` (horas antes y porcentaje) |
 | `bookings` | Reserva del cliente | `id`, `tenant_id`, `code`, `user_id`, `status`, `total_usd`, `expires_at`, `created_at` |
 | `booking_items` | Líneas de la reserva | `booking_id`, `product_id`, `availability_id`, `quantity`, `unit_price_usd`, `policy_snapshot` |
@@ -126,13 +127,14 @@ El modelo es relacional en PostgreSQL, con un único tipo `products` que cubre l
 | `payments` | Intento de pago | `id`, `booking_id`, `method`, `amount_usd`, `amount_ves`, `exchange_rate_id`, `reference`, `status`, `paid_at` |
 | `documents` | Voucher y comprobante | `id`, `booking_id`, `type`, `number`, `file_url`, `issued_at` |
 | `audit_logs` | Rastro de acciones | `id`, `tenant_id`, `actor_id`, `action`, `entity`, `entity_id`, `before`, `after`, `ip`, `at` |
+| `idempotency_keys` | Respuestas de `POST` repetibles | `user_id`, `endpoint`, `key`, `request_hash`, `response_status`, `response_body`, `expires_at` (sin `tenant_id`: la agencia se resuelve después de consumir la clave) |
 
 Better Auth define y migra las tablas `user`, `session`, `account`, `verification`, `organization`, `member`, `invitation` y `twoFactor`; cada persona de una agencia aparece en `member` con su `role`, y los nombres de campo pueden mapearse a snake\_case. En el resto de las tablas, `tenant_id` referencia `organization.id`, y `providers.user_id` y `bookings.user_id` referencian `user.id`.
 
 ### Estados
 
 - Reserva: `PENDING_PAYMENT`, `CONFIRMED`, `CANCELLED`, `EXPIRED`.
-- Pago: `PENDING`, `IN_REVIEW`, `APPROVED`, `REJECTED`, `REFUNDED`.
+- Pago: `PENDING` (interno, nunca observable por el cliente), `IN_REVIEW`, `APPROVED`, `REJECTED`, `REFUNDED`, `PARTIALLY_REFUNDED`. En la API el cliente solo ve `IN_REVIEW` o `APPROVED` mientras el pago está en curso.
 
 ### Reglas de integridad
 
@@ -155,9 +157,9 @@ Los precios se guardan en USD, y el monto en VES se calcula con la tasa BCV vige
 2. En el catálogo, el precio en VES es informativo: USD por la tasa vigente, redondeado a 2 decimales.
 3. Al iniciar el pago se registra la tasa del día y se calcula `amount_ves`; ese par no cambia aunque la tasa cambie después.
 4. El BCV [publica una tasa por día hábil](https://allratestoday.com/es/central-bank-rates-api/bcv/); en fines de semana y feriados se usa la última fecha valor publicada.
-5. Fuente primaria: DolarAPI, endpoint de tasa oficial sin autenticación ([documentación](https://dolarapi.com/docs/venezuela/operations/get-dolar-oficial)); su disponibilidad se debe verificar antes de implementar. Respaldo: la última tasa válida guardada.
+5. Fuente primaria en F1: Cotizave (`ve-bcv`, con `X-API-Key`), en lugar de DolarAPI; el respaldo sigue siendo la última tasa válida guardada.
 6. El administrador puede fijar una tasa manual indicando el motivo; queda marcada como `is_override` y registrada en auditoría.
-7. La tasa se guarda en caché una hora y se refresca una vez al día con un trabajo programado.
+7. La tasa se guarda en caché una hora y se refresca de forma perezosa (al iniciar sesión y al crear un pago), como máximo una vez al día según `fetched_at`; no hay trabajo programado en F1.
 8. Los reembolsos se calculan sobre los montos USD y VES del pago original, es decir, con la tasa congelada del día en que se pagó; el porcentaje y las demás condiciones del reembolso los fija la política de cancelación de la agencia.
 
 ### Métodos de pago simulados
@@ -196,7 +198,7 @@ La API es REST, versionada en `/api/v1` y documentada con OpenAPI (Swagger) gene
 | Autenticación | Rutas de Better Auth bajo `/api/auth/*`: registro, inicio y cierre de sesión, sesión actual, verificación de correo, restablecer contraseña, segundo factor y organizaciones | Público para registro e inicio de sesión; sesión requerida en el resto |
 | Catálogo | `GET /products`, `GET /products/:id`, `GET /products/:id/availability` | Público |
 | Reservas | `POST /bookings` (crea y retiene cupo), `GET /bookings/:id`, `POST /bookings/:id/cancel` | Cliente, Agente |
-| Pagos | `POST /bookings/:id/payments`, `PATCH /payments/:id/approve`, `PATCH /payments/:id/reject` | Cliente (crear); Admin (aprobar, rechazar) |
+| Pagos | `POST /bookings/:id/payments`, `GET /bookings/:id/payments`, `GET /admin/payments`, `GET /admin/payments/:id`, `PATCH /admin/payments/:id/approve`, `PATCH /admin/payments/:id/reject` | Cliente (crear y listar los suyos); Admin (listar, aprobar, rechazar) |
 | Tasas | `GET /exchange-rates/current`, `PUT /admin/exchange-rates/override` | Público (leer); Admin (fijar) |
 | Documentos | `GET /bookings/:id/voucher`, `GET /bookings/:id/receipt` | Dueño de la reserva, Admin |
 | Administración | CRUD en `/admin/products`, `/admin/users`, `/admin/providers`; `GET /admin/audit-logs`, `GET /admin/reports/sales` | Admin, Proveedor (solo sus productos) |
@@ -209,8 +211,8 @@ Better Auth queda fuera del versionado `/api/v1`. El resto de la API exige sesi�
 | --- | --- | --- | --- |
 | `InventoryProvider` | `search`, `getDetails`, `checkAvailability`, `hold`, `confirm`, `cancel` | `OwnInventoryProvider` (principal), `DuffelProvider`, `LiteApiProvider` | Otros agregadores |
 | `PaymentProvider` | `createPayment`, `confirm`, `refund` | `SimulatedPaymentProvider` | Pasarela con Pago Móvil C2P o tarjetas |
-| `InvoiceProvider` | `issue(booking)` | `FreeFormReceiptProvider` | Imprenta digital autorizada |
-| `ExchangeRateProvider` | `getRate(date)` | `DolarApiProvider`, `ManualOverrideProvider` | Fuente directa del BCV |
+| `InvoiceProvider` | `issue(booking, payment?)` | `FreeFormReceiptProvider` (voucher y comprobante con la misma interfaz) | Imprenta digital autorizada |
+| `ExchangeRateProvider` | `getRate(date)` | `CotizaveProvider`, `ManualOverrideProvider` | Fuente directa del BCV |
 | `NotificationProvider` | `send(template, recipient)` | Correo SMTP | WhatsApp |
 
 ### Proveedores externos en sandbox
@@ -231,6 +233,24 @@ Queda por verificar que el registro en Duffel y LiteAPI funcione desde Venezuela
 - Paginación por cursor y filtros explícitos en los listados.
 - Llamadas a proveedores externos con tiempo máximo de 5 segundos, un reintento y circuit breaker; si un proveedor falla, el catálogo sigue mostrando el inventario propio.
 - Las credenciales de proveedores se guardan solo en variables de entorno del servidor.
+
+### Desviaciones canónicas aplicadas en F1
+
+F1 cerró nueve decisiones que difieren del diseño original. Se aplican en el código y en las specs;
+la tabla completa, con el motivo de cada una, está en
+`openspec/changes/f1-hotels-e2e/design.md` §15. No cambian las decisiones D1–D15.
+
+| # | SDD original | F1 |
+| --- | --- | --- |
+| 1 | Ajustes de agencia en `organization` | Tabla `tenant_settings` |
+| 2 | Disponibilidad por rango (`starts_on`/`ends_on`, exclusión `gist`) | Una fila `availability` por `(product_id, night)` |
+| 3 | Estados de pago sin reembolso parcial | `PARTIALLY_REFUNDED` añadido |
+| 4 | `InvoiceProvider.issue(booking)` | `InvoiceProvider.issue(booking, payment?)` |
+| 5 | Pago creado `PENDING` visible | `PENDING` interno; el cliente ve `IN_REVIEW` o `APPROVED` |
+| 6 | `idempotency_keys` con `tenant_id` | Sin `tenant_id`; RLS solo por `user_id` |
+| 7 | Producto de hotel con tabla `hotels` separada | `products` agrupa por `hotel_key`; sin tabla `hotels` en F1 |
+| 8 | Revisión en `PATCH /payments/:id/*` | Bajo `/admin/payments/*`; pagos del cliente en `GET /bookings/:id/payments` |
+| 9 | DolarAPI y refresco diario programado | Cotizave y refresco perezoso al login y al alta de pago, una vez al día |
 
 ## 8. Diseño de componentes
 
@@ -354,8 +374,8 @@ El rendimiento se logra sirviendo el catálogo casi estático, cacheando lo que 
 | Técnica | Dónde | Efecto esperado |
 | --- | --- | --- |
 | ISR y SSR en páginas de catálogo | Web pública | HTML listo para SEO y primera carga rápida |
-| Caché Redis de búsquedas (TTL de 60 s) y de la tasa (TTL de 1 h) | API | Menos consultas a la base de datos y a DolarAPI |
-| Índices compuestos en `products (tenant_id, type, destination_id, status)` y `availability (product_id, starts_on)` | PostgreSQL | Búsquedas y calendarios sin escaneo completo |
+| Caché Redis de búsquedas (TTL de 60 s) y de la tasa (TTL de 1 h) | API | Menos consultas a la base de datos y a Cotizave |
+| Índices compuestos en `products (tenant_id, type, destination_id, status)` y `availability (product_id, night)` | PostgreSQL | Búsquedas y calendarios sin escaneo completo |
 | Paginación por cursor | API | Costo estable en listados grandes |
 | `select` explícito y carga controlada de relaciones en Prisma | API | Evita consultas N+1 |
 | Trabajos asíncronos para PDF y correo | BullMQ | Respuesta de la API sin esperar tareas lentas |
@@ -452,7 +472,7 @@ El diseño descansa en las siguientes suposiciones y servicios de terceros; las 
 | --- | --- | --- |
 | Equipo | Un solo desarrollador; horas semanales y fecha objetivo aún sin definir | El plan de la sección 13 se reordena por fases y se recortan productos |
 | Presupuesto | Planes gratuitos de hosting, base de datos y Redis | Arranques en frío y límites de uso; la demostración lo avisa |
-| Tasa de cambio | DolarAPI disponible y sin autenticación | Se usa la última tasa guardada y el ajuste manual del administrador |
+| Tasa de cambio | Cotizave disponible con su `X-API-Key` | Se usa la última tasa guardada y el ajuste manual del administrador |
 | Vuelos | Duffel en modo de prueba accesible desde Venezuela (sin verificar) | Vuelos con inventario propio, sin adaptador |
 | Hoteles | LiteAPI en sandbox accesible desde Venezuela (sin verificar) | Hoteles con inventario propio, sin adaptador |
 | Proveedores descartados | Amadeus Self-Service ya no opera | No aplica; no hay dependencia |

@@ -264,11 +264,12 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   k6 no está instalado en este entorno y su ejecución queda documentada, no simulada.
 - [ ] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.
   Prueba: informe de verificación con semáforo y M1/M2 anotados.
-- [ ] T-F1-17 Actualizar `docs/sdd/SDD.md` con las nueve desviaciones canónicas de `design.md` §15
-  (`tenant_settings`, `availability` por noche, `PARTIALLY_REFUNDED`,
-  `InvoiceProvider.issue(booking, payment?)`, `PENDING` interno, `idempotency_keys` sin `tenant_id` y
-  producto = tipo de habitación con `hotel_key`, sin tabla `hotels`).
-  Prueba: SDD §5 y §7 coinciden con las specs archivadas; sin cambios en D1–D15.
+- [x] T-F1-17 Actualizar `docs/sdd/SDD.md` con las nueve desviaciones canónicas de `design.md` §15
+  Evidencia: §5 (`tenant_settings`, `availability` por noche, `hotel_key`, `idempotency_keys`, estados de
+  pago), §6 (Cotizave y refresco perezoso), §7 (rutas `/admin/payments`, firma de `InvoiceProvider` y
+  `ExchangeRateProvider`), §11 y §13, más la tabla «Desviaciones canónicas aplicadas en F1» al final de
+  §7 con enlace a `design.md` §15. Prueba: SDD §5 y §7 coinciden con las specs de la change; sin
+  cambios en D1–D15.
 
 ## Notas heredadas de f0-foundations (siguen abiertas)
 
