@@ -10,11 +10,10 @@ export default defineConfig({
     // Limpieza propia de caribe_test antes y después de la corrida.
     globalSetup: ["./test/global-setup.ts"],
     testTimeout: 20_000,
-    // Bajo carga (suite completa + servidores de desarrollo) `createApp()` y
-    // `app.listen(0)` pueden superar 30 s; el archivo aislado pasa. 60 s evita
-    // el flake de `beforeAll` observado en api-errors, notifications y
-    // tenant-settings sin relajar los timeouts de las pruebas.
-    hookTimeout: 60_000,
+    // 30 s es suficiente cuando las pruebas NO llaman al proveedor real:
+    // setup-env.ts fuerza COTIZAVE_API_URL al stub local. No subir el timeout
+    // para enmascarar llamadas de red accidentales en los `beforeAll`.
+    hookTimeout: 30_000,
     // Los e2e comparten una sola base PostgreSQL y varios fijan estado global
     // (la tasa del día, el seed de demostración). En paralelo se pisan entre
     // archivos; en serie el estado de cada archivo queda aislado. Además evita

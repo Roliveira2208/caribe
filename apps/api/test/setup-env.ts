@@ -15,11 +15,13 @@ process.env.BETTER_AUTH_SECRET ??= "test-secret-no-usar-en-produccion-0123456789
 process.env.BETTER_AUTH_URL ??= "http://localhost:3002";
 process.env.TRUSTED_ORIGINS ??= "http://localhost:3000,http://localhost:3001";
 process.env.ALLOWED_IMAGE_HOSTS ??= "images.caribe.test";
-// Sin servidor real de tasas en pruebas: el proveedor falla rápido y cada e2e
-// que lo necesite levanta su propio servidor y fija COTIZAVE_API_URL antes de
-// crear la aplicación. La clave es un valor de prueba, nunca una real.
-process.env.COTIZAVE_API_URL ??= "http://127.0.0.1:9/rates";
-process.env.COTIZAVE_API_KEY ??= "ctz_live_test_no_usar";
+// Sin servidor real de tasas en pruebas: se FUERZA el stub local después de
+// cargar .env. Con `??=` las credenciales reales del entorno ganaban y cada
+// signIn lanzaba un refresco HTTP real (5 s + reintento + circuit breaker)
+// justo durante los beforeAll pesados; eso provocaba `Hook timed out`.
+// Los e2e que levantan su propio servidor sobreescriben la variable después.
+process.env.COTIZAVE_API_URL = "http://127.0.0.1:9/rates";
+process.env.COTIZAVE_API_KEY = "ctz_live_test_no_usar";
 // La caché de tasas de Redis sobrevive a la limpieza de `caribe_test`: una
 // corrida anterior podía dejar la tasa de hoy y hacer que el e2e de pagos no
 // llamara al proveedor. En pruebas se usa solo la caché en memoria, que muere
