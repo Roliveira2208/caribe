@@ -78,6 +78,25 @@
     "regenerating": "Generating…",
     "finish": "I saved my codes, continue"
   },
+  "organization": {
+    "title": "Choose your agency",
+    "description": "You have access to more than one agency. Select the one you want to work with.",
+    "label": "Agency",
+    "placeholder": "Select an agency",
+    "submit": "Continue",
+    "submitting": "Signing in…",
+    "selectError": "We could not activate the agency. Please try again.",
+    "loginTitle": "Sign in to open the dashboard",
+    "loginDescription": "You need an active session to view your agency.",
+    "loginAction": "Go to sign in",
+    "loadError": "We could not check your access. Please try again.",
+    "noMembershipTitle": "Your account has no agency",
+    "noMembershipDescription": "You can book and review your trips on the website.",
+    "webLink": "Go to the website",
+    "platformTitle": "Platform dashboard",
+    "platformDescription": "You are in platform mode, with no active agency. Access is read-only.",
+    "activeAgency": "Active agency: {agency}"
+  },
   "notFound": {
     "title": "Page not found",
     "description": "The route you are looking for does not exist or has changed.",

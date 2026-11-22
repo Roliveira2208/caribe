@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="1200" height="760" role="img" aria-labelledby="wf-title wf-desc">
+  <title id="wf-title">Organización activa en el panel — admin</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad para T-F1-9b: con una membresía se entra al panel, con varias se muestra un selector sin fijar agencia, con cero se muestra un mensaje con enlace a la web y el Super Admin entra en modo plataforma.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 18px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 700; }
+    .lbl { font-size: 12px; fill: #555; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1.2; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1.2; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1.2; }
+    .btn { font-size: 12px; font-weight: 600; }
+    .note { font-size: 11px; fill: #666; }
+  </style>
+
+  <text x="16" y="26" class="cap">Caribe Admin — organización activa · escritorio · wireframe de baja fidelidad · es / en</text>
+
+  <!-- Una membresía -->
+  <rect x="16" y="44" width="568" height="320" class="panel"/>
+  <text x="32" y="72" class="h1">Una membresía</text>
+  <rect x="32" y="92" width="536" height="40" class="box"/>
+  <text x="48" y="117" class="h2">Caribe Admin</text>
+  <text x="490" y="117" class="lbl">Admin · María P. · Agencia Sol ▾</text>
+  <text x="32" y="162" class="note">Tras iniciar sesión el servidor fija la única agencia y entra al panel.</text>
+  <rect x="32" y="184" width="536" height="148" class="box"/>
+  <text x="48" y="212" class="h2">Panel de administración</text>
+  <rect x="48" y="232" width="504" height="28" class="field"/>
+  <text x="60" y="251" class="lbl">Auditoría · últimas acciones de la agencia</text>
+  <rect x="48" y="272" width="504" height="44" class="field"/>
+  <text x="60" y="299" class="lbl">Tabla de auditoría</text>
+  <text x="32" y="356" class="note">Sin paso intermedio: la sesión queda con activeOrganizationId.</text>
+
+  <!-- Varias membresías -->
+  <rect x="616" y="44" width="568" height="320" class="panel"/>
+  <text x="632" y="72" class="h1">Varias membresías</text>
+  <rect x="632" y="92" width="536" height="40" class="box"/>
+  <text x="648" y="117" class="h2">Caribe Admin</text>
+  <text x="1090" y="117" class="lbl">Admin · María P. · Sin agencia</text>
+  <text x="632" y="162" class="note">El servidor NO fija ninguna agencia hasta que la persona elija.</text>
+  <rect x="632" y="184" width="536" height="148" class="box"/>
+  <text x="648" y="212" class="h2">Elige la agencia con la que trabajarás</text>
+  <rect x="648" y="232" width="504" height="32" class="field"/>
+  <text x="660" y="253" class="lbl">Agencia Sol · owner ▾</text>
+  <rect x="648" y="272" width="504" height="32" class="field"/>
+  <text x="660" y="293" class="lbl">Agencia Mar · admin ▾</text>
+  <rect x="1040" y="312" width="112" height="32" class="btnbox"/>
+  <text x="1096" y="333" class="btn" text-anchor="middle">Continuar</text>
+  <text x="632" y="356" class="note">Selector Ant Design, una sola acción; se rechaza una agencia ajena.</text>
+
+  <!-- Cero membresías -->
+  <rect x="16" y="396" width="568" height="320" class="panel"/>
+  <text x="32" y="424" class="h1">Cero membresías</text>
+  <rect x="32" y="444" width="536" height="40" class="box"/>
+  <text x="48" y="469" class="h2">Caribe Admin</text>
+  <text x="490" y="469" class="lbl">Cliente · sin agencia</text>
+  <rect x="32" y="504" width="536" height="132" class="box"/>
+  <text x="48" y="536" class="h2">Tu cuenta no tiene una agencia asociada</text>
+  <text x="48" y="562" class="lbl">Puedes reservar y consultar tus viajes en la web.</text>
+  <rect x="48" y="584" width="180" height="32" class="btnbox"/>
+  <text x="138" y="605" class="btn" text-anchor="middle">Ir a la web</text>
+  <text x="32" y="696" class="note">No se entra al panel. El enlace lleva a /es o /en según el idioma.</text>
+
+  <!-- Super Admin -->
+  <rect x="616" y="396" width="568" height="320" class="panel"/>
+  <text x="632" y="424" class="h1">Super Admin sin agencia</text>
+  <rect x="632" y="444" width="536" height="40" class="box"/>
+  <text x="648" y="469" class="h2">Caribe Admin</text>
+  <text x="1090" y="469" class="lbl">Super Admin · plataforma</text>
+  <rect x="632" y="504" width="536" height="132" class="box"/>
+  <text x="648" y="536" class="h2">Panel de plataforma</text>
+  <rect x="648" y="556" width="504" height="28" class="field"/>
+  <text x="660" y="575" class="lbl">Lectura de agencias, pagos y auditoría</text>
+  <text x="648" y="610" class="note">No hay agencia activa. Las operaciones de agencia siguen devolviendo 403.</text>
+  <text x="632" y="696" class="note">Modo plataforma solo lectura; no se puede elegir una agencia ajena.</text>
+</svg>

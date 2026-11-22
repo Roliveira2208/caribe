@@ -78,6 +78,25 @@
     "regenerating": "Generando…",
     "finish": "Ya guardé mis códigos, continuar"
   },
+  "organization": {
+    "title": "Elige tu agencia",
+    "description": "Tienes acceso a más de una agencia. Selecciona con cuál quieres trabajar.",
+    "label": "Agencia",
+    "placeholder": "Selecciona una agencia",
+    "submit": "Continuar",
+    "submitting": "Entrando…",
+    "selectError": "No se pudo activar la agencia. Inténtalo de nuevo.",
+    "loginTitle": "Inicia sesión para entrar al panel",
+    "loginDescription": "Necesitas una sesión activa para consultar tu agencia.",
+    "loginAction": "Ir a iniciar sesión",
+    "loadError": "No se pudo comprobar tu acceso. Inténtalo de nuevo.",
+    "noMembershipTitle": "Tu cuenta no tiene una agencia asociada",
+    "noMembershipDescription": "Puedes reservar y consultar tus viajes en la web.",
+    "webLink": "Ir a la web",
+    "platformTitle": "Panel de plataforma",
+    "platformDescription": "Estás en modo plataforma, sin una agencia activa. El acceso es de solo lectura.",
+    "activeAgency": "Agencia activa: {agency}"
+  },
   "notFound": {
     "title": "Página no encontrada",
     "description": "La ruta que buscas no existe o cambió.",

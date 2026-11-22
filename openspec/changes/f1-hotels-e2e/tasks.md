@@ -138,7 +138,7 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   responde 403 al revisor que es el propio pagador. Los reembolsos (`refunds`, estados
   `REFUNDED`/`PARTIALLY_REFUNDED`, `REFUND_ALREADY_ISSUED` y los escenarios de "Reembolso") pasan a
   T-F1-10.
-- [ ] T-F1-9b Admin: organización activa (una membresía auto, varias selector, cero sin panel, Super
+- [x] T-F1-9b Admin: organización activa (una membresía auto, varias selector, cero sin panel, Super
   Admin plataforma). Wireframe del selector aprobado antes de construir.
   Prueba: auth-access › "Organización activa en el panel".
 - [ ] T-F1-9c Admin: pantalla mínima de aprobación de pagos (`IN_REVIEW`, aprobar/rechazar con motivo).
