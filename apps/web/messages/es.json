@@ -35,6 +35,8 @@
     "typePackage": "Paquete",
     "typeFlight": "Vuelo",
     "comingSoon": "próximamente",
+    "comingSoonTitle": "Todavía no hay resultados",
+    "comingSoonDescription": "Esta categoría estará disponible próximamente. Mientras tanto, explora los hoteles publicados.",
     "minPrice": "Precio mínimo (USD)",
     "maxPrice": "Precio máximo (USD)",
     "priceError": "Revisa el rango de precio: usa decimales positivos y un mínimo menor o igual al máximo.",

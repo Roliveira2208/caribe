@@ -255,6 +255,12 @@ try {
   const homeForm = stagePage.locator("#search form");
   const homeAction = await homeForm.getAttribute("action");
   const homeFields = await homeForm.locator("input, select, button").count();
+  await homeForm
+    .locator("#search-destination option")
+    .nth(1)
+    .waitFor({ state: "attached", timeout: 8000 })
+    .catch(() => {});
+  const homeDestinationOptions = await homeForm.locator("#search-destination option").count();
   await stagePage.goto(`${baseUrl}/es/search`, { waitUntil: "load" });
   const searchForm = stagePage.locator("form[action='/es/search']").first();
   await searchForm.waitFor();
@@ -264,6 +270,27 @@ try {
   } else {
     console.log("OK   /es: buscador a 100vh con giro local y un solo formulario");
   }
+  if (homeDestinationOptions < 2) {
+    failures.push(`/es: la portada no ofrece los mismos destinos (${homeDestinationOptions})`);
+  } else {
+    console.log(`OK   /es: ${homeDestinationOptions} destinos compartidos con /search`);
+  }
+
+  // Un solo buscador: los enlaces de producto preseleccionan su tipo y las
+  // categorías sin catálogo siguen marcadas como próximamente (T-NAV-10).
+  for (const type of ["hotel", "tour", "package", "flight"]) {
+    await stagePage.goto(`${baseUrl}/es/search?type=${type}`, { waitUntil: "domcontentloaded" });
+    const typeSelect = stagePage.locator("#search-type");
+    await typeSelect.waitFor();
+    const selected = await typeSelect.inputValue();
+    const disabled = await typeSelect.locator("option[disabled]").count();
+    const soonOptions = await typeSelect.locator("option:not([disabled])").allInnerTexts();
+    if (selected !== type || disabled !== 0 || !soonOptions.some((text) => /próximamente/i.test(text))) {
+      failures.push(`/es/search?type=${type}: Preselección ${selected}, deshabilitadas ${disabled}`);
+    }
+  }
+  await stagePage.getByText("Todavía no hay resultados").waitFor({ timeout: 8000 });
+  console.log("OK   /es: tipos preseleccionados y categorías próximamente honestas");
   await stagePage.close();
 
   // Flecha del hero: ancla, foco por teclado y movimiento reducido.

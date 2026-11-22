@@ -32,6 +32,8 @@ const labels: SearchViewLabels = {
   typePackage: "Paquete",
   typeFlight: "Vuelo",
   comingSoon: "próximamente",
+  comingSoonTitle: "Todavía no hay resultados",
+  comingSoonDescription: "Esta categoría estará disponible próximamente.",
   minPrice: "Precio mínimo (USD)",
   maxPrice: "Precio máximo (USD)",
   priceError: "Revisa el rango de precio.",
@@ -112,6 +114,8 @@ describe("catalogInputFromParams", () => {
     const parsed = catalogInputFromParams(params);
 
     expect(parsed.invalidPrice).toBe(false);
+    expect(parsed.selectedType).toBe("tour");
+    expect(parsed.comingSoon).toBe(true);
     expect(parsed.input).toMatchObject({
       q: "café",
       destinationId: "dest-roques",
@@ -145,7 +149,15 @@ describe("catalogInputFromParams", () => {
       new URLSearchParams("maxPriceUsd=100&type=flight&fake=1&guests=0"),
     );
     expect(parsed.invalidPrice).toBe(false);
+    expect(parsed.selectedType).toBe("flight");
+    expect(parsed.comingSoon).toBe(true);
     expect(parsed.input).toEqual({ type: "hotel", maxPriceUsd: "100" });
+  });
+
+  it("preselecciona hotel y descarta tipos desconocidos", () => {
+    expect(catalogInputFromParams(new URLSearchParams()).selectedType).toBe("hotel");
+    expect(catalogInputFromParams(new URLSearchParams("type=unknown")).selectedType).toBe("hotel");
+    expect(catalogInputFromParams(new URLSearchParams("type=hotel")).comingSoon).toBe(false);
   });
 });
 
@@ -196,18 +208,30 @@ describe("SearchFormView", () => {
     expect(html).toContain("shadow-brand");
   });
 
-  it("muestra los cuatro tipos y deshabilita solo los que llegan en F2", () => {
+  it("muestra los cuatro tipos activos, marca los pendientes y respeta el preseleccionado", () => {
     const html = renderForm("en");
     const optionFor = (type: string): string =>
       html.match(new RegExp(`<option(?=[^>]*value="${type}")[^>]*>[^<]*</option>`))?.[0] ?? "";
-    for (const type of ["tour", "hotel", "package", "flight"]) {
+    for (const type of ["hotel", "tour", "package", "flight"]) {
       expect(optionFor(type)).not.toBe("");
+      expect(optionFor(type)).not.toContain("disabled");
     }
-    expect(optionFor("hotel")).not.toContain("disabled");
     for (const type of ["tour", "package", "flight"]) {
-      expect(optionFor(type)).toContain("disabled");
       expect(optionFor(type)).toContain(labels.comingSoon);
     }
+    expect(optionFor("hotel")).toContain("selected");
+
+    const preselected = renderToStaticMarkup(
+      createElement(SearchFormView, {
+        locale: "es",
+        destinations,
+        input: { type: "flight" },
+        labels,
+      }),
+    );
+    expect(
+      preselected.match(new RegExp(`<option(?=[^>]*value="flight")[^>]*>[^<]*</option>`))?.[0],
+    ).toContain("selected");
   });
 
   it("anuncia el rango de precio inválido", () => {
@@ -245,6 +269,22 @@ describe("SearchResultsView", () => {
     expect(html).toContain("$120.00");
     expect(html).toContain("$60.00");
     expect(html).not.toContain("VES");
+  });
+
+  it("anuncia las categorías próximamente sin tarjetas inventadas", () => {
+    const html = renderToStaticMarkup(
+      createElement(SearchResultsView, {
+        page: null,
+        status: "ready",
+        locale: "es",
+        labels,
+        rateDate: null,
+        comingSoon: true,
+      }),
+    );
+    expect(html).toContain(labels.comingSoonTitle);
+    expect(html).toContain(labels.comingSoonDescription);
+    expect(html).not.toContain("href=\"/es/hotels/");
   });
 
   it("el estado vacío es anunciable y no renderiza tarjetas", () => {

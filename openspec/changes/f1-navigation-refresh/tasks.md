@@ -33,7 +33,7 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenarios «Contraste AA verificable» de `specs/web-ui/spec.md`; capturas claras y oscuras en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-9 Hacer real «Iniciar sesión» y construir `/account/trips` con reservas de `GET /api/v1/bookings`, estados accesibles y nota honesta sobre documentos.
   Prueba: escenarios «Acceso del cliente a sus viajes» de `specs/web-ui/spec.md`; capturas de login y Mis viajes en escritorio y móvil; lint, typecheck y tests en verde.
-- [ ] T-NAV-10 Unificar el buscador de `/search` con el del hero mediante el componente compartido, conservando las tarjetas de resultados.
+- [x] T-NAV-10 Unificar el buscador de `/search` con el del hero mediante el componente compartido, conservando las tarjetas de resultados.
   Prueba: escenario «Un solo buscador» de `specs/web-ui/spec.md`; capturas de búsqueda en escritorio y móvil; lint, typecheck y tests en verde.
 - [ ] T-NAV-11 Verificación final de la change: revisar capturas, ejecutar los verificadores de navegación y contraste, lint, typecheck y tests completos, y documentar la evidencia en `verify.md`.
   Prueba: todos los escenarios de `specs/web-ui/spec.md` con evidencia; `node scripts/check-specs.mjs` en verde.

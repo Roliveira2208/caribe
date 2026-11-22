@@ -1,4 +1,4 @@
-import type { CatalogSearchInput } from "./catalog-view";
+import { buildCatalogQuery, type CatalogSearchInput } from "./catalog-view";
 
 /**
  * Lectura y validación de la URL de `/[locale]/search` (change
@@ -12,8 +12,17 @@ export interface ParamSource {
   get(name: string): string | null;
 }
 
+/** Tipos que el buscador sabe preseleccionar; solo `hotel` tiene catálogo en F1. */
+export const SEARCH_TYPES = ["hotel", "tour", "package", "flight"] as const;
+export type SearchType = (typeof SEARCH_TYPES)[number];
+
 export interface ParsedSearchInput {
+  /** Filtros seguros para `GET /products` (siempre `type=hotel`). */
   input: CatalogSearchInput;
+  /** Tipo elegido en el formulario, incluidas las categorías próximamente. */
+  selectedType: SearchType;
+  /** true cuando la categoría elegida todavía no tiene datos. */
+  comingSoon: boolean;
   invalidPrice: boolean;
 }
 
@@ -68,9 +77,9 @@ function validPrice(value: string | undefined): boolean {
 }
 
 /**
- * Construye la query de la API desde la URL. `type` siempre es `hotel`: los
- * otros tipos están deshabilitados en F1 y el esquema de la API solo acepta
- * `hotel`, así que un valor manipulado en la URL no provoca un 422.
+ * Construye la query de la API desde la URL. `input.type` siempre es `hotel`
+ * porque el esquema de la API solo acepta ese valor; `selectedType` conserva la
+ * categoría elegida en el formulario para preseleccionarla sin provocar un 422.
  */
 export function catalogInputFromParams(params: ParamSource): ParsedSearchInput {
   const guests = text(params, "guests");
@@ -78,6 +87,9 @@ export function catalogInputFromParams(params: ParamSource): ParsedSearchInput {
     guests !== undefined && GUESTS_TEXT.test(guests) && Number(guests) >= 1 && Number(guests) <= 20;
 
   const input: CatalogSearchInput = { type: "hotel" };
+  const requestedType = text(params, "type");
+  const selectedType: SearchType = SEARCH_TYPES.find((type) => type === requestedType) ?? "hotel";
+  const comingSoon = selectedType !== "hotel";
   const q = text(params, "q");
   const destinationId = text(params, "destinationId");
   const checkIn = text(params, "checkIn");
@@ -107,7 +119,13 @@ export function catalogInputFromParams(params: ParamSource): ParsedSearchInput {
     if (max !== undefined) input.maxPriceUsd = max;
   }
 
-  return { input, invalidPrice };
+  return { input, selectedType, comingSoon, invalidPrice };
+}
+
+/** Construye la URL de la API para una búsqueda concreta. */
+export function searchApiUrl(input: CatalogSearchInput, limit = 20): string {
+  const query = buildCatalogQuery({ ...input, limit });
+  return query ? `/api/v1/products?${query}` : "/api/v1/products";
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

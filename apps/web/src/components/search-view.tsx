@@ -1,17 +1,18 @@
 import type { Locale } from "@caribe/shared";
 import { localizedPath } from "@/lib/localized-path";
 import {
-  buildCatalogQuery,
   formatUsd,
   formatVes,
   formatValueDate,
   localizedText,
   type CatalogSearchInput,
 } from "@/lib/catalog-view";
+import type { SearchViewLabels } from "@/lib/search-labels";
 import type { CatalogDestinationView, CatalogOfferView, CatalogPageView } from "@/lib/search-view";
-import { SearchPanel, type SearchViewLabels } from "./search-panel";
+import { SearchPanel } from "./search-panel";
 
-export type { SearchViewLabels } from "./search-panel";
+export type { SearchViewLabels } from "@/lib/search-labels";
+export { searchApiUrl } from "@/lib/search-view";
 
 /**
  * Vista de busqueda (change f1-visual-identity). Las piezas exportadas son
@@ -33,6 +34,8 @@ interface SearchResultsProps {
   labels: SearchViewLabels;
   /** Fecha valor de la tasa global; `null` cuando no hay tasa. */
   rateDate: string | null;
+  /** Categoría sin catálogo todavía: se anuncia sin inventar resultados. */
+  comingSoon?: boolean;
 }
 
 /** Buscador y filtros: reutiliza el panel de la portada sin revelacion. */
@@ -118,6 +121,7 @@ export function SearchResultsView({
   locale,
   labels,
   rateDate,
+  comingSoon = false,
 }: SearchResultsProps) {
   if (status === "loading") {
     return (
@@ -131,6 +135,18 @@ export function SearchResultsView({
       <p role="alert" className="rounded-md border border-coral/30 bg-coral/5 p-4 text-coral-ink">
         {labels.error}
       </p>
+    );
+  }
+  if (comingSoon) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="space-y-1 rounded-lg border border-dashed border-ink/25 p-8 text-center"
+      >
+        <p className="font-display text-h4 text-ink">{labels.comingSoonTitle}</p>
+        <p className="text-sm text-ink/70">{labels.comingSoonDescription}</p>
+      </div>
     );
   }
   if (!page || page.items.length === 0) {
@@ -160,10 +176,4 @@ export function SearchResultsView({
       </ul>
     </div>
   );
-}
-
-/** Construye la URL de la API para una busqueda concreta. */
-export function searchApiUrl(input: CatalogSearchInput, limit = 20): string {
-  const query = buildCatalogQuery({ ...input, limit });
-  return query ? `/api/v1/products?${query}` : "/api/v1/products";
 }

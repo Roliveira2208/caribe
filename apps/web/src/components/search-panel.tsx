@@ -1,35 +1,10 @@
 import type { Locale } from "@caribe/shared";
 import { localizedPath } from "@/lib/localized-path";
 import { localizedText, type CatalogSearchInput } from "@/lib/catalog-view";
+import type { SearchViewLabels } from "@/lib/search-labels";
 import type { CatalogDestinationView } from "@/lib/search-view";
 
-/** Textos del buscador, ya traducidos por la pagina que lo monta. */
-export interface SearchViewLabels {
-  title: string;
-  subtitle: string;
-  anyDestination: string;
-  destination: string;
-  checkIn: string;
-  checkOut: string;
-  guests: string;
-  type: string;
-  typeTour: string;
-  typeHotel: string;
-  typePackage: string;
-  typeFlight: string;
-  comingSoon: string;
-  minPrice: string;
-  maxPrice: string;
-  priceError: string;
-  search: string;
-  results: string;
-  loading: string;
-  error: string;
-  emptyTitle: string;
-  emptyDescription: string;
-  viewDetail: string;
-  rateLabel: string;
-}
+export type { SearchViewLabels } from "@/lib/search-labels";
 
 interface SearchPanelProps {
   locale: Locale;
@@ -130,15 +105,20 @@ export function SearchPanel({
         <label className={LABEL_CLASSES} htmlFor="search-type">
           {labels.type}
         </label>
-        <select id="search-type" name="type" defaultValue="hotel" className={FIELD_CLASSES}>
-          <option value="tour" disabled>
+        <select
+          id="search-type"
+          name="type"
+          defaultValue={input.type ?? "hotel"}
+          className={FIELD_CLASSES}
+        >
+          <option value="hotel">{labels.typeHotel}</option>
+          <option value="tour">
             {labels.typeTour} ({labels.comingSoon})
           </option>
-          <option value="hotel">{labels.typeHotel}</option>
-          <option value="package" disabled>
+          <option value="package">
             {labels.typePackage} ({labels.comingSoon})
           </option>
-          <option value="flight" disabled>
+          <option value="flight">
             {labels.typeFlight} ({labels.comingSoon})
           </option>
         </select>

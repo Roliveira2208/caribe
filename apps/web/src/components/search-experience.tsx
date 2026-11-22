@@ -7,17 +7,12 @@ import { useSearchParams } from "next/navigation";
 import { parseTodayRateView } from "@/lib/today-rate";
 import {
   catalogInputFromParams,
-  extractDestinations,
   parseCatalogPageView,
-  type CatalogDestinationView,
   type CatalogPageView,
 } from "@/lib/search-view";
-import {
-  SearchFormView,
-  SearchResultsView,
-  searchApiUrl,
-  type SearchViewLabels,
-} from "./search-view";
+import { searchViewLabels } from "@/lib/search-labels";
+import { useCatalogDestinations } from "@/lib/use-catalog-destinations";
+import { SearchFormView, SearchResultsView, searchApiUrl } from "./search-view";
 
 type LoadStatus = "loading" | "error" | "ready";
 
@@ -25,37 +20,11 @@ type LoadStatus = "loading" | "error" | "ready";
 export function SearchExperience({ locale }: { locale: Locale }) {
   const t = useTranslations("search");
   const params = useSearchParams();
-  const { input, invalidPrice } = catalogInputFromParams(params);
+  const { input, selectedType, comingSoon, invalidPrice } = catalogInputFromParams(params);
   const resultsUrl = searchApiUrl(input);
+  const labels = searchViewLabels(t);
+  const destinations = useCatalogDestinations();
 
-  const labels: SearchViewLabels = {
-    title: t("title"),
-    subtitle: t("subtitle"),
-    anyDestination: t("anyDestination"),
-    destination: t("destination"),
-    checkIn: t("checkIn"),
-    checkOut: t("checkOut"),
-    guests: t("guests"),
-    type: t("type"),
-    typeTour: t("typeTour"),
-    typeHotel: t("typeHotel"),
-    typePackage: t("typePackage"),
-    typeFlight: t("typeFlight"),
-    comingSoon: t("comingSoon"),
-    minPrice: t("minPrice"),
-    maxPrice: t("maxPrice"),
-    priceError: t("priceError"),
-    search: t("search"),
-    results: t("results"),
-    loading: t("loading"),
-    error: t("error"),
-    emptyTitle: t("emptyTitle"),
-    emptyDescription: t("emptyDescription"),
-    viewDetail: t("viewDetail"),
-    rateLabel: t("rateLabel"),
-  };
-
-  const [destinations, setDestinations] = useState<CatalogDestinationView[]>([]);
   const [rateDate, setRateDate] = useState<string | null>(null);
   const [page, setPage] = useState<CatalogPageView | null>(null);
   const [status, setStatus] = useState<LoadStatus>("loading");
@@ -76,24 +45,14 @@ export function SearchExperience({ locale }: { locale: Locale }) {
     return () => controller.abort();
   }, []);
 
-  // No hay endpoint de destinos en F1: se derivan de una lectura acotada del
-  // propio catálogo (design.md, decisión 4).
   useEffect(() => {
     const controller = new AbortController();
-    fetch(searchApiUrl({ type: "hotel", limit: 50 }, 50), { signal: controller.signal })
-      .then(async (response) => (response.ok ? parseCatalogPageView(await response.json()) : null))
-      .then((catalog) => {
-        if (controller.signal.aborted || !catalog) return;
-        setDestinations(extractDestinations(catalog.items));
-      })
-      .catch(() => {
-        // El selector sigue siendo usable con la opción "todos los destinos".
-      });
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
+    // Las categorías sin datos no se envían a una API que solo acepta hotel.
+    if (comingSoon) {
+      setPage(null);
+      setStatus("ready");
+      return;
+    }
     setStatus("loading");
 
     const load = async (): Promise<void> => {
@@ -119,14 +78,14 @@ export function SearchExperience({ locale }: { locale: Locale }) {
 
     void load();
     return () => controller.abort();
-  }, [resultsUrl]);
+  }, [comingSoon, resultsUrl]);
 
   return (
     <div className="w-full space-y-6">
       <SearchFormView
         locale={locale}
         destinations={destinations}
-        input={input}
+        input={{ ...input, type: selectedType }}
         labels={labels}
         priceError={invalidPrice}
       />
@@ -136,6 +95,7 @@ export function SearchExperience({ locale }: { locale: Locale }) {
         locale={locale}
         labels={labels}
         rateDate={rateDate}
+        comingSoon={comingSoon}
       />
     </div>
   );

@@ -35,6 +35,8 @@
     "typePackage": "Package",
     "typeFlight": "Flight",
     "comingSoon": "coming soon",
+    "comingSoonTitle": "No results yet",
+    "comingSoonDescription": "This category will be available soon. In the meantime, explore published stays.",
     "minPrice": "Minimum price (USD)",
     "maxPrice": "Maximum price (USD)",
     "priceError": "Check the price range: use positive decimals and a minimum no greater than the maximum.",
