@@ -69,13 +69,25 @@ agrupan los enlaces de productos, el badge, el selector y la sesión. En móvil 
 despliega el mismo contenido debajo de la barra. El `scroll-margin-top` de las anclas se mantiene
 para que la barra flotante no tape los encabezados. La barra conserva `inset-inline` en móvil para
 no pegarse a los bordes; el botón móvil pasa a un SVG de hamburgesa con `aria-label` traducido y
-`aria-expanded`, y el icono se transforma en cruz al abrir. El contenido desplegado sigue apilado en
-vertical. La superficie añade un borde de 1px con mayor opacidad y un realce interior (`inset 0 1px
-0`) tipo glass de iOS; el fondo se mantiene sobre `ink` para no romper el contraste AA.
+`aria-expanded`, y el icono se transforma en cruz al abrir. El contenido desplegado apila cada
+producto, la tasa, el idioma y cada acción de sesión en una fila propia a ancho completo; se anula el
+`flex-wrap` de escritorio dentro del menú para que nunca queden dos ítems en la misma línea. La
+superficie añade un borde de 1px con mayor opacidad y un realce interior (`inset 0 1px 0`) tipo glass
+de iOS; el fondo se mantiene sobre `ink` para no romper el contraste AA.
 
-Las flechas de sección mantienen el ancla nativa y `scroll-behavior: smooth`, pero añaden un estado
-`:active` visible y una animación suave del icono que se detiene con `prefers-reduced-motion`. El
-tamaño mínimo es 44x44px y la separación inferior respeta `env(safe-area-inset-bottom)`.
+El hero reserva `padding-top` suficiente para que el título no quede bajo la barra flotante. En
+viewports de hasta 700px de alto se compactan el espaciado del contenido, la altura de la
+composición cinética y el relleno vertical de las secciones, de modo que la CTA quede por encima de
+la flecha y los encabezados no se tapen al navegar con las anclas. `scroll-margin-top` sigue
+compensando la cabecera en los destinos de las flechas.
+
+Las flechas de sección mantienen el ancla nativa y `scroll-behavior: smooth`. Al pulsarlas, el
+control baja unos píxeles mediante una transición de `transform: translateY` con la curva compartida
+y vuelve a subir al liberarse; no se usa `scale`, onda de impacto ni ningún cambio brusco de tamaño.
+El timer del estado pulsado dura más que la transición para que el descenso se complete antes de
+volver. Con `prefers-reduced-motion` se conserva solo el cambio de fondo del estado pulsado, sin
+desplazamiento. El tamaño mínimo es 44x44px y la separación inferior respeta
+`env(safe-area-inset-bottom)`.
 
 `LanguageSwitcher` es un desplegable accesible (`button[role=combobox]` + `ul[role=listbox]`)
 con dos banderas SVG locales en `public/images/flags/` (Venezuela para `es`, Estados Unidos para

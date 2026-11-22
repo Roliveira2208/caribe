@@ -39,7 +39,13 @@ Una tarea a la vez. Capturas de escritorio y móvil antes de cada commit en
   Prueba: escenarios «Acceso del cliente a sus viajes» de `specs/web-ui/spec.md`; capturas de login y Mis viajes en escritorio y móvil; lint, typecheck y tests en verde.
 - [x] T-NAV-10 Unificar el buscador de `/search` con el del hero mediante el componente compartido, conservando las tarjetas de resultados.
   Prueba: escenario «Un solo buscador» de `specs/web-ui/spec.md`; capturas de búsqueda en escritorio y móvil; lint, typecheck y tests en verde.
-- [x] T-NAV-11 Verificación final de la change: revisar capturas, ejecutar los verificadores de navegación y contraste, lint, typecheck y tests completos, y documentar la evidencia en `verify.md`.
+- [x] T-NAV-19 Sustituir el “golpe” de la flecha al pulsarla por un descenso suave con `translateY`, sin escala ni onda, conservando la degradación con movimiento reducido.
+  Prueba: escenario «Pulsación de la flecha» de `specs/web-ui/spec.md`; `verify:navigation`; captura de portada en móvil con el estado pulsado; lint, typecheck y tests en verde.
+- [x] T-NAV-20 Apilar cada ítem del menú móvil en una fila completa: productos, tasa, idioma y acciones de sesión.
+  Prueba: escenario «Menú vertical» de `specs/web-ui/spec.md`; `verify:navigation` comprobando posiciones; capturas de cabecera abierta en móvil; lint, typecheck y tests en verde.
+- [x] T-NAV-21 Ajustar el contenido de las secciones al viewport: hero sin solapamiento con la cabecera ni la flecha y espaciado compacto en pantallas bajas.
+  Prueba: escenarios «Hero sin solapamiento» y «Secciones en pantalla baja» de `specs/web-ui/spec.md`; `verify:navigation` con 390x844 y 360x640; capturas de portada en móvil; lint, typecheck y tests en verde.
+- [ ] T-NAV-11 Verificación final de la change: revisar capturas, ejecutar los verificadores de navegación y contraste, lint, typecheck y tests completos, y documentar la evidencia en `verify.md`.
   Prueba: todos los escenarios de `specs/web-ui/spec.md` con evidencia; `node scripts/check-specs.mjs` en verde.
 
 ## Notas

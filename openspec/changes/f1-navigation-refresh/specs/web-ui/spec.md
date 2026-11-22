@@ -203,7 +203,7 @@ fondo de color parecido, sin perder contraste AA.
 #### Scenario: Menú vertical
 - GIVEN el menú móvil cerrado
 - WHEN se activa el botón de hamburgesa
-- THEN las opciones de producto, sesión, idioma y tasa aparecen apiladas en vertical
+- THEN cada producto, la tasa, el idioma y cada acción de sesión ocupa su propia fila, a ancho completo, sin quedar varios ítems en la misma línea
 - THEN el botón cambia su estado accesible y el icono pasa a cerrar
 
 #### Scenario: Borde de glass
@@ -221,14 +221,32 @@ pequeñas SHALL permanecer dentro del viewport y por encima de la zona segura in
 #### Scenario: Pulsación de la flecha
 - GIVEN una flecha de bajada visible
 - WHEN se pulsa
-- THEN el control cambia de estado visual y el desplazamiento hacia la sección es gradual
-- THEN con movimiento reducido el salto es inmediato pero el estado pulsado sigue siendo visible
+- THEN el control desciende de forma gradual con una transición de transform, sin escalas bruscas ni ondas de impacto, y vuelve a su sitio con la misma suavidad
+- THEN el desplazamiento hacia la sección sigue siendo gradual
+- THEN con movimiento reducido el salto es inmediato, el control no se desplaza pero el estado pulsado sigue siendo visible mediante el fondo
 
 #### Scenario: Flecha en móvil
 - GIVEN una ventana de 360x640
 - WHEN se muestra una flecha de bajada
 - THEN el control mide al menos 44x44px y queda dentro del viewport
 - THEN no queda tapado por la zona segura inferior del dispositivo
+
+### Requirement: Contenido ajustado al viewport
+
+Cada sección de la portada SHALL reservar espacio para la cabecera flotante y para el gesto de
+bajada, sin recortar ni tapar textos o acciones en pantallas estrechas o bajas.
+
+#### Scenario: Hero sin solapamiento
+- GIVEN la portada a 390x844 y a 360x640
+- WHEN se renderiza el hero
+- THEN el título y el subtítulo empiezan por debajo de la barra de la cabecera
+- THEN la CTA del hero queda por encima de la flecha de bajada, sin solaparse con ella
+
+#### Scenario: Secciones en pantalla baja
+- GIVEN una ventana de 360x640
+- WHEN se recorren búsqueda, destacados y cierre
+- THEN sus encabezados y acciones quedan dentro del área útil, sin quedar tapados por la cabecera ni por la flecha
+- THEN el contenido se compacta con alturas y espaciados reducidos en lugar de salirse del viewport
 
 ### Requirement: Contraste AA verificable
 
