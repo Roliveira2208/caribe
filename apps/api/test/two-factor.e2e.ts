@@ -951,6 +951,13 @@ const NON_ADMIN_NEST_ROUTES: readonly NonAdminNestRoute[] = [
   },
   {
     method: "GET",
+    path: "bookings/:id/documents",
+    justification: "self-service",
+    reason:
+      "Listado autenticado de documentos de la reserva propia o de la agencia activa; una ajena responde 404 (spec documents, 'Listado autenticado de documentos de una reserva').",
+  },
+  {
+    method: "GET",
     path: "documents/:id/download",
     justification: "self-service",
     reason:

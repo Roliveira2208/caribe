@@ -318,7 +318,11 @@ describe("products admin", () => {
   });
 
   afterAll(async () => {
-    await prisma.organization.deleteMany({ where: { id: { in: [orgA, orgB] } } });
+    // Si el hook de arranque agota el timeout, orgA/orgB quedan sin asignar:
+    // no convertir ese fallo en un error de Prisma que lo oculte.
+    if (orgA && orgB) {
+      await prisma.organization.deleteMany({ where: { id: { in: [orgA, orgB] } } });
+    }
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     await prisma.$disconnect();
     await app?.close();
