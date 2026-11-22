@@ -213,10 +213,14 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   `jobs` (calendario y despacho del barrido).
 - [x] T-F1-13a Web: buscador y resultados. Wireframe aprobado antes de construir.
   Prueba: catalog › "Búsqueda y filtros".
-- [ ] T-F1-13b Web: detalle del hotel. Wireframe aprobado antes de construir.
+- [x] T-F1-13b Web: detalle del hotel. Wireframe aprobado antes de construir.
   Prueba: catalog › "Detalle y disponibilidad públicos".
-- [ ] T-F1-13c Web: checkout (viajero y moneda). Wireframe aprobado antes de construir.
+  Evidencia: `docs/wireframes/detalle.svg`; `apps/web/test/detail-view.test.ts`; capturas `detail-*.png`
+  en `openspec/changes/archive/2026-11-22-f1-visual-identity/verify.md` (sección 1 y matriz).
+- [x] T-F1-13c Web: checkout (viajero y moneda). Wireframe aprobado antes de construir.
   Prueba: booking › "Hay cupo en todas las noches" y "Reserva sin viajeros".
+  Evidencia: `docs/wireframes/checkout.svg`; `apps/web/test/checkout-view.test.ts`; capturas
+  `checkout-*.png` en `openspec/changes/archive/2026-11-22-f1-visual-identity/verify.md`.
 - [ ] T-F1-13d Web: pago con cuenta regresiva y métodos. Wireframe aprobado antes de construir.
   Prueba: payments › "Pago en VES por Pago Móvil" y "Datos por método de pago".
 - [ ] T-F1-13e Web: confirmación con voucher/comprobante. Wireframe aprobado antes de construir.
