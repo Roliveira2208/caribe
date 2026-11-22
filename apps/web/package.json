@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "test:e2e": "playwright test --config=playwright.f1.config.ts",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
     "verify:navigation": "node scripts/verify-navigation.mjs",
     "verify:contrast": "node scripts/verify-contrast.mjs"

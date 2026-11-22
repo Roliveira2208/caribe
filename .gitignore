@@ -9,5 +9,8 @@ coverage/
 .turbo/
 *.log
 *.tsbuildinfo
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/f1-hotels-e2e-results.json
 artifacts-*.txt
 .claude/settings.local.json

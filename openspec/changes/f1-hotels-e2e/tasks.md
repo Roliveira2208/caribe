@@ -252,8 +252,16 @@ Requiere `f0-foundations` archivada. Una tarea a la vez, un commit por tarea.
   Pruebas: `apps/web/test/booking-detail-view.test.ts` (7 casos, incluidos confirmación, bloqueo por
   pago en revisión, sin enlaces falsos y sin acciones en error), e2e de API `cancellations.e2e.ts` y
   `documents-download.e2e.ts`/`two-factor.e2e.ts` ya cubiertos; web lint/typecheck/test en verde.
-- [ ] T-F1-15 Prueba e2e del flujo completo (Playwright) y prueba k6 de búsqueda y reserva.
+- [x] T-F1-15 Prueba e2e del flujo completo (Playwright) y prueba k6 de búsqueda y reserva.
   Prueba: recorrido buscar → reservar → pagar → descargar, más concurrencia de cupo.
+  Evidencia: `apps/web/e2e/f1-hotels-e2e.spec.ts` + `playwright.f1.config.ts` y script
+  `test:e2e`: 2/2 en verde contra catálogo, disponibilidad y tasa reales; verifica cuerpo de pago sin
+  datos de tarjeta/montos/tasas, ausencia de enlaces falsos, política congelada y documento `READY`
+  descargable. `docs/plans/f1-hotels-e2e-verification.md` registra la corrida y el fallo i18n
+  detectado y corregido en `booking-detail-panel.tsx` (`t.raw` para plantillas con marcadores).
+  Concurrencia real: `apps/api/test/bookings.e2e.ts` › «crea exactamente una reserva cuando dos
+  clientes compiten por el último cupo». `scripts/k6/f1-hotels-e2e.js` entregado para carga manual;
+  k6 no está instalado en este entorno y su ejecución queda documentada, no simulada.
 - [ ] T-F1-16 Verificación: `/verify f1-hotels-e2e` en conversación limpia; `/security-review`; archivar.
   Prueba: informe de verificación con semáforo y M1/M2 anotados.
 - [ ] T-F1-17 Actualizar `docs/sdd/SDD.md` con las nueve desviaciones canónicas de `design.md` §15
