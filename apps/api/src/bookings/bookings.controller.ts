@@ -12,10 +12,7 @@ import {
 } from "@nestjs/common";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
-import {
-  activeMembershipOf,
-  type ActiveMembershipRequest,
-} from "../tenant/active-membership.js";
+import type { ActiveMembershipRequest } from "../tenant/active-membership.js";
 import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import {
   BookingPermission,
@@ -74,31 +71,33 @@ export class BookingsController {
   }
 
   @Get()
+  @UseGuards(BookingsGuard)
+  @BookingPermission("read")
   async list(
-    @Req() request: AuthenticatedRequest,
+    @Req() request: BookingsRequest,
     @Query(new ZodValidationPipe(listBookingsQuerySchema)) query: ListBookingsQuery,
   ): Promise<BookingPage> {
-    const { userId } = requireSession(request);
-    const membership = await activeMembershipOf(request);
+    const actor = bookingActorOf(request);
     return this.bookingsService.list({
-      userId,
-      activeOrganizationId: membership?.organizationId ?? null,
-      membershipRole: membership?.role ?? null,
+      userId: actor.userId,
+      activeOrganizationId: actor.tenantId,
+      membershipRole: actor.membershipRole,
       query,
     });
   }
 
   @Get(":id")
+  @UseGuards(BookingsGuard)
+  @BookingPermission("read")
   async detail(
-    @Req() request: AuthenticatedRequest,
+    @Req() request: BookingsRequest,
     @Param("id") bookingId: string,
   ): Promise<BookingDetailResponse> {
-    const { userId } = requireSession(request);
-    const membership = await activeMembershipOf(request);
+    const actor = bookingActorOf(request);
     return this.bookingsService.detail({
-      userId,
-      activeOrganizationId: membership?.organizationId ?? null,
-      membershipRole: membership?.role ?? null,
+      userId: actor.userId,
+      activeOrganizationId: actor.tenantId,
+      membershipRole: actor.membershipRole,
       bookingId,
     });
   }

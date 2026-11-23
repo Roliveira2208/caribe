@@ -1,7 +1,7 @@
 import { type CanActivate, type ExecutionContext, Injectable, SetMetadata } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Role } from "better-auth/plugins/access";
-import { adminRole, ownerRole } from "../access.js";
+import { adminRole, agentRole, ownerRole, providerRole } from "../access.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import {
   activeMembershipOf,
@@ -21,14 +21,18 @@ import { isPlatformRole } from "../tenant/tenant-context.js";
  *   dueño decidió que puede cancelar como cliente).
  * - miembro sin rol de negocio: solo las propias.
  * - proveedor: 403; no cancela reservas.
- * - Super Admin sin agencia: 403; es de solo lectura en reservas.
+ * - Super Admin sin agencia: 403 al cancelar; sí consulta (solo lectura).
  * - cliente sin agencia: solo las propias.
+ *
+ * Las rutas de lectura declaran `read`: con agencia activa solo pasan los roles
+ * con `booking:read`; un `member` sin ese permiso recibe 403 en lugar de caer al
+ * alcance de cliente (fallo cerrado, NUEVO-01).
  *
  * Sin agencia y sin rol de plataforma el actor es el cliente. La propiedad de
  * la fila la comprueba el servicio: una reserva ajena responde 404.
  */
 
-export type BookingAccess = "cancel";
+export type BookingAccess = "read" | "cancel";
 
 /** Clave de metadata del decorador @BookingPermission. */
 export const BOOKING_ACCESS_KEY = "caribe:booking-access";
@@ -62,6 +66,8 @@ export interface BookingsRequest extends ActiveMembershipRequest {
 const AGENCY_BOOKING_ROLES: Record<string, Role> = {
   owner: ownerRole,
   admin: adminRole,
+  agent: agentRole,
+  provider: providerRole,
 };
 
 @Injectable()
@@ -84,9 +90,24 @@ export class BookingsGuard implements CanActivate {
     const membership = await activeMembershipOf(request);
     if (membership) {
       const organizationId = membership.organizationId;
+      const role = AGENCY_BOOKING_ROLES[membership.role];
+      const canReadAgency = role?.authorize({ booking: ["read"] }).success === true;
+
+      if (access === "read") {
+        if (!canReadAgency) {
+          throw forbidden("Tu rol no puede consultar reservas.");
+        }
+        request.bookingActor = {
+          tenantId: organizationId,
+          userId: session.user.id,
+          membershipRole: membership.role as MembershipRole,
+          canCancelAgency: membership.role === "owner" || membership.role === "admin",
+          isPlatform: false,
+        };
+        return true;
+      }
 
       if (membership.role === "owner" || membership.role === "admin") {
-        const role = AGENCY_BOOKING_ROLES[membership.role];
         if (!role || !role.authorize({ booking: ["cancel"] }).success) {
           throw forbidden("Tu rol no puede cancelar reservas.");
         }
@@ -116,6 +137,16 @@ export class BookingsGuard implements CanActivate {
     }
 
     if (isPlatformRole(session.user.role)) {
+      if (access === "read") {
+        request.bookingActor = {
+          tenantId: null,
+          userId: session.user.id,
+          membershipRole: null,
+          canCancelAgency: false,
+          isPlatform: true,
+        };
+        return true;
+      }
       throw forbidden("El Super Admin no cancela reservas.");
     }
 
