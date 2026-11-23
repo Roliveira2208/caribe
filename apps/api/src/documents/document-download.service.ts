@@ -2,6 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { readFile } from "node:fs/promises";
 import { apiConfig } from "../config.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
+import type { Prisma } from "../generated/prisma/client.js";
+import { providerScope } from "../tenant/provider-scope.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import type { DocumentActor } from "./documents.guard.js";
 import { resolveDocumentPath } from "./document-path.js";
@@ -31,23 +33,39 @@ export class DocumentDownloadService {
   async download(actor: DocumentActor, documentId: string): Promise<DownloadedDocument> {
     const tenantId = actor.tenantId;
     const document = tenantId
-      ? await this.tenants.withOwnerTenant(actor.userId, tenantId, (tx) =>
-          tx.document.findFirst({
-            where: {
-              id: documentId,
-              OR: [
-                { tenantId },
-                { booking: { userId: actor.userId } },
-              ],
-            },
+      ? await this.tenants.withOwnerTenant(actor.userId, tenantId, async (tx) => {
+          const scope = await providerScope(tx, {
+            tenantId,
+            membershipRole: actor.membershipRole,
+            userId: actor.userId,
+          });
+          // El dueño siempre puede descargar sus documentos; la rama de agencia
+          // se acota al inventario del proveedor (o se omite si no tiene fila).
+          const ownership: Prisma.DocumentWhereInput[] = [
+            { booking: { userId: actor.userId } },
+          ];
+          if (scope.kind !== "none") {
+            ownership.unshift({
+              tenantId,
+              ...(scope.kind === "provider"
+                ? {
+                    booking: {
+                      items: { some: { product: { providerId: scope.providerId } } },
+                    },
+                  }
+                : {}),
+            });
+          }
+          return tx.document.findFirst({
+            where: { id: documentId, OR: ownership },
             select: {
               type: true,
               number: true,
               status: true,
               fileUrl: true,
             },
-          }),
-        )
+          });
+        })
       : await this.tenants.withOwner(actor.userId, (tx) =>
           tx.document.findFirst({
             where: { id: documentId, booking: { userId: actor.userId } },

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "../generated/prisma/client.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
+import { providerScope } from "../tenant/provider-scope.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import type { DocumentActor } from "./documents.guard.js";
 
@@ -46,12 +47,24 @@ export class DocumentListService {
 
     const tenantId = actor.tenantId;
     if (tenantId) {
-      const agency = await this.tenants.withTenant(tenantId, (tx) =>
-        tx.booking.findFirst({
-          where: { id: bookingId, tenantId },
+      const agency = await this.tenants.withTenant(tenantId, async (tx) => {
+        const scope = await providerScope(tx, {
+          tenantId,
+          membershipRole: actor.membershipRole,
+          userId: actor.userId,
+        });
+        if (scope.kind === "none") return null;
+        return tx.booking.findFirst({
+          where: {
+            id: bookingId,
+            tenantId,
+            ...(scope.kind === "provider"
+              ? { items: { some: { product: { providerId: scope.providerId } } } }
+              : {}),
+          },
           select: { id: true },
-        }),
-      );
+        });
+      });
       if (agency) {
         return {
           items: (

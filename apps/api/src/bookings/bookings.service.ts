@@ -25,6 +25,7 @@ import type {
   RefundResponse,
 } from "../payments/payments.schemas.js";
 import { TENANT_SETTINGS_DEFAULTS } from "../tenant-settings/tenant-settings.schemas.js";
+import { providerScope } from "../tenant/provider-scope.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import {
   generateBookingCode,
@@ -374,7 +375,7 @@ export class BookingsService {
 
   /** Detalle de una reserva propia (reintento idempotente). */
   private async detailForUser(userId: string, bookingId: string): Promise<BookingDetailResponse> {
-    return this.detail({ userId, activeOrganizationId: null, bookingId });
+    return this.detail({ userId, activeOrganizationId: null, membershipRole: null, bookingId });
   }
 
   /**
@@ -394,11 +395,12 @@ export class BookingsService {
   async detail(input: {
     userId: string;
     activeOrganizationId: string | null;
+    membershipRole: string | null;
     bookingId: string;
   }): Promise<BookingDetailResponse> {
     const agencyId = input.activeOrganizationId;
     const read = (tx: Prisma.TransactionClient) =>
-      this.readDetailInTx(tx, input.userId, agencyId, input.bookingId);
+      this.readDetailInTx(tx, input.userId, agencyId, input.membershipRole, input.bookingId);
     const found = agencyId
       ? await this.tenantService.withOwnerTenant(input.userId, agencyId, read)
       : await this.tenantService.withOwner(input.userId, read);
@@ -413,16 +415,30 @@ export class BookingsService {
     tx: Prisma.TransactionClient,
     userId: string,
     agencyId: string | null,
+    membershipRole: string | null,
     bookingId: string,
   ): Promise<{
     booking: BookingRowWithItems;
     estimate: BookingRefundEstimate;
   } | null> {
+    const scope = agencyId
+      ? await providerScope(tx, { tenantId: agencyId, membershipRole, userId })
+      : { kind: "all" as const };
+    if (scope.kind === "none") return null;
+
     const booking = agencyId
       ? await tx.booking.findFirst({
           where: {
             id: bookingId,
-            OR: [{ userId }, { tenantId: agencyId }],
+            OR: [
+              { userId },
+              {
+                tenantId: agencyId,
+                ...(scope.kind === "provider"
+                  ? { items: { some: { product: { providerId: scope.providerId } } } }
+                  : {}),
+              },
+            ],
           },
           include: { items: true },
         })
@@ -650,6 +666,7 @@ export class BookingsService {
   async list(input: {
     userId: string;
     activeOrganizationId: string | null;
+    membershipRole: string | null;
     query: ListBookingsQuery;
   }): Promise<BookingPage> {
     const limit = input.query.limit ?? BOOKINGS_DEFAULT_LIMIT;
@@ -671,13 +688,36 @@ export class BookingsService {
     };
 
     const rows = agencyId
-      ? await this.tenantService.withTenant(agencyId, (tx) =>
-          tx.booking.findMany({
-            where,
+      ? await this.tenantService.withTenant(agencyId, async (tx) => {
+          const scope = await providerScope(tx, {
+            tenantId: agencyId,
+            membershipRole: input.membershipRole,
+            userId: input.userId,
+          });
+          if (scope.kind === "none") return [];
+          return tx.booking.findMany({
+            where: {
+              ...where,
+              // `where` ya puede traer un OR para el cursor: el filtro de
+              // propiedad va en AND para no pisarlo. Las reservas propias del
+              // proveedor siguen visibles aunque no contengan su inventario.
+              ...(scope.kind === "provider"
+                ? {
+                    AND: [
+                      {
+                        OR: [
+                          { items: { some: { product: { providerId: scope.providerId } } } },
+                          { userId: input.userId },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+            },
             orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             take: limit + 1,
-          }),
-        )
+          });
+        })
       : await this.tenantService.withOwner(input.userId, (tx) =>
           tx.booking.findMany({
             where,

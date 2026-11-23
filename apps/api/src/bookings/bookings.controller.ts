@@ -83,6 +83,7 @@ export class BookingsController {
     return this.bookingsService.list({
       userId,
       activeOrganizationId: membership?.organizationId ?? null,
+      membershipRole: membership?.role ?? null,
       query,
     });
   }
@@ -97,6 +98,7 @@ export class BookingsController {
     return this.bookingsService.detail({
       userId,
       activeOrganizationId: membership?.organizationId ?? null,
+      membershipRole: membership?.role ?? null,
       bookingId,
     });
   }
