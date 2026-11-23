@@ -215,6 +215,13 @@ Better Auth queda fuera del versionado `/api/v1`. El resto de la API exige sesi�
 | `ExchangeRateProvider` | `getRate(date)` | `CotizaveProvider`, `ManualOverrideProvider` | Fuente directa del BCV |
 | `NotificationProvider` | `send(template, recipient)` | Correo SMTP | WhatsApp |
 
+> **BLOQUEANTE OBLIGATORIO — F-FINAL-003.** No se puede sustituir `SimulatedPaymentProvider` por una
+> pasarela real mientras `refund` se confirme externamente antes de persistirse dentro de la
+> transacción (`apps/api/src/payments/payments.service.ts`, `refundForBooking`): un rollback dejaría un
+> reembolso externo ejecutado sin registro en `refunds`. Antes del cambio hay que implementar un outbox
+> o un `refundId` idempotente del proveedor con reconciliación, y cubrirlo con tests. No es opcional ni
+> objeto de una excepción para la demo: es condición previa para conectar cualquier proveedor real.
+
 ### Proveedores externos en sandbox
 
 | Proveedor | Uso | Acceso y límites |

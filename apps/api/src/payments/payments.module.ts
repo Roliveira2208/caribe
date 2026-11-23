@@ -15,6 +15,12 @@ import { SimulatedPaymentProvider } from "./simulated-payment.provider.js";
  * Pagos (T-F1-9, design §7): alta por el dueño de la reserva, consulta y
  * revisión del panel. La pasarela se inyecta por token para que el servicio
  * dependa de `PaymentProvider` (D9) y una pasarela real no toque el dominio.
+ *
+ * BLOQUEANTE OBLIGATORIO (F-FINAL-003, ver SDD §"Interfaces internas"): antes de
+ * sustituir `SimulatedPaymentProvider` por una pasarela real hay que corregir
+ * `refundForBooking`: hoy el reembolso externo se confirma antes de persistirse,
+ * así que un rollback dejaría un reembolso real sin registro. Requiere outbox o
+ * `refundId` idempotente con reconciliación y tests. No es opcional para la demo.
  */
 @Module({
   imports: [

@@ -625,8 +625,11 @@ export class PaymentsService {
       rate: formatRate(payment.rate),
       reason,
     };
-    // La pasarela confirma el reembolso antes de persistirlo; si falla, la
-    // transacción entera se revierte.
+    // BLOQUEANTE OBLIGATORIO (F-FINAL-003): con SimulatedPaymentProvider el
+    // reembolso es local y esta afirmación es cierta. Con una pasarela real NO
+    // lo es: si la transacción revierte después de este await, el dinero ya
+    // salió y no queda fila en `refunds`. Antes de cambiar el proveedor hay que
+    // implantar outbox o `refundId` idempotente con reconciliación (ver SDD).
     await this.provider.refund(intent);
 
     const refundId = randomUUID();
