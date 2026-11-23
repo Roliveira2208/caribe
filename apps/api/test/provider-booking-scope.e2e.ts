@@ -6,6 +6,7 @@ import { Client } from "pg";
 import { createApp, type ApiApplication } from "../src/bootstrap.js";
 import { generateBookingCode } from "../src/bookings/booking-code.js";
 import { apiConfig } from "../src/config.js";
+import { prisma } from "../src/prisma.js";
 import {
   addMember,
   authOrigin,
@@ -215,6 +216,7 @@ describe("alcance de proveedor sobre reservas y documentos", () => {
     await db?.query(`DELETE FROM "organization" WHERE id = $1`, [tenantA]);
     await db?.end();
     await app?.close();
+    await prisma.$disconnect();
   });
 
   it("el proveedor A lista solo las reservas con productos suyos", async () => {

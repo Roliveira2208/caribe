@@ -14,6 +14,11 @@ import { prisma } from "../src/prisma.js";
 
 export const TEST_PASSWORD = "Password123!";
 export const authOrigin = process.env.BETTER_AUTH_URL ?? "http://localhost:3002";
+/**
+ * Las peticiones HTTP de las fixtures fallan rápido con un mensaje claro en
+ * lugar de consumir silenciosamente el `hookTimeout` de Vitest bajo carga.
+ */
+const TEST_HTTP_TIMEOUT_MS = 10_000;
 
 /** Alta de usuario por la API de servidor (accion de sistema). */
 export async function createUser(email: string): Promise<string> {
@@ -29,6 +34,7 @@ export async function signIn(baseUrl: string, email: string): Promise<string> {
     method: "POST",
     headers: { "content-type": "application/json", origin: authOrigin },
     body: JSON.stringify({ email, password: TEST_PASSWORD }),
+    signal: AbortSignal.timeout(TEST_HTTP_TIMEOUT_MS),
   });
   if (!res.ok) {
     throw new Error(`sign-in falló: ${await res.text()}`);
@@ -89,6 +95,7 @@ export async function setActiveOrg(
     method: "POST",
     headers: { "content-type": "application/json", cookie, origin: authOrigin },
     body: JSON.stringify({ organizationId }),
+    signal: AbortSignal.timeout(TEST_HTTP_TIMEOUT_MS),
   });
   if (!res.ok) {
     throw new Error(`set-active falló: ${await res.text()}`);
