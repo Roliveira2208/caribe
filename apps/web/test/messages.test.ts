@@ -83,6 +83,16 @@ describe("messages de la web", () => {
     expect(missingInEs, "claves que estan en en.json pero no en es.json").toEqual([]);
   });
 
+  it("el badge de la cabecera muestra solo BCV y el monto", () => {
+    for (const locale of LOCALES) {
+      const messages = readMessages(locale) as {
+        todayRate?: { label?: unknown; loading?: unknown };
+      };
+      expect(messages.todayRate?.label, `${locale}.json: etiqueta del badge`).toBe("BCV");
+      expect(messages.todayRate?.loading, `${locale}.json: carga del badge`).toBe("BCV…");
+    }
+  });
+
   it("todos los valores son cadenas no vacias", () => {
     for (const locale of LOCALES) {
       const leaves = flatten(readMessages(locale));

@@ -18,15 +18,15 @@ import {
 const appRoot = fileURLToPath(new URL("..", import.meta.url));
 
 const labels: TodayRateBadgeLabels = {
-  label: "Tasa BCV",
+  label: "BCV",
   unavailable: "Tasa no disponible",
-  loading: "Tasa BCV…",
+  loading: "BCV…",
 };
 
 const enLabels: TodayRateBadgeLabels = {
-  label: "BCV rate",
+  label: "BCV",
   unavailable: "Rate unavailable",
-  loading: "BCV rate…",
+  loading: "BCV…",
 };
 
 const AVAILABLE_RATE: TodayRateView = {
@@ -71,8 +71,7 @@ function brandToken(name: string): string {
 describe("TodayRateBadge", () => {
   it("muestra solo BCV y el monto en espanol", () => {
     const html = renderBadge(AVAILABLE_RATE, "es");
-    expect(html).toContain(labels.label);
-    expect(html).toContain("36,00");
+    expect(html).toContain("BCV 36,00");
     expect(html).not.toContain("Bs/$");
     expect(html).not.toContain("del");
     expect(html).not.toContain("10 nov");
@@ -82,7 +81,7 @@ describe("TodayRateBadge", () => {
 
   it("usa el formato del locale en ingles sin fecha valor", () => {
     const html = renderBadge(AVAILABLE_RATE, "en", enLabels);
-    expect(html).toContain("36.00");
+    expect(html).toContain("BCV 36.00");
     expect(html).not.toContain("VES/USD");
     expect(html).not.toContain("Nov 10");
     expect(html).not.toContain(" on ");

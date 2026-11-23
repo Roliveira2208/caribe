@@ -146,7 +146,7 @@ try {
       )
       .catch(() => {});
     const text = (await badge.innerText()).trim();
-    const label = locale === "es" ? "Tasa BCV" : "BCV rate";
+    const label = "BCV";
     const hasDateOrUnit = /(?:Bs\/\$|VES\/USD|\bdel\b|\bon\b|\b\d{1,2}\s+[a-z]{3}\b)/i.test(text);
     const idle = /(?:no disponible|unavailable|…)$/.test(text);
     const amount = text.startsWith(label) ? text.slice(label.length).trim() : "";

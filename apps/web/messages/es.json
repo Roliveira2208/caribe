@@ -17,9 +17,9 @@
     "menu": "Menú"
   },
   "todayRate": {
-    "label": "Tasa BCV",
+    "label": "BCV",
     "unavailable": "Tasa no disponible",
-    "loading": "Tasa BCV…"
+    "loading": "BCV…"
   },
   "search": {
     "title": "Buscar viaje",
