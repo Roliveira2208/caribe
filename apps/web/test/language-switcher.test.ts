@@ -59,6 +59,7 @@ describe("selector de idioma en píldora", () => {
     expect(script).toContain('"ES"');
     expect(script).toContain('"ENG"');
     expect(script).not.toContain('getByRole("combobox"');
-    expect(script).not.toContain("/images/flags/");
+    expect(script).not.toContain("desplegable con dos banderas");
+    expect(script).toContain('problems.push("queda una bandera")');
   });
 });

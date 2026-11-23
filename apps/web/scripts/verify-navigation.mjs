@@ -207,7 +207,9 @@ try {
         }
       }
     }
-    if ((await page.locator('.site-header button[role="combobox"]').count()) !== 1) {
+    if (
+      (await page.locator('.site-header [role="group"] button[aria-current="true"]').count()) !== 1
+    ) {
       problems.push("falta el selector de idioma");
     }
     if ((await page.locator('.site-header [role="status"]').count()) === 0) {
@@ -250,7 +252,7 @@ try {
       );
       const stacked = childTops.every((top, index) => index === 0 || top > childTops[index - 1]);
       const itemBoxes = await mobile
-        .locator('#site-tools a, #site-tools [role="status"], #site-tools button[role="combobox"]')
+        .locator('#site-tools a, #site-tools [role="status"], #site-tools [role="group"]')
         .evaluateAll((nodes) =>
           nodes.map((node) => {
             const rect = node.getBoundingClientRect();
@@ -276,52 +278,48 @@ try {
     await mobile.close();
   }
 
-  // Selector de idioma: desplegable con banderas VE/US y activo anunciado.
+  // Selector de idioma: píldora ES|ENG sin banderas, activo anunciado.
   for (const locale of locales) {
     const nextLocale = locale === "es" ? "en" : "es";
     const languageLabel = locale === "es" ? "Idioma" : "Language";
-    const nextLabel = locale === "es" ? "English" : "Español";
+    const activeLabel = locale === "es" ? "ES" : "ENG";
+    const nextLabel = locale === "es" ? "ENG" : "ES";
     const page = await browser.newPage();
-    // El desplegable necesita la hidratación de React para responder al clic.
     await page.goto(`${baseUrl}/${locale}/search`, { waitUntil: "networkidle" });
     const header = page.locator(".site-header");
     const problems = [];
 
     if ((await header.locator("select").count()) !== 0) problems.push("queda un select nativo");
-    const combo = header.getByRole("combobox", { name: languageLabel });
-    await combo.waitFor();
-    await combo.click();
-    await page.waitForFunction(
-      () => document.querySelector('button[role="combobox"]')?.getAttribute("aria-expanded") === "true",
-      null,
-      { timeout: 5000 },
-    );
-    const list = page.getByRole("listbox", { name: languageLabel });
-    const options = list.getByRole("option");
-    if ((await options.count()) !== 2) problems.push("no hay dos idiomas");
-    const flags = await options.locator('img[src*="/images/flags/"]').count();
-    if (flags !== 2) problems.push(`banderas=${flags}`);
-    const selected = list.getByRole("option", { selected: true });
-    if ((await selected.getAttribute("aria-current")) !== "true") {
-      problems.push("activo sin aria-current");
+    if ((await header.locator('img[src*="/images/flags/"]').count()) !== 0) {
+      problems.push("queda una bandera");
+    }
+    const pill = header.getByRole("group", { name: languageLabel });
+    await pill.waitFor();
+    const buttons = pill.getByRole("button");
+    if ((await buttons.count()) !== 2) problems.push("no hay dos idiomas");
+    const texts = (await buttons.allInnerTexts()).map((text) => text.trim());
+    if (!texts.includes("ES") || !texts.includes("ENG")) {
+      problems.push(`etiquetas=${JSON.stringify(texts)}`);
+    }
+    const active = pill.locator('[aria-current="true"]');
+    if ((await active.count()) !== 1 || (await active.innerText()).trim() !== activeLabel) {
+      problems.push("activo incorrecto");
     }
 
     if (problems.length > 0) {
       failures.push(`/${locale}: selector (${problems.join(", ")})`);
       console.error(`FAIL /${locale}: selector (${problems.join(", ")})`);
     } else {
-      console.log(`OK   /${locale}: desplegable con dos banderas y activo resaltado`);
+      console.log(`OK   /${locale}: píldora ES|ENG sin banderas y ${activeLabel} activo`);
     }
 
-    await list.getByRole("option", { name: nextLabel }).click();
+    await pill.getByRole("button", { name: nextLabel }).click();
     await page.waitForURL(`${baseUrl}/${nextLocale}/search`);
     await page.waitForLoadState("networkidle");
     const nextLanguageLabel = nextLocale === "es" ? "Idioma" : "Language";
-    await page.getByRole("combobox", { name: nextLanguageLabel }).click();
-    const switched = page
-      .getByRole("listbox", { name: nextLanguageLabel })
-      .getByRole("option", { selected: true });
-    if ((await switched.innerText()).trim() !== nextLabel) {
+    const switched = page.locator(".site-header").getByRole("group", { name: nextLanguageLabel });
+    const switchedActive = switched.locator('[aria-current="true"]');
+    if ((await switchedActive.innerText()).trim() !== nextLabel) {
       failures.push(`/${nextLocale}/search: el idioma activo no cambió`);
       console.error(`FAIL /${nextLocale}/search: el idioma activo no cambió`);
     } else {
