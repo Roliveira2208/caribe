@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="1200" height="760" role="img" aria-labelledby="wf-title wf-desc">
+<rect id="canvas-bg" x="0" y="0" width="1200" height="760" fill="#ffffff"/>
+
+  <title id="wf-title">Panel de tasas — admin</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad del panel de tasas del admin: tarjeta de tasa vigente con override de agencia, tabla de las últimas tres tasas con origen, ámbito, motivo y actor, y modal centrado de confirmación de override con vista antes/después, motivo obligatorio y fecha valor.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 20px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 700; }
+    .rate { font-size: 26px; font-weight: 700; fill: #222; }
+    .lbl { font-size: 12px; fill: #555; }
+    .val { font-size: 12px; fill: #333; }
+    .btn { font-size: 12.5px; font-weight: 600; fill: #333; }
+    .abtn { font-size: 11px; font-weight: 600; fill: #333; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1.2; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1.2; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1.2; }
+    .chip { fill: #fff; stroke: #777; stroke-width: 1; }
+    .modal { fill: #fff; stroke: #555; stroke-width: 1.6; }
+    .overlay { fill: #444; fill-opacity: 0.08; }
+    .focus { fill: none; stroke: #555; stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .mark { fill: #fff; stroke: #666; stroke-width: 1.2; }
+    .marktxt { font-size: 12px; font-weight: 700; }
+    .sep { stroke: #ddd; stroke-width: 1; }
+  </style>
+
+  <!-- Encabezado del wireframe -->
+  <text x="16" y="28" class="cap">Caribe Admin — Tasas · escritorio · wireframe de baja fidelidad · es / en</text>
+
+  <!-- Header del panel -->
+  <rect x="16" y="44" width="1168" height="44" class="box"/>
+  <text x="32" y="72" class="h1">Caribe Admin</text>
+  <text x="920" y="72" class="lbl">Admin · María P.</text>
+  <text x="1082" y="72" class="lbl">ES | EN</text>
+
+  <!-- Tarjeta de tasa vigente -->
+  <rect x="16" y="100" width="1168" height="96" class="panel"/>
+  <text x="32" y="124" class="h2">Tasa vigente</text>
+  <text x="32" y="144" class="lbl">Agencia activa: Viajes Caribe C.A. · tenant TC-001</text>
+  <text x="32" y="180" class="rate">900,0000</text>
+  <text x="240" y="174" class="lbl">Origen</text>
+  <text x="240" y="190" class="val">COTIZAVE</text>
+  <text x="400" y="174" class="lbl">Fecha valor</text>
+  <text x="400" y="190" class="val">23/11/2026</text>
+  <text x="590" y="174" class="lbl">Ámbito</text>
+  <text x="590" y="190" class="val">Agencia</text>
+  <rect x="820" y="158" width="180" height="28" class="chip"/>
+  <text x="910" y="176" class="abtn" text-anchor="middle">Override de agencia</text>
+  <rect x="1020" y="158" width="148" height="28" class="btnbox"/>
+  <text x="1094" y="176" class="abtn" text-anchor="middle">Editar tasa →</text>
+
+  <!-- Últimas filas del historial de tasas -->
+  <rect x="16" y="208" width="1168" height="162" class="box"/>
+  <rect x="16" y="208" width="1168" height="30" class="panel"/>
+  <text x="32" y="228" class="lbl">Fecha valor</text>
+  <text x="160" y="228" class="lbl">Tasa</text>
+  <text x="268" y="228" class="lbl">Origen</text>
+  <text x="400" y="228" class="lbl">Ámbito</text>
+  <text x="500" y="228" class="lbl">Override</text>
+  <text x="620" y="228" class="lbl">Motivo</text>
+  <text x="1030" y="228" class="lbl">Actor</text>
+
+  <!-- Fila 1: override de agencia -->
+  <line x1="16" y1="238" x2="1184" y2="238" class="sep"/>
+  <text x="32" y="262" class="val">23/11/2026</text>
+  <text x="160" y="262" class="val">900,0000</text>
+  <text x="268" y="262" class="val">COTIZAVE</text>
+  <text x="400" y="262" class="val">Agencia</text>
+  <rect x="500" y="248" width="54" height="22" class="chip"/>
+  <text x="527" y="263" class="abtn" text-anchor="middle">Sí</text>
+  <text x="620" y="262" class="val">BCV no publicó</text>
+  <text x="1030" y="262" class="val">María P. · admin</text>
+
+  <!-- Fila 2: tasa global -->
+  <line x1="16" y1="276" x2="1184" y2="276" class="sep"/>
+  <text x="32" y="300" class="val">22/11/2026</text>
+  <text x="160" y="300" class="val">896,5000</text>
+  <text x="268" y="300" class="val">COTIZAVE</text>
+  <text x="400" y="300" class="val">Global</text>
+  <rect x="500" y="286" width="54" height="22" class="chip"/>
+  <text x="527" y="301" class="abtn" text-anchor="middle">No</text>
+  <text x="620" y="300" class="val">—</text>
+  <text x="1030" y="300" class="val">sistema · job</text>
+
+  <!-- Fila 3: tasa global anterior -->
+  <line x1="16" y1="314" x2="1184" y2="314" class="sep"/>
+  <text x="32" y="338" class="val">21/11/2026</text>
+  <text x="160" y="338" class="val">893,2000</text>
+  <text x="268" y="338" class="val">COTIZAVE</text>
+  <text x="400" y="338" class="val">Global</text>
+  <rect x="500" y="324" width="54" height="22" class="chip"/>
+  <text x="527" y="339" class="abtn" text-anchor="middle">No</text>
+  <text x="620" y="338" class="val">—</text>
+  <text x="1030" y="338" class="val">sistema · job</text>
+
+  <line x1="16" y1="352" x2="1184" y2="352" class="sep"/>
+  <text x="16" y="366" class="lbl">Últimas 3 filas · historial consultable · la tasa de cada pago queda congelada</text>
+
+  <!-- Capa de fondo del modal superpuesto -->
+  <rect id="overlay" x="0" y="0" width="1200" height="760" class="overlay"/>
+
+  <!-- Modal centrado: confirmación de override -->
+  <rect x="290" y="230" width="620" height="300" class="modal"/>
+  <text x="314" y="262" class="h1">Confirmar override</text>
+  <line x1="314" y1="268" x2="886" y2="268" class="sep"/>
+
+  <rect x="314" y="278" width="252" height="34" class="field"/>
+  <text x="326" y="299" class="val">Antes: 900,0000 (COTIZAVE)</text>
+  <text x="585" y="301" class="h1" text-anchor="middle">→</text>
+  <rect x="608" y="278" width="278" height="34" class="field"/>
+  <text x="620" y="299" class="val">Después: 950,0000 (manual)</text>
+
+  <text x="314" y="338" class="lbl">Motivo * (obligatorio)</text>
+  <rect x="314" y="346" width="572" height="34" class="field"/>
+  <text x="326" y="368" class="val">BCV no publicó</text>
+
+  <text x="314" y="398" class="lbl">Fecha valor</text>
+  <rect x="314" y="406" width="220" height="32" class="field"/>
+  <text x="326" y="427" class="val">23/11/2026</text>
+  <text x="560" y="427" class="note">Confirmar escribe y audita · Cancelar no modifica nada</text>
+
+  <rect x="636" y="452" width="110" height="32" class="btnbox"/>
+  <text x="691" y="472" class="abtn" text-anchor="middle">Cancelar</text>
+  <rect x="770" y="452" width="120" height="32" class="btnbox"/>
+  <text x="830" y="472" class="abtn" text-anchor="middle">Confirmar override</text>
+  <rect x="766" y="448" width="128" height="40" class="focus"/>
+  <text x="691" y="502" class="lbl" text-anchor="middle">sin cambios</text>
+  <text x="830" y="502" class="lbl" text-anchor="middle">escribe + audita</text>
+
+  <!-- Reglas visibles -->
+  <rect x="16" y="542" width="1168" height="142" class="notes"/>
+  <text x="32" y="564" class="notetitle">Reglas visibles en esta pantalla</text>
+  <text x="32" y="584" class="note">[1] La tasa entra como texto decimal (14,4) y el motivo es obligatorio: se valida en el servidor con esquema Zod; nunca se confía en un número enviado por el cliente.</text>
+  <text x="32" y="602" class="note">[2] Al existir override vigente se exige confirmación explícita con vista antes/después; el modal no aplica ningún cambio hasta pulsar «Confirmar override».</text>
+  <text x="32" y="620" class="note">[3] La tasa congelada de cada pago (exchange_rate_id + amount_ves) no se recalcula cuando cambia la tasa vigente.</text>
+  <text x="32" y="638" class="note">[4] Solo el admin de la agencia con segundo factor activo puede crear o reemplazar un override; el ámbito Global se administra aparte.</text>
+  <text x="32" y="656" class="note">[5] Cada override escribe en audit_logs con actor, antes/después e IP; la IP puede ser null tras un proxy no confiable.</text>
+  <text x="32" y="674" class="note">[6] Foco visible, etiquetas asociadas y contraste AA en badges, campos y botones, incluidos los del modal.</text>
+
+  <!-- Textos es/en -->
+  <rect x="16" y="690" width="1168" height="62" class="notes"/>
+  <text x="32" y="709" class="notetitle">Textos es / en (mismas claves, sin cadenas fijas en componentes)</text>
+  <text x="32" y="729" class="note">es: Tasa vigente · Origen · Fecha valor · Motivo · Cancelar · Confirmar override</text>
+  <text x="32" y="747" class="note">en: Current rate · Source · Value date · Reason · Cancel · Confirm override</text>
+</svg>
