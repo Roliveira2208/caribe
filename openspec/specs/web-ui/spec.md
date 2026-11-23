@@ -152,23 +152,6 @@ apareciendo en checkout y en el panel de pagos.
 - WHEN se muestra el equivalente VES
 - THEN sigue apareciendo la fecha valor de la tasa
 
-### Requirement: Selector de idioma con banderas
-
-El selector SHALL presentarse como un desplegable con banderas de Venezuela y Estados Unidos, las
-etiquetas «Español» y «English», y el idioma activo resaltado y anunciado con `aria-current`.
-
-#### Scenario: Desplegable con banderas
-- GIVEN la cabecera en cualquier idioma
-- WHEN se renderiza el selector
-- THEN se ve una bandera VE junto a «Español» y una bandera US junto a «English»
-- THEN el activo está resaltado y anunciado con `aria-current`
-- THEN no queda un control nativo `<select>` sin banderas
-
-#### Scenario: Cambio de idioma
-- GIVEN un usuario en `/es/search`
-- WHEN activa «English»
-- THEN navega a `/en/search` y la bandera US queda resaltada
-
 ### Requirement: Cabecera flotante
 
 La cabecera pública SHALL ser una barra centrada que no ocupe todo el ancho, separada del borde
@@ -494,6 +477,31 @@ SHALL NOT exigir sesión para abrirse.
 - GIVEN un código con caracteres que requieren codificación en la URL
 - WHEN se abre su página
 - THEN se muestra el código descodificado sin interpretarlo como HTML
+
+### Requirement: Selector de idioma en píldora
+
+El selector SHALL presentarse como una píldora con dos botones visibles, `ES` y `ENG`, sin banderas y
+sin control nativo `<select>`. El idioma activo SHALL estar resaltado y anunciado con `aria-current`;
+ambos botones SHALL ser alcanzables con teclado y mostrar contorno de foco visible. El selector SHALL
+conservar la ruta y sus parámetros al cambiar de idioma.
+
+#### Scenario: Píldora sin banderas
+- GIVEN la cabecera en cualquier idioma
+- WHEN se renderiza el selector
+- THEN se ven exactamente dos botones con los textos «ES» y «ENG»
+- THEN no aparece ninguna imagen de bandera ni un `<select>` nativo
+- THEN el botón del idioma activo está resaltado y anunciado con `aria-current`
+
+#### Scenario: Cambio de idioma
+- GIVEN un usuario en `/es/search`
+- WHEN activa «ENG»
+- THEN navega a `/en/search`, el prefijo cambia y el segmento `search` no
+- THEN «ENG» queda resaltado y anunciado como activo
+
+#### Scenario: Teclado
+- GIVEN un usuario que tabula por la cabecera
+- WHEN alcanza cada botón del selector
+- THEN ve el contorno de foco ámbar y puede activarlo con Enter o Espacio
 
 ## Casos límite
 
