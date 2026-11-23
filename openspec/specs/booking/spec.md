@@ -282,6 +282,13 @@ SHALL exponer también la política guardada en `policy_snapshot` y, cuando exis
 `refund_estimate` calculado en el servidor con esa política y la tasa congelada del pago. La web SHALL
 mostrar ese texto decimal sin recalcular montos ni tasas.
 
+El Proveedor SHALL ver solo las reservas que tengan al menos una línea con un producto de su
+`provider_id`; las reservas de otros proveedores de su agencia SHALL responder 404. Un usuario con rol
+`provider` sin registro de proveedor en la agencia SHALL ver cero reservas al listar y SHALL recibir
+404 al consultar el detalle. Un rol
+sin `booking:read`, como `member`, SHALL recibir 403 `FORBIDDEN` al listar o consultar reservas con
+agencia activa; el sistema SHALL NOT degradar a «mis reservas» ni devolver un resumen vacío.
+
 #### Scenario: Dueño consulta su reserva
 - GIVEN una reserva del cliente
 - WHEN la consulta por id
@@ -308,6 +315,16 @@ mostrar ese texto decimal sin recalcular montos ni tasas.
 - WHEN un admin de B la consulta
 - THEN 404
 
+#### Scenario: Proveedor ve solo su inventario
+- GIVEN dos proveedores A y B de la misma agencia con un producto cada uno y una reserva por producto
+- WHEN el proveedor A lista reservas y consulta la reserva del producto de B
+- THEN el listado contiene solo la reserva de A y la reserva de B responde 404
+
+#### Scenario: Reserva con líneas de varios proveedores
+- GIVEN una reserva con un producto del proveedor A y otro del proveedor B
+- WHEN el proveedor A la consulta
+- THEN 200, porque una de sus líneas pertenece a su inventario
+
 #### Scenario: Agencia activa sin membresía
 - GIVEN una sesión con `activeOrganizationId` de una agencia a la que el usuario ya no pertenece
 - WHEN consulta o lista reservas
@@ -322,6 +339,16 @@ mostrar ese texto decimal sin recalcular montos ni tasas.
 - GIVEN reservas `PENDING_PAYMENT` y `CONFIRMED` del mismo cliente
 - WHEN lista con estado `CONFIRMED`
 - THEN solo aparecen las confirmadas
+
+#### Scenario: Lectura requiere booking:read
+- GIVEN un `member` con agencia activa y sin `booking:read`
+- WHEN lista reservas o consulta una reserva de esa agencia
+- THEN 403 con código `FORBIDDEN`, sin filas ni resumen
+
+#### Scenario: Agente conserva la lectura
+- GIVEN un `agent` con `booking:read` en la agencia A
+- WHEN lista las reservas de A
+- THEN 200 con las reservas de la agencia
 
 ### Requirement: Transiciones de estado de la reserva
 Las transiciones SHALL ser solo: `PENDING_PAYMENT → CONFIRMED`, `PENDING_PAYMENT → CANCELLED`,

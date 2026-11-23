@@ -81,6 +81,11 @@ SHALL ser la ruta autenticada `/api/v1/documents/:id/download` y SHALL estar pre
 `status = READY`. La respuesta SHALL NOT exponer `file_url`, rutas de disco, `tenantId`, importes ni
 datos personales. Una reserva ajena SHALL responder 404; una petición sin sesión SHALL responder 401.
 
+Cuando el personal es un Proveedor, SHALL ver solo los documentos de reservas que tengan al menos una
+línea con un producto de su `provider_id`. Los documentos de reservas de otros proveedores de su
+misma agencia SHALL responder 404. El dueño de la reserva SHALL ver siempre los documentos de su
+propia reserva.
+
 #### Scenario: Dueño consulta los documentos de su reserva
 - GIVEN una reserva con un voucher `READY` y un comprobante `PENDING`
 - WHEN el dueño consulta `GET /bookings/:id/documents`
@@ -95,6 +100,11 @@ datos personales. Una reserva ajena SHALL responder 404; una petición sin sesi�
 - WHEN se consulta su listado de documentos
 - THEN 404 sin revelar la existencia de la reserva
 
+#### Scenario: Proveedor lista solo los documentos de su inventario
+- GIVEN dos proveedores de la misma agencia con una reserva y un documento cada uno
+- WHEN el proveedor A consulta el listado de la reserva del proveedor B
+- THEN 404 sin revelar la existencia de la reserva ni del documento
+
 #### Scenario: Sin sesión
 - WHEN un visitante anónimo consulta el listado
 - THEN 401
@@ -106,9 +116,11 @@ servidor; SHALL NOT derivarse del código de reserva, del número de documento n
 `file_url` SHALL guardar una ruta relativa; el sistema SHALL NOT exponer una URL pública ni servir el
 archivo directamente desde el disco. La descarga SHALL hacerse por una ruta autenticada que compruebe
 propiedad del dueño o pertenencia a la agencia y SHALL responder `application/pdf` con
-`Content-Disposition: attachment`. Una ruta manipulada (`..`, ruta absoluta o fuera del directorio)
-SHALL rechazarse con 400 `INVALID_PATH` sin leer ningún archivo. Al elegir hosting se migrará a
-almacenamiento externo (S3/Blob) manteniendo la ruta autenticada; se anota en `design.md`.
+`Content-Disposition: attachment`. Un Proveedor SHALL descargar solo documentos de reservas con
+líneas de productos de su `provider_id`; los demás documentos de su agencia SHALL responder 404. Una
+ruta manipulada (`..`, ruta absoluta o fuera del directorio) SHALL rechazarse con 400 `INVALID_PATH`
+sin leer ningún archivo. Al elegir hosting se migrará a almacenamiento externo (S3/Blob) manteniendo
+la ruta autenticada; se anota en `design.md`.
 
 #### Scenario: Descarga autenticada
 - GIVEN un voucher del cliente
@@ -119,6 +131,16 @@ almacenamiento externo (S3/Blob) manteniendo la ruta autenticada; se anota en `d
 - GIVEN un documento de la agencia A
 - WHEN un admin de A lo descarga
 - THEN recibe el PDF
+
+#### Scenario: Proveedor descarga un documento de su inventario
+- GIVEN un voucher `READY` de una reserva con un producto del proveedor A
+- WHEN el proveedor A lo descarga
+- THEN recibe el PDF
+
+#### Scenario: Proveedor no descarga el documento de otro proveedor
+- GIVEN un voucher `READY` de una reserva con un producto del proveedor B de la misma agencia
+- WHEN el proveedor A intenta descargarlo
+- THEN 404 sin leer el archivo
 
 #### Scenario: Sin sesión
 - WHEN un visitante anónimo pide un documento

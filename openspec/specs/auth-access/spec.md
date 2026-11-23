@@ -273,10 +273,12 @@ ajeno.
 Un Cliente o Agente SHALL crear reservas y reportar pagos solo para sí mismo; el `user_id` SHALL salir
 de la sesión y un Agente SHALL NOT reservar en nombre de otra persona en F1. El owner y el admin de la
 agencia SHALL ver y cancelar las reservas de su agencia; el Agente SHALL ver y cancelar solo las
-propias; el Proveedor SHALL NOT cancelar reservas. La aprobación o rechazo de un pago SHALL ser
-exclusiva del Admin de agencia de la agencia del pago y de una persona distinta de quien lo reportó. El
-Super Admin SHALL ser de solo lectura en reservas y pagos y SHALL NOT cancelar. Ningún otro rol SHALL
-revisar pagos.
+propias; el Proveedor SHALL NOT cancelar reservas. El Proveedor SHALL ver solo reservas y documentos
+de las líneas con productos de su `provider_id`, aunque estén en su misma agencia. Un `member` sin
+`booking:read` SHALL NOT ver reservas ni resumen de la agencia: las rutas de lectura SHALL responder
+403 `FORBIDDEN` por defecto. La aprobación o rechazo de un pago SHALL ser exclusiva del Admin de
+agencia de la agencia del pago y de una persona distinta de quien lo reportó. El Super Admin SHALL ser
+de solo lectura en reservas y pagos y SHALL NOT cancelar. Ningún otro rol SHALL revisar pagos.
 
 #### Scenario: Agente crea su propia reserva
 - GIVEN un agente autenticado
@@ -302,10 +304,20 @@ revisar pagos.
 - WHEN el agente de A intenta cancelarla
 - THEN 404 y la reserva no cambia
 
+#### Scenario: Proveedor ve solo su inventario
+- GIVEN reservas de los proveedores A y B en la misma agencia
+- WHEN el proveedor A lista reservas
+- THEN solo recibe las que contienen productos suyos
+
 #### Scenario: Proveedor intenta cancelar
 - GIVEN una reserva de la agencia A
 - WHEN el proveedor de A intenta cancelarla
 - THEN 403 y la reserva no cambia
+
+#### Scenario: Member sin permiso de lectura
+- GIVEN un `member` con agencia activa y sin `booking:read`
+- WHEN lista o consulta reservas
+- THEN 403 `FORBIDDEN`, sin reservas ni resumen
 
 #### Scenario: Super Admin intenta cancelar
 - GIVEN una reserva de una agencia
