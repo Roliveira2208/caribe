@@ -1,0 +1,14 @@
+{
+  "name": "@caribe/fonts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fuentes auto-alojadas de Caribe, compartidas por web y admin.",
+  "files": [
+    "fonts/*.woff2",
+    "fonts/LICENSE-ITF-FFL.txt"
+  ],
+  "exports": {
+    "./fonts/*": "./fonts/*",
+    "./package.json": "./package.json"
+  }
+}

@@ -187,7 +187,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
 
   return (
     <Card title={title} style={{ width: "100%", maxWidth: 420 }}>
-      <p style={{ marginTop: 0, color: "#6b7280" }}>{description}</p>
+      <p style={{ marginTop: 0, color: "var(--caribe-ink)" }}>{description}</p>
 
       {step === "loading" ? <Alert type="info" showIcon title={t("loading")} /> : null}
 
@@ -309,7 +309,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
               ))}
             </div>
           ) : (
-            <p style={{ color: "#6b7280" }}>{t("backupCodesEmpty")}</p>
+            <p style={{ color: "var(--caribe-ink)" }}>{t("backupCodesEmpty")}</p>
           )}
           {backupCodes.length > 0 ? (
             <Button

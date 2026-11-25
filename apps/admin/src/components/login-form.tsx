@@ -50,7 +50,7 @@ export function LoginForm({ locale, redirectTo }: LoginFormProps) {
 
   return (
     <Card title={t("title")} style={{ width: "100%", maxWidth: 380 }}>
-      <p style={{ marginTop: 0, color: "#6b7280" }}>{t("description")}</p>
+      <p style={{ marginTop: 0, color: "var(--caribe-ink)" }}>{t("description")}</p>
       {error ? <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} /> : null}
       <Form<LoginValues> layout="vertical" requiredMark={false} onFinish={onFinish}>
         <Form.Item label={t("email")} name="email" rules={[{ required: true }, { type: "email" }]}>

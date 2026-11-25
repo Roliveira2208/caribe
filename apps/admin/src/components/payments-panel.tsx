@@ -207,7 +207,7 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
 
   return (
     <Card title={t("title")} style={{ width: "100%" }}>
-      <p style={{ marginTop: 0, color: "#6b7280" }}>{t("description")}</p>
+      <p style={{ marginTop: 0, color: "var(--caribe-ink)" }}>{t("description")}</p>
       <Space wrap style={{ marginBottom: 16 }}>
         <div>
           <label htmlFor="payments-status" style={{ display: "block", marginBottom: 4 }}>

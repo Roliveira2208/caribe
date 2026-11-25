@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
@@ -9,6 +10,31 @@ import { alternateLinks, siteUrl } from "@/i18n/metadata";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
 import "../globals.css";
+
+// Las fuentes se sirven desde el paquete compartido @caribe/fonts; la ruta es
+// relativa al archivo que llama a localFont (guía de Next 16).
+const clashDisplay = localFont({
+  src: [
+    { path: "../../../../../packages/fonts/fonts/clash-display-500.woff2", weight: "500" },
+    { path: "../../../../../packages/fonts/fonts/clash-display-600.woff2", weight: "600" },
+    { path: "../../../../../packages/fonts/fonts/clash-display-700.woff2", weight: "700" },
+  ],
+  variable: "--font-clash-display",
+  display: "swap",
+  fallback: ["sans-serif"],
+});
+
+const generalSans = localFont({
+  src: [
+    { path: "../../../../../packages/fonts/fonts/general-sans-400.woff2", weight: "400" },
+    { path: "../../../../../packages/fonts/fonts/general-sans-500.woff2", weight: "500" },
+    { path: "../../../../../packages/fonts/fonts/general-sans-600.woff2", weight: "600" },
+    { path: "../../../../../packages/fonts/fonts/general-sans-700.woff2", weight: "700" },
+  ],
+  variable: "--font-general-sans",
+  display: "swap",
+  fallback: ["sans-serif"],
+});
 
 interface LocaleLayoutProps {
   children: React.ReactNode;
@@ -49,7 +75,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   const messages = await getMessages();
   return (
-    <html lang={locale}>
+    <html lang={locale} className={`${clashDisplay.variable} ${generalSans.variable}`}>
       <body>
         <AntdRegistry>
           <Providers locale={locale}>

@@ -48,10 +48,10 @@ export default async function PanelPage({ params }: PanelPageProps) {
 
   return (
     <div style={{ width: "100%" }}>
-      <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700, color: "#1f2937" }}>
+      <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700, color: "var(--caribe-ink)" }}>
         {isPlatform ? tOrg("platformTitle") : t("title")}
       </h1>
-      <p style={{ margin: "0 0 16px", color: "#6b7280" }}>
+      <p style={{ margin: "0 0 16px", color: "var(--caribe-ink)" }}>
         {isPlatform
           ? tOrg("platformDescription")
           : tOrg("activeAgency", { agency: access.organization.name })}

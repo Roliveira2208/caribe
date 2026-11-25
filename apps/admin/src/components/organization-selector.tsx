@@ -42,7 +42,7 @@ export function OrganizationSelector({ organizations }: OrganizationSelectorProp
 
   return (
     <Card title={t("title")} style={{ width: "100%", maxWidth: 520 }}>
-      <p style={{ marginTop: 0, color: "#6b7280" }}>{t("description")}</p>
+      <p style={{ marginTop: 0, color: "var(--caribe-ink)" }}>{t("description")}</p>
       {error ? <Alert type="error" showIcon title={error} style={{ marginBottom: 16 }} /> : null}
       <label htmlFor="organization-select" style={{ display: "block", marginBottom: 8 }}>
         {t("label")}

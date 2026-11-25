@@ -10,9 +10,9 @@ import "../globals.css";
 
 const clashDisplay = localFont({
   src: [
-    { path: "../../../public/fonts/clash-display-500.woff2", weight: "500" },
-    { path: "../../../public/fonts/clash-display-600.woff2", weight: "600" },
-    { path: "../../../public/fonts/clash-display-700.woff2", weight: "700" },
+    { path: "../../../../../packages/fonts/fonts/clash-display-500.woff2", weight: "500" },
+    { path: "../../../../../packages/fonts/fonts/clash-display-600.woff2", weight: "600" },
+    { path: "../../../../../packages/fonts/fonts/clash-display-700.woff2", weight: "700" },
   ],
   variable: "--font-clash-display",
   display: "swap",
@@ -21,10 +21,10 @@ const clashDisplay = localFont({
 
 const generalSans = localFont({
   src: [
-    { path: "../../../public/fonts/general-sans-400.woff2", weight: "400" },
-    { path: "../../../public/fonts/general-sans-500.woff2", weight: "500" },
-    { path: "../../../public/fonts/general-sans-600.woff2", weight: "600" },
-    { path: "../../../public/fonts/general-sans-700.woff2", weight: "700" },
+    { path: "../../../../../packages/fonts/fonts/general-sans-400.woff2", weight: "400" },
+    { path: "../../../../../packages/fonts/fonts/general-sans-500.woff2", weight: "500" },
+    { path: "../../../../../packages/fonts/fonts/general-sans-600.woff2", weight: "600" },
+    { path: "../../../../../packages/fonts/fonts/general-sans-700.woff2", weight: "700" },
   ],
   variable: "--font-general-sans",
   display: "swap",

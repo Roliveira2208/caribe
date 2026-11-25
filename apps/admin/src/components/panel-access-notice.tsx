@@ -19,7 +19,7 @@ export async function PanelAccessNotice({ access }: { access: PanelAccess }) {
     return (
       <section style={{ maxWidth: 520 }}>
         <h1 style={{ margin: "0 0 8px", fontSize: 24 }}>{tOrg("loginTitle")}</h1>
-        <p style={{ color: "#6b7280" }}>{tOrg("loginDescription")}</p>
+        <p style={{ color: "var(--caribe-ink)" }}>{tOrg("loginDescription")}</p>
         <Link href="/login">{tOrg("loginAction")}</Link>
       </section>
     );
@@ -29,7 +29,7 @@ export async function PanelAccessNotice({ access }: { access: PanelAccess }) {
     return (
       <section style={{ maxWidth: 520, border: "1px solid #d1d5db", borderRadius: 8, padding: 24 }}>
         <h1 style={{ margin: "0 0 8px", fontSize: 24 }}>{tOrg("noMembershipTitle")}</h1>
-        <p style={{ color: "#6b7280" }}>{tOrg("noMembershipDescription")}</p>
+        <p style={{ color: "var(--caribe-ink)" }}>{tOrg("noMembershipDescription")}</p>
         <Link href="/">{tOrg("webLink")}</Link>
       </section>
     );

@@ -8,7 +8,7 @@ export default async function NotFoundPage() {
   return (
     <div style={{ textAlign: "center" }}>
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>{t("title")}</h1>
-      <p style={{ color: "#6b7280" }}>{t("description")}</p>
+      <p style={{ color: "var(--caribe-ink)" }}>{t("description")}</p>
       <Link href="/" style={{ color: "#0d7d6c", textDecoration: "underline" }}>
         {t("back")}
       </Link>

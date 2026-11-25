@@ -3,15 +3,15 @@ import { Link } from "@/i18n/navigation";
 import { LanguageSwitcher } from "./language-switcher";
 import { SessionNav } from "./session-nav";
 
-/** Cabecera del shell del admin: marca, sesion e idioma. */
+/** Cabecera del shell del admin: marca, navegacion, idioma y sesion. */
 export async function SiteHeader() {
   const t = await getTranslations("nav");
 
   return (
     <header
       style={{
-        borderBottom: "1px solid #e5e7eb",
-        background: "#ffffff",
+        borderBottom: "1px solid var(--caribe-teal)",
+        background: "var(--caribe-bone)",
       }}
     >
       <div
@@ -27,12 +27,22 @@ export async function SiteHeader() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <Link href="/" style={{ textDecoration: "none" }}>
-            <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1f2937" }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 18,
+                fontWeight: 700,
+                color: "var(--caribe-ink)",
+                fontFamily: "var(--font-clash-display), sans-serif",
+              }}
+            >
               {t("appName")}
             </p>
-            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{t("tagline")}</p>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--caribe-ink)" }}>
+              {t("tagline")}
+            </p>
           </Link>
-          <Link href="/admin/payments" style={{ fontSize: 14, color: "#1f2937" }}>
+          <Link href="/admin/payments" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
             {t("payments")}
           </Link>
         </div>

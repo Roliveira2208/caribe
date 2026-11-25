@@ -97,9 +97,9 @@ describe("identidad visual Caribe", () => {
       "general-sans-700.woff2",
       "LICENSE-ITF-FFL.txt",
     ]) {
-      expect(read(`public/fonts/${file}`).length).toBeGreaterThan(0);
+      expect(read(`../../packages/fonts/fonts/${file}`).length).toBeGreaterThan(0);
     }
-    const license = read("public/fonts/LICENSE-ITF-FFL.txt");
+    const license = read("../../packages/fonts/fonts/LICENSE-ITF-FFL.txt");
     expect(license).toContain("You may self-host the Font Software");
     expect(license).toContain("You may, but are not required to, identify or credit");
   });

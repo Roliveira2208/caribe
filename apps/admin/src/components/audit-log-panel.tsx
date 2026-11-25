@@ -87,7 +87,7 @@ export function AuditLogPanel({ locale, redirectTo }: AuditLogPanelProps) {
 
   return (
     <Card title={t("auditTitle")} style={{ width: "100%" }}>
-      <p style={{ marginTop: 0, color: "#6b7280" }}>{t("auditDescription")}</p>
+      <p style={{ marginTop: 0, color: "var(--caribe-ink)" }}>{t("auditDescription")}</p>
       {state.status === "loading" ? <Alert type="info" showIcon title={t("loading")} /> : null}
       {state.status === "forbidden" ? (
         <Alert type="warning" showIcon title={t("forbidden")} />
