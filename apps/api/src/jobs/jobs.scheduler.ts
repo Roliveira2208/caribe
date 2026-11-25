@@ -2,6 +2,10 @@ import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@ne
 import { Queue, Worker } from "bullmq";
 import { DocumentRenderingService } from "../documents/document-rendering.service.js";
 import { NotificationService } from "../notifications/notification.service.js";
+import {
+  RefundReconciliationService,
+  type RefundReconciliationSummary,
+} from "../payments/refund-reconciliation.service.js";
 import { BookingExpirationService } from "./booking-expiration.service.js";
 import {
   DOCUMENT_JOB_ATTEMPTS,
@@ -11,6 +15,8 @@ import {
   JOBS_QUEUE_NAME,
   RECOVER_PENDING_JOB,
   RECOVER_PENDING_SCHEDULE,
+  RECONCILE_REFUNDS_JOB,
+  RECONCILE_REFUNDS_SCHEDULE,
   RENDER_DOCUMENT_JOB,
   SEND_NOTIFICATION_JOB,
   isTransientLockError,
@@ -75,6 +81,7 @@ export interface JobHandlers {
   renderDocument(payload: RenderDocumentPayload): Promise<unknown>;
   sendNotification(payload: NotificationPayload): Promise<unknown>;
   recoverPending(): Promise<RecoverySummary>;
+  reconcileRefunds(): Promise<RefundReconciliationSummary>;
 }
 
 /** Encola el correo. El servicio hará los 3 intentos con espera creciente. */
@@ -106,6 +113,11 @@ export async function registerSchedules(queue: SchedulerQueue): Promise<void> {
     { pattern: RECOVER_PENDING_SCHEDULE },
     { name: RECOVER_PENDING_JOB },
   );
+  await queue.upsertJobScheduler(
+    RECONCILE_REFUNDS_JOB,
+    { pattern: RECONCILE_REFUNDS_SCHEDULE },
+    { name: RECONCILE_REFUNDS_JOB },
+  );
 }
 
 /** Despacha por nombre de trabajo; un nombre desconocido falla cerrado. */
@@ -122,6 +134,8 @@ export function createJobProcessor(
         return handlers.sendNotification(notificationPayloadSchema.parse(job.data));
       case RECOVER_PENDING_JOB:
         return handlers.recoverPending();
+      case RECONCILE_REFUNDS_JOB:
+        return handlers.reconcileRefunds();
       default:
         throw new Error(`Trabajo desconocido: ${job.name}`);
     }
@@ -148,6 +162,7 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
     private readonly rendering: DocumentRenderingService,
     private readonly notifications: NotificationService,
     private readonly recovery: PendingRecoveryService,
+    private readonly refundReconciliation: RefundReconciliationService,
   ) {}
 
   /** Pasada del barrido; las colas reales solo existen con BullMQ activo. */
@@ -156,6 +171,11 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
       document: (payload) => this.enqueueDocumentRender(payload),
       notification: (payload) => this.enqueueNotification(payload),
     });
+  }
+
+  /** Pasada de reconciliación de reembolsos (spec security). */
+  async reconcileRefunds(): Promise<RefundReconciliationSummary> {
+    return this.refundReconciliation.reconcileRefunds();
   }
 
   onModuleInit(): void {
@@ -217,6 +237,7 @@ export class JobsScheduler implements OnModuleInit, OnModuleDestroy {
         sendNotification: (payload) =>
           this.notifications.sendWithRetries(payload.notificationId, payload.tenantId),
         recoverPending: () => this.recoverPending(),
+        reconcileRefunds: () => this.reconcileRefunds(),
       }),
       { connection, ...workerOptions() },
     );

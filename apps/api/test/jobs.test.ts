@@ -8,6 +8,8 @@ import {
   NOTIFICATION_JOB_DELAYS,
   RECOVER_PENDING_JOB,
   RECOVER_PENDING_SCHEDULE,
+  RECONCILE_REFUNDS_JOB,
+  RECONCILE_REFUNDS_SCHEDULE,
   RENDER_DOCUMENT_JOB,
   SEND_NOTIFICATION_JOB,
   WORKER_CONCURRENCY,
@@ -58,9 +60,15 @@ describe("jobs", () => {
         { pattern: RECOVER_PENDING_SCHEDULE },
         { name: RECOVER_PENDING_JOB },
       ],
+      [
+        RECONCILE_REFUNDS_JOB,
+        { pattern: RECONCILE_REFUNDS_SCHEDULE },
+        { name: RECONCILE_REFUNDS_JOB },
+      ],
     ]);
     expect(EXPIRE_BOOKINGS_SCHEDULE).toBe("* * * * *");
     expect(RECOVER_PENDING_SCHEDULE).toBe("* * * * *");
+    expect(RECONCILE_REFUNDS_SCHEDULE).toBe("* * * * *");
   });
 
   it("lee el umbral del barrido desde el entorno con 5 minutos por defecto", () => {
@@ -126,11 +134,18 @@ describe("jobs", () => {
       notifications: 1,
       failed: 0,
     }));
+    const reconcileRefunds = vi.fn(async () => ({
+      organizations: 1,
+      completed: 2,
+      pending: 1,
+      failed: 0,
+    }));
     const process = createJobProcessor({
       expireBookings,
       renderDocument,
       sendNotification,
       recoverPending,
+      reconcileRefunds,
     });
 
     await expect(process({ name: EXPIRE_BOOKINGS_JOB, data: {} })).resolves.toEqual({
@@ -145,6 +160,14 @@ describe("jobs", () => {
       failed: 0,
     });
     expect(recoverPending).toHaveBeenCalledTimes(1);
+
+    await expect(process({ name: RECONCILE_REFUNDS_JOB, data: {} })).resolves.toEqual({
+      organizations: 1,
+      completed: 2,
+      pending: 1,
+      failed: 0,
+    });
+    expect(reconcileRefunds).toHaveBeenCalledTimes(1);
 
     const payload = {
       documentId: "4f3c1a52-8b7d-4c10-9f2e-6a5b4d3c2e1f",

@@ -127,8 +127,14 @@ export interface ProviderPayment {
   providerReference: string | null;
 }
 
-/** Lo que el servicio entrega al proveedor para reembolsar (T-F1-10). */
+/**
+ * Lo que el servicio entrega al proveedor para reembolsar (T-F1-10,
+ * F-FINAL-003). `refundId` lo genera el servidor y Viaja con la intención para
+ * que una repetición no emita un segundo reembolso externo.
+ */
 export interface RefundIntent {
+  /** Identificador idempotente; coincide con `refunds.id`. */
+  refundId: string;
   paymentId: string;
   amountUsd: string;
   amountVes: string;
@@ -136,17 +142,30 @@ export interface RefundIntent {
   reason: string;
 }
 
+/** Estado del reembolso tal como lo conoce el proveedor. */
+export type ProviderRefundStatus = "PENDING" | "COMPLETED";
+
 export interface ProviderRefund {
   providerReference: string | null;
+  status: ProviderRefundStatus;
+}
+
+/** Consulta del proveedor usada por la reconciliación (spec security). */
+export interface ProviderRefundState {
+  refundId: string;
+  providerReference: string | null;
+  status: ProviderRefundStatus;
 }
 
 /**
- * Puerto de pagos (D9): cobro real, confirmación y reembolso. En F1 el único
- * adaptador es `SimulatedPaymentProvider`; una pasarela real implementa la
- * misma interfaz sin tocar el dominio.
+ * Puerto de pagos (D9): cobro real, confirmación, reembolso y consulta de su
+ * estado. En F1 el único adaptador es `SimulatedPaymentProvider`; una pasarela
+ * real implementa la misma interfaz sin tocar el dominio.
  */
 export interface PaymentProvider {
   createPayment(intent: PaymentIntent): Promise<ProviderPayment>;
   confirm(paymentId: string): Promise<ProviderPayment>;
   refund(intent: RefundIntent): Promise<ProviderRefund>;
+  /** `null` cuando el proveedor no conoce ese `refundId`. */
+  getRefund(refundId: string): Promise<ProviderRefundState | null>;
 }

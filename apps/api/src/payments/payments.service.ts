@@ -43,6 +43,7 @@ import {
 import { ExchangeRateService } from "../rates/exchange-rate.service.js";
 import { TENANT_SETTINGS_DEFAULTS } from "../tenant-settings/tenant-settings.schemas.js";
 import { TenantService } from "../tenant/tenant.service.js";
+import { PAYMENT_PROVIDER } from "./payment-provider.token.js";
 import type { PaymentActor } from "./payments.guard.js";
 import { decodePaymentsCursor, encodePaymentsCursor } from "./payments.cursor.js";
 import {
@@ -57,9 +58,6 @@ import {
   type PaymentResponse,
   type RefundResponse,
 } from "./payments.schemas.js";
-
-/** Token de inyección de la pasarela (la interfaz se borra en runtime). */
-export const PAYMENT_PROVIDER = Symbol("PAYMENT_PROVIDER");
 
 /** Reserva con los datos que necesita un pago. */
 interface PayableBookingRow {
@@ -111,6 +109,19 @@ export interface CancellationRefundParams {
   tenantId: string;
   bookingId: string;
   actorId: string;
+}
+
+/** Intención registrada en el outbox y lista para despachar tras el commit. */
+export interface RefundDispatchPayload {
+  refundId: string;
+  tenantId: string;
+  intent: RefundIntent;
+}
+
+/** Resultado interno de la cancelación: respuesta y efecto externo pendiente. */
+export interface CancellationRefundResult {
+  response: RefundResponse;
+  dispatch: RefundDispatchPayload;
 }
 
 /** Datos de una transacción de alta de pago. */
@@ -570,11 +581,16 @@ export class PaymentsService {
    *
    * Un pago `IN_REVIEW` impide cancelar (`PAYMENT_IN_REVIEW`); un pago ya
    * reembolsado sin la reserva cancelada responde `REFUND_ALREADY_ISSUED`.
+   *
+   * F-FINAL-003: el `refundId` se genera aquí y viaja en la intención al
+   * proveedor. La fila `refund_dispatches` se escribe DENTRO de esta
+   * transacción, antes de cualquier efecto externo; el llamador despacha tras
+   * el commit. Así un rollback no deja un reembolso externo sin fila local.
    */
   async refundForCancellation(
     tx: Prisma.TransactionClient,
     params: CancellationRefundParams,
-  ): Promise<RefundResponse | null> {
+  ): Promise<CancellationRefundResult | null> {
     const payments = await tx.payment.findMany({
       where: { bookingId: params.bookingId, tenantId: params.tenantId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -618,21 +634,15 @@ export class PaymentsService {
 
     const amounts = refundAmounts(payment.amountUsd, percentage, payment.rate);
     const reason = `Cancelación de la reserva (${percentage}%)`;
+    const refundId = randomUUID();
     const intent: RefundIntent = {
+      refundId,
       paymentId: payment.id,
       amountUsd: amounts.amountUsd,
       amountVes: amounts.amountVes,
       rate: formatRate(payment.rate),
       reason,
     };
-    // BLOQUEANTE OBLIGATORIO (F-FINAL-003): con SimulatedPaymentProvider el
-    // reembolso es local y esta afirmación es cierta. Con una pasarela real NO
-    // lo es: si la transacción revierte después de este await, el dinero ya
-    // salió y no queda fila en `refunds`. Antes de cambiar el proveedor hay que
-    // implantar outbox o `refundId` idempotente con reconciliación (ver SDD).
-    await this.provider.refund(intent);
-
-    const refundId = randomUUID();
     const createdAt = new Date();
     await tx.refund.create({
       data: {
@@ -662,14 +672,56 @@ export class PaymentsService {
       data: { status: paymentStatus },
     });
 
+    await tx.refundDispatch.create({
+      data: {
+        refundId,
+        tenantId: params.tenantId,
+        paymentId: payment.id,
+        bookingId: params.bookingId,
+        status: "PENDING",
+        createdAt,
+        updatedAt: createdAt,
+      },
+    });
+
     return {
-      id: refundId,
-      amountUsd: amounts.amountUsd,
-      amountVes: amounts.amountVes,
-      rate: formatRate(payment.rate),
-      valueDate: formatValueDate(payment.valueDate),
-      paymentStatus,
+      response: {
+        // `id` es el `refundId` idempotente enviado al proveedor.
+        id: refundId,
+        amountUsd: amounts.amountUsd,
+        amountVes: amounts.amountVes,
+        rate: formatRate(payment.rate),
+        valueDate: formatValueDate(payment.valueDate),
+        paymentStatus,
+      },
+      dispatch: { refundId, tenantId: params.tenantId, intent },
     };
+  }
+
+  /**
+   * Despacho del reembolso tras el commit (F-FINAL-003). Un fallo aquí no
+   * revierte la cancelación: el outbox sigue en PENDING y el barrido lo cierra
+   * consultando al proveedor, sin volver a emitir el reembolso.
+   */
+  async dispatchRefund(dispatch: RefundDispatchPayload): Promise<void> {
+    try {
+      const result = await this.provider.refund(dispatch.intent);
+      await this.tenantService.withTenant(dispatch.tenantId, (tx) =>
+        tx.refundDispatch.update({
+          where: { refundId: dispatch.refundId },
+          data: {
+            status: result.status,
+            providerReference: result.providerReference,
+          },
+        }),
+      );
+    } catch (error) {
+      this.logger.error(
+        `Reembolso ${dispatch.refundId} pendiente de reconciliación: ${
+          error instanceof Error ? error.message : "error desconocido"
+        }`,
+      );
+    }
   }
 
   /**

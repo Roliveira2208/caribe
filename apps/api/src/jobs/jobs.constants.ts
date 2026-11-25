@@ -28,6 +28,15 @@ export const RECOVER_PENDING_JOB = "jobs.recover-pending";
 /** Igual que la expiración: la tolerancia se mide en minutos. */
 export const RECOVER_PENDING_SCHEDULE = "* * * * *";
 
+/**
+ * Reconciliación de reembolsos pendientes (T-F2-5, F-FINAL-003): consulta al
+ * proveedor con `getRefund`, nunca reemite un reembolso ya aplicado.
+ */
+export const RECONCILE_REFUNDS_JOB = "refunds.reconcile";
+
+/** Cada minuto, igual que el resto de pasadas de recuperación. */
+export const RECONCILE_REFUNDS_SCHEDULE = "* * * * *";
+
 /** Umbral por defecto; se puede subir con `PENDING_RECOVERY_MINUTES`. */
 export const DEFAULT_PENDING_RECOVERY_MINUTES = 5;
 

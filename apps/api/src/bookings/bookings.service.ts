@@ -19,7 +19,7 @@ import {
   releaseIdempotencyKey,
   requireIdempotencyKey,
 } from "../idempotency/idempotency.js";
-import { PaymentsService } from "../payments/payments.service.js";
+import { PaymentsService, type RefundDispatchPayload } from "../payments/payments.service.js";
 import type {
   BookingRefundEstimate,
   RefundResponse,
@@ -465,6 +465,10 @@ export class BookingsService {
    * en una transacción con el tenant de la reserva, porque `availability_tenant`
    * exige el GUC de la agencia para liberar el cupo. El orden de bloqueo es
    * `bookings` → revalidar → `availability`.
+   *
+   * F-FINAL-003: la intención se confirma con la transacción; el efecto externo
+   * se despacha SOLO tras el commit. Si el despacho falla, el outbox queda
+   * PENDING para la reconciliación y la cancelación ya confirmada responde igual.
    */
   async cancel(input: {
     actor: BookingActor;
@@ -475,11 +479,13 @@ export class BookingsService {
     if (!booking) {
       throw new ApiProblemException("NOT_FOUND", "La reserva no existe.");
     }
-    return this.tenantService.withOwnerTenant(
+    const result = await this.tenantService.withOwnerTenant(
       input.actor.userId,
       booking.tenantId,
       (tx) => this.cancelInTx(tx, input.actor, booking.id, booking.tenantId, input.ip),
     );
+    if (result.dispatch) await this.paymentsService.dispatchRefund(result.dispatch);
+    return result.response;
   }
 
   /** Reserva visible para el actor: agencia completa o solo las propias. */
@@ -511,7 +517,7 @@ export class BookingsService {
     bookingId: string,
     tenantId: string,
     ip: string | null,
-  ): Promise<CancelBookingResponse> {
+  ): Promise<{ response: CancelBookingResponse; dispatch: RefundDispatchPayload | null }> {
     const rows = await tx.$queryRaw<
       Array<{ id: string; code: string; status: BookingStatusValue }>
     >(Prisma.sql`
@@ -532,13 +538,16 @@ export class BookingsService {
     // emitido (spec booking, "Cancelación repetida").
     if (booking.status === "CANCELLED" || booking.status === "EXPIRED") {
       return {
-        id: booking.id,
-        code: booking.code,
-        status: booking.status,
-        refund:
-          booking.status === "CANCELLED"
-            ? await this.existingRefund(tx, booking.id)
-            : null,
+        response: {
+          id: booking.id,
+          code: booking.code,
+          status: booking.status,
+          refund:
+            booking.status === "CANCELLED"
+              ? await this.existingRefund(tx, booking.id)
+              : null,
+        },
+        dispatch: null,
       };
     }
 
@@ -601,7 +610,7 @@ export class BookingsService {
       after: {
         code: booking.code,
         status: "CANCELLED",
-        refundId: refund?.id ?? null,
+        refundId: refund?.response.id ?? null,
       },
       ip,
     });
@@ -612,25 +621,28 @@ export class BookingsService {
         actorId: actor.userId,
         action: "booking.refund",
         entity: "refund",
-        entityId: refund.id,
+        entityId: refund.response.id,
         before: null,
         after: {
           bookingId,
-          amountUsd: refund.amountUsd,
-          amountVes: refund.amountVes,
-          rate: refund.rate,
-          valueDate: refund.valueDate,
-          paymentStatus: refund.paymentStatus,
+          amountUsd: refund.response.amountUsd,
+          amountVes: refund.response.amountVes,
+          rate: refund.response.rate,
+          valueDate: refund.response.valueDate,
+          paymentStatus: refund.response.paymentStatus,
         },
         ip,
       });
     }
 
     return {
-      id: booking.id,
-      code: booking.code,
-      status: "CANCELLED",
-      refund,
+      response: {
+        id: booking.id,
+        code: booking.code,
+        status: "CANCELLED",
+        refund: refund?.response ?? null,
+      },
+      dispatch: refund?.dispatch ?? null,
     };
   }
 

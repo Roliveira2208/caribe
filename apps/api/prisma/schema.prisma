@@ -125,6 +125,7 @@ model Organization {
   exchangeRates    ExchangeRate[]
   payments         Payment[]
   refunds          Refund[]
+  refundDispatches RefundDispatch[]
   documents        Document[]
   documentCounters DocumentCounter[]
   notificationLogs NotificationLog[]
@@ -561,11 +562,38 @@ model Refund {
   createdBy      String       @map("created_by")
   createdAt      DateTime     @default(now()) @map("created_at")
   documents      Document[]
+  dispatch       RefundDispatch?
 
   @@unique([paymentId])
   @@index([bookingId])
   @@index([tenantId])
   @@map("refunds")
+}
+
+/// Intención de reembolso registrada ANTES de llamar al proveedor (F-FINAL-003).
+/// La fila se confirma con la cancelación; el despacho externo ocurre después
+/// del commit y su resultado se escribe aquí. Append-only en el sentido de que
+/// nunca se borra: un resultado no registrado se conserva como PENDING.
+model RefundDispatch {
+  refundId          String               @id @map("refund_id")
+  tenantId          String               @map("tenant_id")
+  organization      Organization         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentId         String               @map("payment_id")
+  bookingId         String               @map("booking_id")
+  status            RefundDispatchStatus @default(PENDING)
+  providerReference String?              @map("provider_reference")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  refund            Refund               @relation(fields: [refundId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@index([paymentId])
+  @@map("refund_dispatches")
+}
+
+enum RefundDispatchStatus {
+  PENDING
+  COMPLETED
 }
 
 model Document {
