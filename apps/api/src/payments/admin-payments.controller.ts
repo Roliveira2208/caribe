@@ -12,6 +12,7 @@ import {
 import { attachAuditData, currentAuditTx } from "../audit/audit-storage.js";
 import { Auditable } from "../audit/auditable.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import { BusinessRateLimit } from "../security/business-rate-limit.js";
 import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { PaymentPermission, PaymentsGuard, paymentActorOf, type PaymentsRequest } from "./payments.guard.js";
 import {
@@ -65,6 +66,7 @@ export class AdminPaymentsController {
 
   @Auditable({ action: "payment.approve", entity: "payment" })
   @Patch(":id/approve")
+  @BusinessRateLimit("paymentReviews")
   @PaymentPermission("review")
   @HttpCode(200)
   async approve(
@@ -80,6 +82,7 @@ export class AdminPaymentsController {
 
   @Auditable({ action: "payment.reject", entity: "payment" })
   @Patch(":id/reject")
+  @BusinessRateLimit("paymentReviews")
   @PaymentPermission("review")
   @HttpCode(200)
   async reject(

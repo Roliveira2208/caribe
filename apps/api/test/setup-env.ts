@@ -14,6 +14,14 @@ process.env.DATABASE_URL = testDatabaseUrl();
 process.env.BETTER_AUTH_SECRET ??= "test-secret-no-usar-en-produccion-0123456789";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3002";
 process.env.TRUSTED_ORIGINS ??= "http://localhost:3000,http://localhost:3001";
+// Los e2e de F1 comparten la IP local y hacen muchas más peticiones que los
+// umbrales de producción; se FUERZA un cupo alto para que solo la suite de
+// límites (que sobreescribe estas variables en su beforeAll) vea 429.
+process.env.RATE_LIMIT_WINDOW_SECONDS = "60";
+process.env.RATE_LIMIT_BOOKINGS_MAX = "100000";
+process.env.RATE_LIMIT_PAYMENTS_MAX = "100000";
+process.env.RATE_LIMIT_PAYMENT_REVIEWS_MAX = "100000";
+process.env.RATE_LIMIT_DOWNLOADS_MAX = "100000";
 // El socket local actúa como proxy de confianza en los e2e de seguridad: permite
 // simular clientes reales con una cadena `cliente, 127.0.0.1` sin red extra.
 // Un .env copiado de .env.example lo trae vacío: en ese caso también hay que

@@ -7,7 +7,7 @@ tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 - [x] T-F2-1 Generar y someter a aprobación `docs/wireframes/panel-tasas.svg`. Prueba: gate de aprobación del wireframe antes de T-F2-8.
 - [x] T-F2-2 M1: configurar `trustedProxies`, resolver la IP real y corregir el rate limit de login. Prueba: `security › "IP tras proxy de confianza"`, `"Cabecera de proxy no confiable"` y `"Rate limit por IP real"`.
 - [x] T-F2-3 M2: Helmet, CSP sin inline y CORS con `TRUSTED_ORIGINS`. Prueba: `security › "Cabeceras de seguridad en la API"`, `"CSP sin scripts inline"`, `"CORS con orígenes permitidos"` y `"CORS con origen desconocido"`.
-- [ ] T-F2-4 Rate limiting de rutas de negocio con 429 Problem Details. Prueba: `security › "Límite en creación de reservas"`, `"Límite en alta y revisión de pagos"` y `"Límite en descargas"`.
+- [x] T-F2-4 Rate limiting de rutas de negocio con 429 Problem Details. Prueba: `security › "Límite en creación de reservas"`, `"Límite en alta y revisión de pagos"` y `"Límite en descargas"`.
 - [ ] T-F2-5 Reembolso idempotente: `refundId`, registro atómico/outbox y reconciliación. Prueba: `security › "Reembolso idempotente"`, `"Rollback sin reembolso externo"` y `"Reconciliación de reembolsos"`.
 - [ ] T-F2-6 Paquete compartido de fuentes y `ConfigProvider` con tokens Caribe. Prueba: `admin-ui › "Tokens Caribe"`, `"Tipografía compartida"` y `"Cabecera del panel"`.
 - [ ] T-F2-7 Textos es/en y accesibilidad del shell del panel. Prueba: `admin-ui › "Textos es y en"` y `"Accesibilidad básica"`.

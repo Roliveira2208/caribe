@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Req, StreamableFile, UseGuards } from "@nestjs/common";
+import { BusinessRateLimit } from "../security/business-rate-limit.js";
 import { DocumentDownloadService } from "./document-download.service.js";
 import {
   DocumentPermission,
@@ -20,6 +21,7 @@ export class DocumentsController {
   constructor(private readonly downloads: DocumentDownloadService) {}
 
   @Get(":id/download")
+  @BusinessRateLimit("downloads")
   @DocumentPermission("download")
   async download(
     @Req() request: DocumentsRequest,

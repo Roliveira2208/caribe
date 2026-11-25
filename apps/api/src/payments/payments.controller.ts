@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { paymentBodySchema, type PaymentBody } from "@caribe/shared";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import { BusinessRateLimit } from "../security/business-rate-limit.js";
 import {
   PaymentPermission,
   PaymentsGuard,
@@ -40,6 +41,7 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post()
+  @BusinessRateLimit("payments")
   @PaymentPermission("self")
   @HttpCode(201)
   create(

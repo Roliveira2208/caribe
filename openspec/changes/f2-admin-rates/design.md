@@ -62,6 +62,21 @@ El endpoint de reportes se añade al módulo admin, con guard de sesión, TOTP, 
 guard dedicado que solo permite lectura a admin de agencia y Super Admin. Los totales se calculan en
 SQL con `DECIMAL`, sobre los pagos `APPROVED` y su tasa congelada; nunca se recalcula `amount_ves`.
 
+**Inventario de rutas sin sesión (F-FINAL-002).** La política es «fallo cerrado»: solo se permite
+sin sesión lo que lleva `@AllowAnonymous` explícito, el guard global de Better Auth exige sesión en
+el resto y no se activa ningún plugin ni modo de autenticación nuevo.
+
+| Ruta | Política |
+| --- | --- |
+| `GET /api/v1/products`, `GET /api/v1/products/:id/availability`, `GET /api/v1/products/:id` | Público (`@AllowAnonymous`), solo datos `PUBLISHED` y no borrados |
+| `GET /api/v1/rates/today` | Público (`@AllowAnonymous`), tasa global vigente |
+| `/api/auth/*` | Rutas propias de Better Auth (alta/inicio de sesión y las ya existentes de organización/admin); no cambia su clasificación ni se añaden plugins |
+| `POST /api/v1/bookings`, `POST /api/v1/bookings/:id/payments`, `PATCH /api/v1/admin/payments/:id/approve`, `PATCH /api/v1/admin/payments/:id/reject`, `GET /api/v1/documents/:id/download` | Protected: sesión + permiso + TOTP donde aplica; T-F2-4 añade límite pero no acceso anónimo |
+
+El guard de T-F2-4 no crea rutas públicas y no altera este inventario: las cinco rutas limitadas ya
+exigían sesión antes del cambio. El límite de login de T-F2-2 actúa sobre `/api/auth/*` sin sesión,
+con la misma ventana y umbral que la librería.
+
 ## 5. Matriz de permisos en la UI
 
 | Pantalla | owner/admin | agent | provider | member | Super Admin |
@@ -100,9 +115,17 @@ inventario ajeno y que un `member` sin `booking:read` no ve reservas ni resumen 
   `script-src` usa `'nonce-…'` y `'strict-dynamic'`, nunca `'unsafe-inline'`; `style-src` lo permite
   únicamente por el cssinjs de Ant Design. La cabecera se fija en el proxy, de modo que también la
   reciben las páginas de error.
-- **F-FINAL-002**: `@nestjs/throttler` aplicado a `POST /bookings`, alta y revisión de pagos y
-  descargas, con 429 en formato Problem Details. Los umbrales se deciden antes de la tarea y quedan
-  en variables de entorno; se actualiza el inventario de rutas sin sesión.
+- **F-FINAL-002**: `@nestjs/throttler` aporta el almacenamiento en memoria; un guard propio marca
+  las cuatro rutas con un decorador y lanza `RATE_LIMITED` (429 Problem Details) con `Retry-After`.
+  No se usa el `ThrottlerGuard` de la librería porque aplicaría todas las políticas a todas las
+  rutas. La identidad es la IP real resuelta en T-F2-2 (o el usuario autenticado como respaldo), con
+  hash SHA-256 en la clave: ni la IP ni la ruta se exponen en la respuesta. `approve` y `reject`
+  comparten el cupo de revisión para que no se eluda alternando operaciones.
+  Umbrales por defecto (ventana común de 60 s, configurables por entorno): reservas 10, alta de
+  pagos 10, revisión de pagos 20 y descargas 60. Un valor inválido cae al valor por defecto en lugar de
+  desactivar la protección. El inventario de rutas sin sesión se actualiza en el delta de
+  `auth-access`: estas cuatro rutas siguen exigiendo sesión y el limitador no crea ninguna ruta
+  pública nueva.
 - **F-FINAL-003**: `refundId` idempotente en la interfaz `PaymentProvider` y registro atómico/outbox
   para que un rollback de la base no deje un reembolso externo sin fila; barrido de reconciliación de
   pendientes. No cambia la interfaz pública de los otros cuatro proveedores.

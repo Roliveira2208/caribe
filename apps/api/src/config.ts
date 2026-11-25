@@ -63,6 +63,40 @@ export const loginRateLimit = {
   max: 10,
 } as const;
 
+/**
+ * Umbrales de las rutas de negocio (T-F2-4, spec security). La ventana es la
+ * misma para las cuatro familias; cada familia tiene su propio contador para
+ * que una descarga no consuma el cupo de reservas ni una revisión el del alta.
+ */
+export interface BusinessRateLimits {
+  windowSeconds: number;
+  bookings: number;
+  payments: number;
+  paymentReviews: number;
+  downloads: number;
+}
+
+function positiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt((value ?? "").trim(), 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+/**
+ * Valores por defecto pensados para una persona, no para un lote: 10 altas que
+ * mutan estado por minuto, 20 revisiones de personal y 60 lecturas de PDF.
+ * Un valor inválido cae al valor por defecto en lugar de dejar la ruta sin
+ * protección.
+ */
+export function resolveBusinessRateLimits(env: NodeJS.ProcessEnv = process.env): BusinessRateLimits {
+  return {
+    windowSeconds: positiveInt(env.RATE_LIMIT_WINDOW_SECONDS, 60),
+    bookings: positiveInt(env.RATE_LIMIT_BOOKINGS_MAX, 10),
+    payments: positiveInt(env.RATE_LIMIT_PAYMENTS_MAX, 10),
+    paymentReviews: positiveInt(env.RATE_LIMIT_PAYMENT_REVIEWS_MAX, 20),
+    downloads: positiveInt(env.RATE_LIMIT_DOWNLOADS_MAX, 60),
+  };
+}
+
 export const apiConfig = {
   port: API_PORT,
   basePath: "/api/v1",

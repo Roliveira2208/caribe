@@ -12,6 +12,7 @@ import {
 } from "@nestjs/common";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
+import { BusinessRateLimit } from "../security/business-rate-limit.js";
 import type { ActiveMembershipRequest } from "../tenant/active-membership.js";
 import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import {
@@ -55,6 +56,7 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
+  @BusinessRateLimit("bookings")
   @HttpCode(201)
   create(
     @Req() request: AuthenticatedRequest,
