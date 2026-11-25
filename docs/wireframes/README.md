@@ -19,6 +19,8 @@ Bocetos SVG de estructura, contenido y reglas visibles del MVP. Se conservan los
 | `panel-pagos.svg` | Panel de administración de reservas y pagos | Admin · escritorio |
 | `panel-tasas.svg` | Panel de tasas: tasa vigente, override con confirmación antes/después e historial | Admin · escritorio |
 | `panel-auditoria.svg` | Panel de auditoría: filtros y cursor, pestaña de eventos de autenticación y alcance por agencia | Admin · escritorio |
+| `panel-catalogo.svg` | Panel de catálogo: alta, edición y estados de productos, y disponibilidad por noche | Admin · escritorio |
+| `panel-usuarios-roles.svg` | Panel de usuarios y roles: invitación, cambio de rol y revocación de sesiones con Better Auth y TOTP | Admin · escritorio |
 
 ## Decisiones del nuevo inicio
 

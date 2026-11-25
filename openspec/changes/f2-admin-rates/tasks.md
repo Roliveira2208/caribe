@@ -23,7 +23,7 @@ tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 - [x] T-F2-17 Generar y someter a aprobación `docs/wireframes/panel-catalogo.svg`. Prueba: gate de aprobación antes de T-F2-18.
 - [x] T-F2-18 Catálogo: alta, edición, propiedad y estados. Prueba: `catalog › "Alta de producto en el panel"`, `"Edición de producto de la agencia"`, `"Proveedor edita solo sus productos"` y `"Publicar y archivar producto"`.
 - [x] T-F2-19 Catálogo: disponibilidad, precios y traducciones. Prueba: `catalog › "Disponibilidad por noche"`, `"Lectura de disponibilidad del panel"`, `"Precio como texto decimal"` y `"Traducciones es y en"`.
-- [ ] T-F2-20 Generar y someter a aprobación `docs/wireframes/panel-usuarios-roles.svg`. Prueba: gate de aprobación antes de T-F2-21.
+- [x] T-F2-20 Generar y someter a aprobación `docs/wireframes/panel-usuarios-roles.svg`. Prueba: gate de aprobación antes de T-F2-21.
 - [ ] T-F2-21 Usuarios y roles sobre Better Auth. Prueba: `auth-access › "Invitar miembro con segundo factor"`, `"Cambiar rol de un miembro"`, `"Revocar sesión desde el panel"`, `"Organización objetivo ajena"`, `"Super Admin en modo plataforma"` y `"Operación sin agencia activa"`.
 - [ ] T-F2-22 Generar y someter a aprobación `docs/wireframes/panel-reportes.svg`. Prueba: gate de aprobación antes de T-F2-23.
 - [ ] T-F2-23 Reporte de ventas `GET /admin/reports/sales`. Prueba: `reports › "Reporte por rango de fechas"`, `"Totales calculados en el servidor"`, `"Desglose por método y estado"`, `"Alcance por rol"` y `"Exportación CSV del reporte"`.

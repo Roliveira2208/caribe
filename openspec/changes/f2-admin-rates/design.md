@@ -191,11 +191,15 @@ cursor. La IP se muestra como «—» cuando sea `null`.
 
 ## 8. Wireframes y puertas
 
-- Ya aprobados: `docs/wireframes/panel-pagos.svg`, `panel-tasas.svg`, `panel-auditoria.svg` y
-  `panel-catalogo.svg`.
-- Pendientes de aprobación, uno por uno, antes de implementar su pantalla: `panel-usuarios-roles.svg`
-  y `panel-reportes.svg`.
+- Ya aprobados: `docs/wireframes/panel-pagos.svg`, `panel-tasas.svg`, `panel-auditoria.svg`,
+  `panel-catalogo.svg` y `panel-usuarios-roles.svg`.
+- Pendiente de aprobación, antes de implementar su pantalla: `panel-reportes.svg`.
   Todos siguen `docs/wireframes/README.md` y el formato de baja fidelidad de `panel-pagos.svg`.
+- Decisiones aprobadas de usuarios/roles (T-F2-20): el listado muestra miembro, rol, estado de 2FA y
+  última sesión; los modales cubren invitación, cambio de rol antes/después y revocación de sesiones
+  con la IP mostrada como «—». La organización objetivo se elige solo entre las membresías del actor;
+  Super Admin consulta agencias en modo plataforma sin fijar agencia activa. No se incluye exportación
+  ni otra acción sin ruta existente en la spec.
 - **Pausa 1** tras el override de tasa: verificación independiente de los escenarios obligatorios de
   `exchange-rates` y `security`.
 - **Pausa 2** tras la aprobación/rechazo de pagos: verificación independiente y revisión de seguridad
