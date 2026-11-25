@@ -5,7 +5,8 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@caribe/shared";
 import { alternateLinks } from "@/i18n/metadata";
 import { AuditLogPanel } from "@/components/audit-log-panel";
 import { PanelAccessNotice } from "@/components/panel-access-notice";
-import { loadPanelAccess } from "@/lib/panel-access";
+import { resolveAuditAccess } from "@/lib/audit-client";
+import { loadActiveMemberRole, loadPanelAccess } from "@/lib/panel-access";
 
 interface PanelPageProps {
   params: Promise<{ locale: string }>;
@@ -35,16 +36,19 @@ export default async function PanelPage({ params }: PanelPageProps) {
   const tOrg = await getTranslations("organization");
 
   const cookieStore = await cookies();
-  const access = await loadPanelAccess({
+  const request = {
     cookieHeader: cookieStore.toString(),
     origin: process.env["ADMIN_URL"] ?? "http://localhost:3001",
-  });
+  };
+  const access = await loadPanelAccess(request);
 
   if (access.status !== "platform" && access.status !== "ready") {
     return <PanelAccessNotice access={access} />;
   }
 
   const isPlatform = access.status === "platform";
+  const role = isPlatform ? null : await loadActiveMemberRole(request);
+  const audit = resolveAuditAccess(isPlatform ? "platform" : "ready", role);
 
   return (
     <div style={{ width: "100%" }}>
@@ -56,7 +60,7 @@ export default async function PanelPage({ params }: PanelPageProps) {
           ? tOrg("platformDescription")
           : tOrg("activeAgency", { agency: access.organization.name })}
       </p>
-      <AuditLogPanel locale={locale} redirectTo={`/${locale}`} />
+      {audit.canRead ? <AuditLogPanel locale={locale} redirectTo={`/${locale}`} /> : null}
     </div>
   );
 }

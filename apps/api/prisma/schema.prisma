@@ -205,6 +205,8 @@ model AuditLog {
   at       DateTime @default(now())
 
   @@index([tenantId])
+  @@index([tenantId, at, id])
+  @@index([at, id])
   @@map("audit_logs")
 }
 

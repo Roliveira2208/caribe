@@ -123,6 +123,33 @@ export async function loadActiveMemberRole(
 /** Alias conservado para el panel de tasas; comparte la misma lectura. */
 export const loadRateRole = loadActiveMemberRole;
 
+/** Actor necesario para la matriz del visor de auditoría (T-F2-15). */
+export interface AuditActor {
+  status: "ready" | "platform" | "login";
+  role: string | null;
+}
+
+/**
+ * Resuelve en servidor si quien pide la auditoría es Super Admin (plataforma)
+ * o un miembro con agencia activa. No fija la organización: solo lee la sesión
+ * y el rol de la membresía activa, igual que el panel de tasas.
+ */
+export async function loadAuditActor(
+  options: LoadPanelAccessOptions,
+): Promise<AuditActor> {
+  const response = await authRequest("/get-session", options);
+  if (!response.ok) return { status: "login", role: null };
+  const body = (await response.json().catch(() => null)) as SessionData | null;
+  const user = body?.user;
+  if (!user) return { status: "login", role: null };
+  const roles = Array.isArray(user.role) ? user.role : [user.role];
+  if (roles.includes(SUPER_ADMIN_ROLE)) {
+    return { status: "platform", role: SUPER_ADMIN_ROLE };
+  }
+  const role = await loadActiveMemberRole(options);
+  return role === null ? { status: "login", role: null } : { status: "ready", role };
+}
+
 /**
  * Id del usuario autenticado, leído de la misma sesión de Better Auth (T-F2-12).
  * Se usa solo para deshabilitar la revisión del propio pago; sin sesión válida

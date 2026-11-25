@@ -1,11 +1,20 @@
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { resolveAuditAccess } from "@/lib/audit-client";
+import { loadAuditActor } from "@/lib/panel-access";
 import { LanguageSwitcher } from "./language-switcher";
 import { SessionNav } from "./session-nav";
 
 /** Cabecera del shell del admin: marca, navegacion, idioma y sesion. */
 export async function SiteHeader() {
   const t = await getTranslations("nav");
+  const cookieStore = await cookies();
+  const actor = await loadAuditActor({
+    cookieHeader: cookieStore.toString(),
+    origin: process.env["ADMIN_URL"] ?? "http://localhost:3001",
+  });
+  const audit = resolveAuditAccess(actor.status, actor.role);
 
   return (
     <header
@@ -48,6 +57,11 @@ export async function SiteHeader() {
           <Link href="/admin/rates" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
             {t("rates")}
           </Link>
+          {audit.visible ? (
+            <Link href="/admin/audit" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
+              {t("audit")}
+            </Link>
+          ) : null}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LanguageSwitcher />

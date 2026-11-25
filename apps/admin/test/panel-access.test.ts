@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SessionData } from "@caribe/shared";
 import {
   loadActiveMemberRole,
+  loadAuditActor,
   loadPanelAccess,
   loadRateRole,
   loadSessionUser,
@@ -143,6 +144,51 @@ describe("loadSessionUser", () => {
       new Response(JSON.stringify({ user: { id: 42 } }), { status: 200 }),
     ) as unknown as typeof globalThis.fetch;
     await expect(loadSessionUser({ ...options, fetchImpl: invalid })).resolves.toBeNull();
+  });
+});
+
+describe("loadAuditActor", () => {
+  it("resuelve plataforma para el Super Admin sin consultar membresías", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify(session("super_admin")), { status: 200 }),
+    ) as unknown as typeof globalThis.fetch;
+    await expect(loadAuditActor({ ...options, fetchImpl })).resolves.toEqual({
+      status: "platform",
+      role: "super_admin",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("resuelve el rol de la membresía activa para el resto de usuarios", async () => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).endsWith("/get-session")) {
+        return new Response(JSON.stringify(session()), { status: 200 });
+      }
+      return new Response(JSON.stringify({ role: "admin" }), { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+    await expect(loadAuditActor({ ...options, fetchImpl })).resolves.toEqual({
+      status: "ready",
+      role: "admin",
+    });
+  });
+
+  it("falla cerrado sin sesión o sin rol de agencia", async () => {
+    const anonymous = vi.fn(async () => new Response(null, { status: 401 })) as unknown as typeof globalThis.fetch;
+    await expect(loadAuditActor({ ...options, fetchImpl: anonymous })).resolves.toEqual({
+      status: "login",
+      role: null,
+    });
+
+    const noRole = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).endsWith("/get-session")) {
+        return new Response(JSON.stringify(session()), { status: 200 });
+      }
+      return new Response(JSON.stringify({ role: null }), { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+    await expect(loadAuditActor({ ...options, fetchImpl: noRole })).resolves.toEqual({
+      status: "login",
+      role: null,
+    });
   });
 });
 
