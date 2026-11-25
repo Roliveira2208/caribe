@@ -148,3 +148,119 @@ salvedad de los escenarios deseables:
 
 Las observaciones 2-4 siguen registradas como informativas/no bloqueantes; no se ha tocado código
 de API, specs, `tasks.md` ni dependencias.
+
+---
+
+# Verificación independiente — PAUSA 2 (T-F2-13)
+
+**Fecha:** 2026-11-25  
+**Change:** `f2-admin-rates`  
+**Alcance verificado:** panel de pagos (T-F2-11 y T-F2-12) y no regresión de seguridad antes de
+catálogo y usuarios/roles.  
+**Veredicto:** **PASS** — 8/8 escenarios obligatorios de `payments` con test concreto y 13/13
+obligatorios de `security` en verde; auditoría de seguridad sin hallazgos Critical/High/Medium.  
+**Deseables de `payments`:** 0 completos, 2 parciales (estado vacío y estado de error) y 2 pendientes
+(exportación CSV y columnas configurables). No bloquean F2; se retoman en T-F2-25 o se recortan con
+nota en la verificación final.  
+**Bloqueos para avanzar:** ninguno.
+
+La verificación la hicieron dos agentes independientes en conversaciones limpias y modo solo lectura:
+uno derivó tests por escenario y el otro auditoría de seguridad. Antes de los informes `git status
+--short` estaba vacío en `main` @ `98029bc`; ninguno modificó código, specs, `tasks.md`, dependencias
+ni historial de Git. La corrección de la observación L1 se documenta en §7 y no cambia el veredicto.
+
+## 1. Comandos ejecutados por los verificadores
+
+| Comando | Resultado |
+| --- | --- |
+| `node scripts/check-specs.mjs` | `OK: 15 specs válidas` |
+| API: `vitest run` de `payments.e2e.ts`, `security.e2e.ts`, `business-rate-limit.e2e.ts`, `refund-idempotency.e2e.ts`, `two-factor.e2e.ts` | **5 archivos / 78 tests en verde** |
+| API: `security.e2e.ts`, `business-rate-limit.e2e.ts`, `refund-idempotency.e2e.ts` aislados | **3 archivos / 14 tests en verde** |
+| Admin: `vitest run` de `payments-client`, `payments-panel`, `panel-access`, `accessibility`, `messages` | **5 archivos / 73 tests en verde** |
+
+Los recuentos se listan como evidencia de cada ejecución, no para sumarlos. No hubo tests fallidos.
+
+## 2. `payments` — 8 escenarios obligatorios
+
+| # | Escenario | Estado | Evidencia |
+| --- | --- | --- | --- |
+| 1 | Listado filtrable | Cubierto | `payments.e2e.ts` → *"el panel lista solo la agencia activa, pagina y filtra"* (solo A, `status`/`method`, cursor, decimales del servidor y `exchangeRateId`). `payments-client.test.ts` → filtros y cursor; `payments-panel.test.ts` → *"pide cada página al servidor con el cursor y no pagina en el cliente"*. Código: `admin-payments.controller.ts:49-56`, `payments.service.ts:333-372`, `payments-client.ts:132-149`, `payments-panel.tsx:101-143`. |
+| 2 | Aprobar con TOTP | Cubierto | `payments.e2e.ts` → *"aprueba en modo MANUAL, confirma la reserva y audita el antes/después"*. `two-factor.e2e.ts` → *"inventario Nest: toda ruta administrativa exige segundo factor"* (incluye `approve`/`reject`, sin TOTP → 403 `TWO_FACTOR_REQUIRED`). La UI redirige a `/two-factor` (`payments-panel.tsx:74-77`). |
+| 3 | Rechazo con motivo en el panel | Cubierto | `payments.e2e.ts` → *"rechaza con motivo, deja la reserva pendiente y guarda el motivo"* y *"rechaza sin motivo con 422"*. `payments-client.test.ts` → *"exige motivo antes de llamar a la API"*. Código: `payments.schemas.ts:40-45`, `payments.service.ts:503-525`. |
+| 4 | Revisor distinto del pagador en la UI | Cubierto | `payments.e2e.ts` → *"impide que el pagador revise su propio pago"* (403 y sigue `IN_REVIEW`). `payments-client.test.ts` → matriz `canReviewPayment`; `payments-panel.test.ts` → botones deshabilitados con mensaje es/en. Código: `payments.service.ts:412-419`, `payments-panel.tsx:215-230`, `page.tsx:44-62`. |
+| 5 | Par congelado solo lectura | Cubierto | `payments.e2e.ts` → *"rechaza montos, tasas y campos calculados enviados por el cliente"* (422). `payments-client.test.ts` → par del servidor como texto; `payments-panel.test.ts` → sin `type="number"` ni `Number(row.*)`. Código: `payments.schemas.ts:30-45`, `payments-panel.tsx:185-201`. |
+| 6 | Revisión concurrente en la UI | Cubierto | `payments.e2e.ts` → *"resuelve dos revisiones concurrentes con una sola ganadora"* (200 + 409 `PAYMENT_ALREADY_REVIEWED` con solapamiento forzado). `payments-client.test.ts` → conserva el código y recarga; `payments-panel.test.ts` → recarga y deshabilita acciones. Código: `payments.service.ts:427-451`, `payments-panel.tsx:82-121`. Véase observación L1 y §7. |
+| 7 | Sin permiso de lectura de pagos | Cubierto | `payments.e2e.ts` → *"niega el listado a member y provider; agente y plataforma solo leen"*. `payments-client.test.ts` → matriz de roles y Super Admin de solo lectura. Código: `payments.guard.ts:98-130`, `payments-client.ts:42-56`, `page.tsx:40-62`. |
+| 8 | Pago de otra agencia | Cubierto | `payments.e2e.ts` → *"el detalle respeta la agencia y el Super Admin ve todas"* (404 para B desde A) y *"rechaza filtros fuera del contrato y no cruza reservas de otra agencia"* (lista vacía). Código: `payments.service.ts:333-386,412-416`. Véase observación 2. |
+
+## 3. `security` — confirmación de no regresión
+
+Los 13 escenarios obligatorios siguen respaldados por las mismas pruebas de la PAUSA 1, ejecutadas
+otra vez sobre `98029bc`: `security.e2e.ts` (IP real, proxy no confiable, cabeceras, CORS y límite de
+login), `business-rate-limit.e2e.ts` (reservas, pagos y descargas) y `refund-idempotency.e2e.ts`
+(idempotencia, rollback, fila pendiente, reconciliación y sin secretos). **14/14 tests en verde.**
+Los dos commits de pagos no tocaron `bootstrap.ts`, `security/*`, migraciones ni el flujo de reembolsos.
+
+## 4. Auditoría de seguridad independiente
+
+**Veredicto: PASS**, riesgo residual 10/100, sin hallazgos Critical/High/Medium. Comprobaciones
+explícitas:
+
+1. **Montos/tasa/id de tasa:** `paymentBodySchema` es `strictObject` sin campos calculados; la UI pinta
+   cadenas del servidor y no contiene `Number(row.amount*)`. No hallazgo.
+2. **Roles, TOTP y autorrevisión:** matriz única en `access.ts`, guard global de segundo factor en
+   rutas `/admin`, `PaymentsGuard` falla cerrado y el servicio niega la revisión propia. La UI solo
+   refleja la matriz; la autoridad es la API. No hallazgo.
+3. **Tenants y `exchangeRateId`:** `tenantId` de sesión revalidada, RLS forzada, listado/detalle/revisión
+   filtrados y `exchangeRateId` serializado desde la fila con FK y trigger de inmutabilidad. No hallazgo.
+4. **Concurrencia:** bloqueo `bookings` → `payments` con `FOR UPDATE`, second check y una sola escritura;
+   pago, reserva, documentos, aviso y auditoría comparten transacción. No hallazgo (véase L1).
+5. **Secretos y mensajes:** 5xx convertidos a `INTERNAL_ERROR` con `correlationId`; la UI usa solo
+   claves es/en y nunca muestra `cause.message`; el contrato no acepta PAN/CVV. No hallazgo.
+6. **Regresiones de red y reembolsos:** Helmet/CORS/CSP, IP real, rate limiting y outbox intactos. No hallazgo.
+
+## 5. Deseables de `payments`
+
+| Escenario | Estado | Motivo |
+| --- | --- | --- |
+| Exportación CSV de pagos | Pendiente | Sin endpoint, botón ni test. |
+| Columnas configurables | Pendiente | Columnas fijas; sin preferencias persistentes ni test. |
+| Estado vacío | Parcial | Texto es/en en `locale.emptyText`; sin test de render ni de foco. |
+| Estado de error | Parcial | `handleError` cubre 401/2FA/403/409/410/422 y genérico; faltan mensajes propios para `ACTIVE_ORGANIZATION_REQUIRED` y 404, y comprobación de foco. |
+
+## 6. Observaciones de los verificadores
+
+1. **L1 (baja) — conflicto secuencial:** una segunda revisión que llega después del primer commit
+   recibe 409 `INVALID_STATE_TRANSITION` (estado terminal observado en la lectura inicial), mientras
+   que `PAYMENT_ALREADY_REVIEWED` se reserva para el solapamiento real. Es la distinción exigida por
+   la spec base, así que **no se cambió la API**; la UI sí debe recargar en ambos casos. Corregida en §7.
+2. **L2 (baja) — cobertura de UI estática:** los tests del panel comprueban el código fuente; las
+   funciones puras sí tienen tests unitarios. No hay test de interacción con navegador para el botón
+   deshabilitado ni para la recarga. Coherente con la limitación ya registrada en PAUSA 1.
+3. **Informativa — trazabilidad:** la cobertura F2 de pagos vive en `payments.e2e.ts` heredado y en los
+   tests de `apps/admin`; no hay un `f2-payments.e2e.ts` con ese nombre.
+4. **Baja — 404 en revisión ajena:** el 404 HTTP se afirma para el detalle; `approve`/`reject` de otra
+   agencia está bloqueado por `tenantId` en el servicio, pero sin aserción HTTP directa.
+5. **Baja — TOTP payments-específico:** el 403 se verifica con el inventario global de rutas `/admin`,
+   no con un caso puntual de aprobación; la redirección de UI es inspección estática.
+6. **Baja — claves calculadas exactas:** el e2e rechaza `amount_usd`, `amount_ves`, `rate`, `tenant_id`
+   y `user_id`; no envía literalmente `amountUsd`/`amountVes`/`exchange_rate_id`. El `strictObject`
+   las rechazaría por desconocidas.
+
+## 7. Corrección posterior a la verificación
+
+Se cerró la observación L1 sin cambiar el contrato de la API:
+
+- `apps/admin/src/lib/payments-client.ts` añade `isReviewConflict`, que reconoce como conflicto
+  `PAYMENT_ALREADY_REVIEWED` e `INVALID_STATE_TRANSITION` con estado 409; otros 409 (por ejemplo
+  `BOOKING_CANCELLED`) siguen mostrando el error genérico.
+- `apps/admin/src/components/payments-panel.tsx` usa esa función en `handleError`, de modo que una
+  vista desactualizada recarga la lista y deshabilita las acciones, sin presentar un segundo resultado.
+- `payments-client.test.ts` y `payments-panel.test.ts` añaden tests que fallaron en rojo antes del
+  cambio: ambos códigos se tratan como conflicto y otros errores no.
+
+Comprobación: `pnpm --filter @caribe/admin exec vitest run` → 12 archivos / **116 tests en verde**;
+`pnpm lint`, `pnpm typecheck` y `pnpm test` en verde. Las observaciones 2-6 siguen registradas como
+informativas o no bloqueantes; no se ha tocado specs ni dependencias.
+
+**Conclusión:** la PAUSA 2 puede cerrarse en verde. Se autoriza iniciar catálogo y usuarios/roles.
