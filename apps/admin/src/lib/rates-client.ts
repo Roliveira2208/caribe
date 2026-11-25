@@ -166,7 +166,7 @@ export async function listRateAudits(options: RatesApiOptions = {}): Promise<Rat
   const body: unknown = await response.json().catch(() => null);
   const items = isRecord(body) && Array.isArray(body["items"]) ? body["items"] : [];
 
-  return items.flatMap((entry): RateAudit[] => {
+  const rows = items.flatMap((entry): RateAudit[] => {
     if (!isRecord(entry) || entry["action"] !== RATE_AUDIT_ACTION) return [];
     if (
       typeof entry["id"] !== "string" ||
@@ -180,6 +180,17 @@ export async function listRateAudits(options: RatesApiOptions = {}): Promise<Rat
     const after = isRecord(entry["after"]) ? entry["after"] : null;
     return [{ id: entry["id"], action: RATE_AUDIT_ACTION, entityId: entry["entityId"], actorId, at: entry["at"], before, after }];
   });
+
+  // La spec del historial pide orden por fecha valor (la API ordena por `at`).
+  return rows.sort((left, right) => {
+    const byValueDate = valueDateOf(right).localeCompare(valueDateOf(left));
+    return byValueDate !== 0 ? byValueDate : right.at.localeCompare(left.at);
+  });
+}
+
+function valueDateOf(row: RateAudit): string {
+  const date = row.after?.["valueDate"] ?? row.before?.["valueDate"];
+  return typeof date === "string" ? date : "";
 }
 
 /**

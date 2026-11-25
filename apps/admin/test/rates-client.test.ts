@@ -165,6 +165,30 @@ describe('exchange-rates › "Historial de overrides" (T-F2-9)', () => {
     expect(rows[0]).not.toHaveProperty("tenantId");
   });
 
+  it("ordena el historial por fecha valor, no por el orden de auditoría", async () => {
+    const audit = (id: string, valueDate: string, at: string) => ({
+      id,
+      action: "exchange-rate.override",
+      entityId: `rate-${id}`,
+      actorId: "user-1",
+      at,
+      before: { rate: "900.0000", valueDate },
+      after: { rate: "950.0000", valueDate, reason: "Ajuste" },
+    });
+    const fetchImpl = vi.fn(async () =>
+      json({
+        items: [
+          audit("audit-old", "2026-11-20", "2026-11-25T12:00:00.000Z"),
+          audit("audit-new", "2026-11-25", "2026-11-21T08:00:00.000Z"),
+          audit("audit-mid", "2026-11-22", "2026-11-23T09:00:00.000Z"),
+        ],
+      }),
+    );
+
+    const rows = await listRateAudits({ fetchImpl });
+    expect(rows.map((row) => row.id)).toEqual(["audit-new", "audit-mid", "audit-old"]);
+  });
+
   it("un 403 deja el historial vacío, sin filas residuales", async () => {
     const fetchImpl = vi.fn(async () => problem(403, "FORBIDDEN"));
     await expect(listRateAudits({ fetchImpl })).rejects.toMatchObject({
