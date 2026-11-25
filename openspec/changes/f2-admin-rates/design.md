@@ -83,7 +83,11 @@ la spec base y el e2e de `products-admin` se ajusta en consecuencia. Para que la
 acciones que la API rechazaría sin adivinar la propiedad, el listado `GET /admin/products` devuelve
 `viewerProviderId`: el id del registro de proveedor del actor, o `null` si no lo tiene. El panel
 recalcula su matriz con ese valor; la API sigue siendo la única fuente de verdad y valida cada
-operación.
+operación. El cuerpo de `POST /admin/products/:id/availability` es `{ nights: [{ night, capacity,
+priceUsd }] }`: `night` es `YYYY-MM-DD` en `America/Caracas`, `priceUsd` es texto decimal y el servidor
+guarda `reserved` (se conserva al ajustar, cero al crear). Una noche repetida en el cuerpo se detecta
+antes de escribir y responde 409 `AVAILABILITY_DUPLICATED` dentro de la misma transacción; el panel lee
+las noches de la lectura pública y nunca calcula importes.
 
 **Decisiones del panel de tasas (T-F2-8/9).** No se crea una ruta por id ni se acepta `tenantId` en el
 cuerpo: un override de otra agencia simplemente no existe en el ámbito de la agencia activa, así que no

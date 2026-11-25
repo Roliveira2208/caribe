@@ -17,8 +17,11 @@ Los precios SHALL enviarse como texto decimal, nunca como `number`, y SHALL pers
 `DECIMAL`; los campos calculados por el cliente (`totalUsd`, `totalVes`, `exchangeRate` o equivalentes)
 SHALL rechazarse con 422 `VALIDATION_ERROR`, porque el servidor SHALL calcular siempre importes y tasas.
 La disponibilidad SHALL guardarse por `(product_id, night)` con `capacity`, `reserved` y `price_usd`, en
-`America/Caracas`; una noche solapada o duplicada SHALL responder 409 con `AVAILABILITY_DUPLICATED` y
-SHALL NOT crear una segunda fila. Título y descripción SHALL enviarse en JSONB con `es` y `en` en las
+`America/Caracas`. Ajustar una noche ya existente SHALL actualizar su única fila conservando `reserved`;
+una noche repetida en la petición o un intento de crear una segunda fila para la misma noche SHALL
+responder 409 con `AVAILABILITY_DUPLICATED` y SHALL NOT escribir ninguna fila. `reserved` SHALL ser
+gestionado por el servidor: el panel SHALL enviar solo `capacity` y `priceUsd`, y una noche nueva SHALL
+empezar con `reserved` en cero. Título y descripción SHALL enviarse en JSONB con `es` y `en` en las
 escrituras del panel; la falta de una traducción SHALL responder 422 `VALIDATION_ERROR`, sin contradecir
 el fallback a `es` de la spec base en las lecturas públicas. Las etiquetas y mensajes del panel SHALL
 salir de los catálogos es/en y todos los controles SHALL ser accesibles por teclado.
@@ -49,8 +52,9 @@ salir de los catálogos es/en y todos los controles SHALL ser accesibles por tec
 
 #### Scenario: Disponibilidad por noche
 - GIVEN un producto con filas de disponibilidad por `(product_id, night)` en `America/Caracas`
-- WHEN el panel crea o ajusta una noche ya existente o solapada con cupo y precio
-- THEN la noche solapada responde 409 con código `AVAILABILITY_DUPLICATED` y no se crea una segunda fila
+- WHEN el panel ajusta una noche existente con cupo y precio, o crea una noche nueva
+- THEN la noche existente se actualiza en su única fila conservando `reserved`, y la nueva empieza con `reserved` en cero
+- AND una noche repetida en la petición responde 409 con código `AVAILABILITY_DUPLICATED` y no se escribe ninguna fila
 - AND cada fila conserva `capacity`, `reserved` y `price_usd` válidos, sin ocupar la noche de salida de la estancia
 
 #### Scenario: Precio como texto decimal
