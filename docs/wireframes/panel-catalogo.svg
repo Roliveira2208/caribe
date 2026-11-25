@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="1200" height="860" role="img" aria-labelledby="wf-title wf-desc">
+  <rect x="0" y="0" width="1200" height="860" fill="#ffffff"/>
+
+  <title id="wf-title">Panel de catálogo — admin</title>
+  <desc id="wf-desc">Wireframe de baja fidelidad del catálogo del panel: listado paginado por cursor, alta y edición de tipos de habitación con textos es/en y precio decimal como texto, publicación y archivado, matriz por rol y propiedad de proveedor, y disponibilidad por noche en America/Caracas.</desc>
+  <style>
+    text { font-family: "Segoe UI", system-ui, sans-serif; fill: #333; }
+    .cap { font-size: 13px; fill: #777; }
+    .h1 { font-size: 20px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 700; }
+    .lbl { font-size: 12px; fill: #555; }
+    .val { font-size: 12px; fill: #333; }
+    .btn { font-size: 12.5px; font-weight: 600; fill: #333; }
+    .abtn { font-size: 11px; font-weight: 600; fill: #333; }
+    .box { fill: #fff; stroke: #888; stroke-width: 1.2; }
+    .panel { fill: #f7f7f7; stroke: #888; stroke-width: 1.2; }
+    .field { fill: #fff; stroke: #999; stroke-width: 1; }
+    .line { fill: #e8e8e8; }
+    .btnbox { fill: #e8e8e8; stroke: #666; stroke-width: 1.2; }
+    .primary { fill: #F4A300; stroke: #B37A00; stroke-width: 1.2; }
+    .chip { fill: #fff; stroke: #777; stroke-width: 1; }
+    .active { fill: #0E2A3D; stroke: #0E2A3D; }
+    .activeText { font-size: 12.5px; font-weight: 600; fill: #fff; }
+    .notes { fill: #fff; stroke: #888; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .note { font-size: 11.5px; fill: #555; }
+    .notetitle { font-size: 13px; font-weight: 700; fill: #444; }
+    .sep { stroke: #ddd; stroke-width: 1; }
+  </style>
+
+  <text x="16" y="28" class="cap">Caribe Admin — Catálogo · escritorio · wireframe de baja fidelidad · es / en</text>
+
+  <!-- Header del panel -->
+  <rect x="16" y="44" width="1168" height="44" class="box"/>
+  <text x="32" y="72" class="h1">Caribe Admin</text>
+  <rect x="716" y="56" width="260" height="22" class="chip"/>
+  <text x="728" y="72" class="lbl">Admin / Proveedor · Agencia Sol</text>
+  <text x="988" y="72" class="lbl">o Super Admin · plataforma</text>
+  <text x="1116" y="72" class="lbl">ES | EN</text>
+
+  <!-- Pestañas -->
+  <rect x="16" y="100" width="1168" height="36" class="panel"/>
+  <rect x="24" y="106" width="104" height="24" class="active"/>
+  <text x="38" y="122" class="activeText">Productos</text>
+  <rect x="136" y="106" width="144" height="24" class="chip"/>
+  <text x="148" y="122" class="lbl">Disponibilidad</text>
+  <text x="300" y="122" class="note">Super Admin: solo lectura · Proveedor: solo sus productos (ajenos = 404)</text>
+
+  <!-- Filtros del listado -->
+  <text x="16" y="158" class="lbl">Buscar</text>
+  <rect x="16" y="166" width="180" height="32" class="field"/>
+  <text x="28" y="187" class="val">Título o room_type…</text>
+  <text x="212" y="158" class="lbl">Estado</text>
+  <rect x="212" y="166" width="132" height="32" class="field"/>
+  <text x="224" y="187" class="val">Todos ▾</text>
+  <text x="360" y="158" class="lbl">Proveedor</text>
+  <rect x="360" y="166" width="152" height="32" class="field"/>
+  <text x="372" y="187" class="val">Todos ▾</text>
+  <text x="528" y="158" class="lbl">Destino</text>
+  <rect x="528" y="166" width="152" height="32" class="field"/>
+  <text x="540" y="187" class="val">Todos ▾</text>
+  <rect x="696" y="166" width="176" height="32" class="primary"/>
+  <text x="784" y="187" class="btn" text-anchor="middle">Nuevo tipo de habitación</text>
+  <text x="892" y="170" class="note">Oculto para Super Admin; Proveedor usa su providerId</text>
+  <text x="892" y="187" class="note">El cursor lo emite la API, no se construye en la UI</text>
+
+  <!-- Listado -->
+  <rect x="16" y="216" width="1168" height="268" class="box"/>
+  <rect x="16" y="216" width="1168" height="32" class="panel"/>
+  <text x="32" y="237" class="lbl">Producto (es / en)</text>
+  <text x="312" y="237" class="lbl">Tipo de habitación</text>
+  <text x="456" y="237" class="lbl">Proveedor</text>
+  <text x="612" y="237" class="lbl">Estado</text>
+  <text x="744" y="237" class="lbl">Precio base USD</text>
+  <text x="900" y="237" class="lbl">Acciones</text>
+
+  <line x1="16" y1="248" x2="1184" y2="248" class="sep"/>
+  <text x="32" y="274" class="val">Hab. doble · Double room</text>
+  <text x="312" y="274" class="val">double</text>
+  <text x="456" y="274" class="val">proveedor-01</text>
+  <rect x="612" y="260" width="104" height="24" class="chip"/>
+  <text x="622" y="276" class="lbl">DRAFT</text>
+  <text x="744" y="274" class="val">120.50</text>
+  <text x="900" y="274" class="val">Editar · Publicar</text>
+  <text x="1056" y="274" class="val">[1]</text>
+
+  <line x1="16" y1="292" x2="1184" y2="292" class="sep"/>
+  <text x="32" y="318" class="val">Suite mar · Sea suite</text>
+  <text x="312" y="318" class="val">suite_sea</text>
+  <text x="456" y="318" class="val">proveedor-01</text>
+  <rect x="612" y="304" width="104" height="24" class="chip"/>
+  <text x="622" y="320" class="lbl">PUBLISHED</text>
+  <text x="744" y="318" class="val">180.00</text>
+  <text x="900" y="318" class="val">Editar · Archivar</text>
+  <text x="1056" y="318" class="val">[1]</text>
+
+  <line x1="16" y1="336" x2="1184" y2="336" class="sep"/>
+  <text x="32" y="362" class="val">Hab. simple · Single room</text>
+  <text x="312" y="362" class="val">single</text>
+  <text x="456" y="362" class="val">proveedor-02</text>
+  <rect x="612" y="348" width="104" height="24" class="chip"/>
+  <text x="622" y="364" class="lbl">ARCHIVED</text>
+  <text x="744" y="362" class="val">95.00</text>
+  <text x="900" y="362" class="val">Ver · Publicar</text>
+  <text x="1056" y="362" class="val">[2]</text>
+
+  <line x1="16" y1="380" x2="1184" y2="380" class="sep"/>
+  <rect x="32" y="396" width="168" height="10" class="line"/>
+  <rect x="312" y="396" width="76" height="10" class="line"/>
+  <rect x="456" y="396" width="88" height="10" class="line"/>
+  <rect x="612" y="396" width="64" height="10" class="line"/>
+  <rect x="744" y="396" width="72" height="10" class="line"/>
+  <rect x="900" y="396" width="116" height="10" class="line"/>
+  <line x1="16" y1="424" x2="1184" y2="424" class="sep"/>
+  <rect x="32" y="440" width="152" height="10" class="line"/>
+  <rect x="312" y="440" width="88" height="10" class="line"/>
+  <rect x="456" y="440" width="80" height="10" class="line"/>
+  <rect x="612" y="440" width="76" height="10" class="line"/>
+  <rect x="744" y="440" width="64" height="10" class="line"/>
+  <rect x="900" y="440" width="104" height="10" class="line"/>
+
+  <text x="16" y="474" class="lbl">Página 1 · cursor opaco</text>
+  <rect x="172" y="460" width="104" height="26" class="btnbox"/>
+  <text x="224" y="477" class="abtn" text-anchor="middle">Anterior</text>
+  <rect x="288" y="460" width="104" height="26" class="btnbox"/>
+  <text x="340" y="477" class="abtn" text-anchor="middle">Siguiente</text>
+  <text x="412" y="477" class="note">Último cursor = null · solo productos de la agencia activa</text>
+
+  <!-- Alta y edición (modal) -->
+  <rect x="16" y="498" width="1168" height="134" class="notes"/>
+  <text x="32" y="518" class="notetitle">Alta / edición (modal) — POST o PUT /admin/products</text>
+  <text x="32" y="538" class="lbl">hotelKey</text>
+  <rect x="32" y="544" width="128" height="26" class="field"/>
+  <text x="42" y="561" class="val">opcional (UUID)</text>
+  <text x="176" y="538" class="lbl">roomType</text>
+  <rect x="176" y="544" width="120" height="26" class="field"/>
+  <text x="186" y="561" class="val">double</text>
+  <text x="312" y="538" class="lbl">destinationId</text>
+  <rect x="312" y="544" width="136" height="26" class="field"/>
+  <text x="322" y="561" class="val">UUID ▾</text>
+  <text x="464" y="538" class="lbl">providerId (solo Admin)</text>
+  <rect x="464" y="544" width="136" height="26" class="field"/>
+  <text x="474" y="561" class="val">Proveedor ▾</text>
+  <text x="616" y="538" class="lbl">basePriceUsd</text>
+  <rect x="616" y="544" width="120" height="26" class="field"/>
+  <text x="626" y="561" class="val">"120.50"</text>
+
+  <text x="32" y="590" class="lbl">title</text>
+  <rect x="32" y="596" width="248" height="26" class="field"/>
+  <text x="42" y="613" class="val">es: Hab. doble · en: Double room</text>
+  <text x="296" y="590" class="lbl">description</text>
+  <rect x="296" y="596" width="248" height="26" class="field"/>
+  <text x="306" y="613" class="val">es: … · en: …</text>
+  <text x="560" y="590" class="lbl">attributes · cancellationPolicyId</text>
+  <rect x="560" y="596" width="272" height="26" class="field"/>
+  <text x="570" y="613" class="val">desde esquema compartido · opcional</text>
+  <rect x="848" y="596" width="104" height="26" class="btnbox"/>
+  <text x="900" y="613" class="btn" text-anchor="middle">Guardar</text>
+  <rect x="960" y="596" width="104" height="26" class="btnbox"/>
+  <text x="1012" y="613" class="btn" text-anchor="middle">Cancelar</text>
+  <text x="1080" y="613" class="note">Sin totalUsd / totalVes / exchangeRate</text>
+
+  <!-- Disponibilidad -->
+  <rect x="16" y="646" width="1168" height="96" class="notes"/>
+  <text x="32" y="666" class="notetitle">Disponibilidad por noche — America/Caracas</text>
+  <rect x="32" y="676" width="116" height="24" class="field"/>
+  <text x="42" y="692" class="val">Desde 25/11</text>
+  <rect x="156" y="676" width="116" height="24" class="field"/>
+  <text x="166" y="692" class="val">Hasta 28/11</text>
+  <rect x="288" y="676" width="104" height="24" class="btnbox"/>
+  <text x="340" y="692" class="btn" text-anchor="middle">Aplicar</text>
+  <text x="420" y="692" class="val">25/11 · cupo 5 · reservadas 3 · priceUsd "120.50"</text>
+  <text x="744" y="692" class="val">26/11 · 5 · 3 · "120.50"</text>
+  <text x="968" y="692" class="val">27/11 · 5 · 2 · "130.00"</text>
+  <text x="32" y="718" class="note">Noche de salida no se ocupa · noche duplicada → 409 AVAILABILITY_DUPLICATED, sin segunda fila</text>
+  <text x="560" y="718" class="note">[3] La API hoy solo expone lectura de disponibilidad: ver pregunta abierta</text>
+
+  <!-- Estados y notas -->
+  <rect x="16" y="756" width="1168" height="38" class="notes"/>
+  <text x="32" y="773" class="notetitle">Estados</text>
+  <text x="32" y="789" class="note">Vacío: «Sin productos con estos filtros» · Error 403 / 404 / 422 VALIDATION_ERROR / 409: el foco va al aviso; sin botones que la API rechazaría</text>
+
+  <text x="16" y="812" class="note">[1] Admin de agencia con TOTP: edita, publica y archiva los productos de su agencia; el estado mostrado vuelve del servidor.</text>
+  <text x="16" y="830" class="note">[2] Proveedor: solo edita los suyos; otro proveedor de la misma agencia y otra agencia responden 404 sin revelar propiedad.</text>
+  <text x="16" y="848" class="note">[3] Super Admin en plataforma: listado y detalle en lectura; publicar, archivar y guardar no aparecen o responden 403.</text>
+  <text x="822" y="848" class="cap">Textos es/en · foco visible · teclado en tabla, filtros y modal</text>
+</svg>

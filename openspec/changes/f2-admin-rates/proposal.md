@@ -40,6 +40,10 @@ idempotente con un proveedor real). El dueño decidió cerrar todas esas deudas 
 2. Al pisar un override vigente se muestra un modal con antes → después y motivo; cancelar no escribe.
 3. La tipografía se comparte desde un paquete del workspace; no se copia en cada app.
 4. M1, M2, F-FINAL-002 y F-FINAL-003 se cierran en F2, antes de la demo pública.
+5. La disponibilidad necesita escritura desde el panel: se añade una ruta de escritura nueva con su
+   clasificación en el inventario, porque hoy solo existe la lectura pública.
+6. `en` es obligatorio en `title` y `description` del panel: la API refuerza Zod y responde 422 si
+   falta, sin depender del fallback de lectura a `es`.
 
 ## Preguntas abiertas
 

@@ -54,7 +54,8 @@ Endpoints existentes que reutiliza el panel (sin cambiar su contrato):
 | Tasa vigente / override | `GET /admin/exchange-rates/current`, `PUT /admin/exchange-rates/override` | T-F1-5 |
 | Pagos | `GET /admin/payments`, `PATCH /admin/payments/:id/approve`, `.../reject` | T-F1-9 |
 | Auditoría | `GET /admin/audit-logs`, `GET /admin/auth-events` | T-F0-9 |
-| Catálogo | `GET/POST/PATCH /admin/products` y disponibilidad | T-F1-4 |
+| Catálogo | `GET/POST/PUT /admin/products`, `.../publish`, `.../archive` | T-F1-4 |
+| Disponibilidad del panel | **`POST /admin/products/:id/availability` (nuevo)** | F2 |
 | Usuarios y roles | `/api/auth/organization/*`, `/api/auth/admin/*` | Better Auth |
 | Reportes | **`GET /admin/reports/sales` (nuevo)** | F2 |
 
@@ -67,6 +68,15 @@ ni se permiten campos calculados en las peticiones.
 El endpoint de reportes se añade al módulo admin, con guard de sesión, TOTP, memberships activa y un
 guard dedicado que solo permite lectura a admin de agencia y Super Admin. Los totales se calculan en
 SQL con `DECIMAL`, sobre los pagos `APPROVED` y su tasa congelada; nunca se recalcula `amount_ves`.
+
+**Decisiones del panel de catálogo (T-F2-17/18/19).** La delta hablaba de «endpoints de escritura ya
+existentes» para disponibilidad, pero solo existe la lectura pública. Se añade una ruta de escritura
+autenticada del panel, con el mismo guard `ActiveMembershipGuard`/`ProductsGuard` y propiedad de fila
+del resto de `/admin/products`; entra en el inventario de rutas como protegida, nunca pública. El
+precio viaja como texto decimal y la noche duplicada responde 409 `AVAILABILITY_DUPLICATED` sin crear
+una segunda fila. Además, `en` pasa a ser obligatorio en `title` y `description` de las escrituras del
+panel: la API responde 422 si falta, mientras la lectura pública conserva el fallback a `es` de la
+spec base.
 
 **Decisiones del panel de tasas (T-F2-8/9).** No se crea una ruta por id ni se acepta `tenantId` en el
 cuerpo: un override de otra agencia simplemente no existe en el ámbito de la agencia activa, así que no
@@ -168,9 +178,10 @@ cursor. La IP se muestra como «—» cuando sea `null`.
 
 ## 8. Wireframes y puertas
 
-- Ya aprobados: `docs/wireframes/panel-pagos.svg`, `panel-tasas.svg` y `panel-auditoria.svg`.
-- Pendientes de aprobación, uno por uno, antes de implementar su pantalla: `panel-catalogo.svg`,
-  `panel-usuarios-roles.svg` y `panel-reportes.svg`.
+- Ya aprobados: `docs/wireframes/panel-pagos.svg`, `panel-tasas.svg`, `panel-auditoria.svg` y
+  `panel-catalogo.svg`.
+- Pendientes de aprobación, uno por uno, antes de implementar su pantalla: `panel-usuarios-roles.svg`
+  y `panel-reportes.svg`.
   Todos siguen `docs/wireframes/README.md` y el formato de baja fidelidad de `panel-pagos.svg`.
 - **Pausa 1** tras el override de tasa: verificación independiente de los escenarios obligatorios de
   `exchange-rates` y `security`.
