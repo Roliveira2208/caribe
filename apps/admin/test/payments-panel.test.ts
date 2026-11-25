@@ -83,8 +83,8 @@ describe("panel de pagos (T-F2-11)", () => {
     expect(panel).toContain('t("selfReview")');
   });
 
-  it("recarga tras una revisión concurrente y lleva a activar el segundo factor", () => {
-    expect(panel).toContain('cause.code === "PAYMENT_ALREADY_REVIEWED"');
+  it("recarga tras cualquier conflicto de revisión y lleva a activar el segundo factor", () => {
+    expect(panel).toContain("isReviewConflict(cause)");
     expect(panel).toContain("setReload");
     expect(panel).toContain("isTwoFactorRequired(cause)");
     expect(panel).toContain("/two-factor");

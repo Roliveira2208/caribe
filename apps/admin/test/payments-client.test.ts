@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthApiError } from "@caribe/shared";
 import {
   canReviewPayment,
+  isReviewConflict,
   listAdminPayments,
   resolvePaymentPanelAccess,
   reviewAdminPayment,
@@ -176,5 +177,20 @@ describe("revisor distinto del pagador", () => {
     expect(canReviewPayment(resolvePaymentPanelAccess("ready", "agent"), "user-2", "user-1")).toBe(
       false,
     );
+  });
+});
+
+describe("conflictos de revisión en la UI", () => {
+  it("recarga tanto por revisión concurrente como por estado terminal ya observado", () => {
+    for (const code of ["PAYMENT_ALREADY_REVIEWED", "INVALID_STATE_TRANSITION"]) {
+      expect(isReviewConflict(new AuthApiError(409, "conflicto", code))).toBe(true);
+    }
+  });
+
+  it("no trata otros errores como conflicto de revisión", () => {
+    expect(isReviewConflict(new AuthApiError(409, "otro", "BOOKING_CANCELLED"))).toBe(false);
+    expect(isReviewConflict(new AuthApiError(403, "forbidden", "FORBIDDEN"))).toBe(false);
+    expect(isReviewConflict(new AuthApiError(422, "validación", "VALIDATION_ERROR"))).toBe(false);
+    expect(isReviewConflict(new Error("red"))).toBe(false);
   });
 });

@@ -24,6 +24,7 @@ import {
 } from "@caribe/shared";
 import {
   canReviewPayment,
+  isReviewConflict,
   listAdminPayments,
   PAYMENT_FILTER_STATUSES,
   reviewAdminPayment,
@@ -79,7 +80,7 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
           setNotice({ kind: "error", message: t("forbidden") });
           return;
         }
-        if (cause.status === 409 && cause.code === "PAYMENT_ALREADY_REVIEWED") {
+        if (isReviewConflict(cause)) {
           setNotice({ kind: "error", message: t("alreadyReviewed") });
           setReload((value) => value + 1);
           return;

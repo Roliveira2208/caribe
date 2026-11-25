@@ -91,6 +91,20 @@ export function validRejectionReason(reason: string): boolean {
   return trimmed.length > 0 && trimmed.length <= 500;
 }
 
+/**
+ * Conflictos que significan "otro revisor llegó antes", tanto por solapamiento
+ * (`PAYMENT_ALREADY_REVIEWED`) como por una vista ya desactualizada
+ * (`INVALID_STATE_TRANSITION`, código que la API usa para estados terminales
+ * observados en la lectura inicial). La UI recarga en ambos casos.
+ */
+export function isReviewConflict(cause: unknown): boolean {
+  return (
+    cause instanceof AuthApiError &&
+    cause.status === 409 &&
+    (cause.code === "PAYMENT_ALREADY_REVIEWED" || cause.code === "INVALID_STATE_TRANSITION")
+  );
+}
+
 /** Convierte una respuesta HTTP fallida en el error tipado que ya entiende la UI. */
 async function readError(response: Response): Promise<AuthApiError> {
   const body = (await response.json().catch(() => null)) as
