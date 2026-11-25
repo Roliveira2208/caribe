@@ -16,6 +16,7 @@
 
 | Dominio | Tipo | Escenarios nuevos | Obligatorios | Deseables |
 | --- | --- | ---: | ---: | ---: |
+| `api-errors` | delta ADDED | 1 | 1 | 0 |
 | `exchange-rates` | delta ADDED | 12 | 9 | 3 |
 | `payments` | delta ADDED | 12 | 8 | 4 |
 | `audit` | delta ADDED | 10 | 6 | 4 |
@@ -78,10 +79,15 @@ inventario ajeno y que un `member` sin `booking:read` no ve reservas ni resumen 
 
 ## 6. Seguridad heredada
 
-- **M1**: `TRUSTED_PROXIES` se pasa a `advanced.ipAddress.trustedProxies` de Better Auth y al middleware
-  que calcula `request.ip`. Una cabecera `X-Forwarded-For` de un origen no confiable se ignora. El
-  rate limit de login usa la IP resuelta; si no hay proxy de confianza, la IP puede ser `null` y la
-  auditoría lo registra así, sin fingir un valor.
+- **M1**: `TRUSTED_PROXIES` configura un middleware propio que conoce la dirección del socket. Solo si
+  el socket es un proxy de confianza y el último salto de `X-Forwarded-For` coincide con él se recorre
+  la cadena hacia la izquierda; en cualquier otro caso la cabecera se ignora y se usa el socket. El
+  resultado se publica como `request.ip` y en una cabecera interna (`x-caribe-client-ip`) que Better
+  Auth consume mediante `advanced.ipAddress.ipAddressHeaders`: la librería no puede comprobar quién
+  emitió la cabecera, así que no se le entrega la cadena original ni `trustedProxies`. El límite de
+  login se aplica antes del handler con la misma ventana/umbral (60 s, 10 intentos) y devuelve 429
+  Problem Details con `code = RATE_LIMITED`. Si no hay IP resoluble, el valor es `null` y la auditoría
+  lo registra así, sin fingir uno ni compartir bucket global.
 - **M2**: Helmet con CSP sin `unsafe-inline`, HSTS y `X-Content-Type-Options`; CORS con
   `TRUSTED_ORIGINS` y credenciales solo para esos orígenes; preflight desconocido rechazado sin
   cabeceras de autorización.

@@ -15,8 +15,12 @@ y `audit` (34) son regresión y no se cuentan aquí.
 
 ## Totales
 
+El delta de `api-errors` se añadió durante T-F2-2 para dar un `code` estable a las respuestas 429 que
+ya exigía la spec `security`; por eso el total pasó de 75 a 76 escenarios y de 61 a 62 obligatorios.
+
 | Spec | Escenarios | Obligatorio | Deseable | Aplazable |
 | --- | ---: | ---: | ---: | ---: |
+| api-errors | 1 | 1 | 0 | 0 |
 | exchange-rates | 12 | 9 | 3 | 0 |
 | payments | 12 | 8 | 4 | 0 |
 | audit | 10 | 6 | 4 | 0 |
@@ -25,10 +29,14 @@ y `audit` (34) son regresión y no se cuentan aquí.
 | admin-ui | 10 | 7 | 3 | 0 |
 | reports | 5 | 5 | 0 | 0 |
 | security | 13 | 13 | 0 | 0 |
-| **Total** | **75** | **61** | **14** | **0** |
+| **Total** | **76** | **62** | **14** | **0** |
 
-**Regla de cierre:** solo los **61 obligatorios** bloquean F2. Ningún obligatorio se recorta para
+**Regla de cierre:** solo los **62 obligatorios** bloquean F2. Ningún obligatorio se recorta para
 meter un deseable. Las dos pausas (T-F2-10 y T-F2-13) son obligatorias antes de catálogo y usuarios.
+
+## api-errors (1)
+
+- **Obligatorio (1)**: Límite excedido.
 
 ## exchange-rates (12)
 
