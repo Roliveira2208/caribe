@@ -17,6 +17,8 @@ Bocetos SVG de estructura, contenido y reglas visibles del MVP. Se conservan los
 | `mis-reservas.svg` | Mis reservas: listado entre agencias, detalle con política congelada y estados vacío/error | Web · escritorio |
 | `cancelacion-descarga.svg` | Confirmación de cancelación, reembolso, bloqueo por pago en revisión y descargas solo de documentos `READY` | Web · escritorio |
 | `panel-pagos.svg` | Panel de administración de reservas y pagos | Admin · escritorio |
+| `panel-tasas.svg` | Panel de tasas: tasa vigente, override con confirmación antes/después e historial | Admin · escritorio |
+| `panel-auditoria.svg` | Panel de auditoría: filtros y cursor, pestaña de eventos de autenticación y alcance por agencia | Admin · escritorio |
 
 ## Decisiones del nuevo inicio
 

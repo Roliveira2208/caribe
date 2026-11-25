@@ -168,9 +168,9 @@ cursor. La IP se muestra como «—» cuando sea `null`.
 
 ## 8. Wireframes y puertas
 
-- Ya aprobado: `docs/wireframes/panel-pagos.svg`.
-- Pendientes de aprobación, uno por uno, antes de implementar su pantalla: `panel-tasas.svg`,
-  `panel-auditoria.svg`, `panel-catalogo.svg`, `panel-usuarios-roles.svg` y `panel-reportes.svg`.
+- Ya aprobados: `docs/wireframes/panel-pagos.svg`, `panel-tasas.svg` y `panel-auditoria.svg`.
+- Pendientes de aprobación, uno por uno, antes de implementar su pantalla: `panel-catalogo.svg`,
+  `panel-usuarios-roles.svg` y `panel-reportes.svg`.
   Todos siguen `docs/wireframes/README.md` y el formato de baja fidelidad de `panel-pagos.svg`.
 - **Pausa 1** tras el override de tasa: verificación independiente de los escenarios obligatorios de
   `exchange-rates` y `security`.

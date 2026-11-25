@@ -17,7 +17,7 @@ tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 - [x] T-F2-11 Pagos: listado, filtros, cursor y estados. Prueba: `payments › "Listado filtrable"`, `"Sin permiso de lectura de pagos"` y `"Pago de otra agencia"`.
 - [x] T-F2-12 Pagos: aprobación, rechazo y concurrencia desde el panel. Prueba: `payments › "Aprobar con TOTP"`, `"Rechazo con motivo en el panel"`, `"Revisor distinto del pagador en la UI"`, `"Par congelado solo lectura"` y `"Revisión concurrente en la UI"`.
 - [x] T-F2-13 **PAUSA 2**: verificación independiente y revisión de seguridad en sesión limpia antes de catálogo y usuarios. Prueba: escenarios obligatorios de `payments` y `security` con evidencia; informe en `verify.md`.
-- [ ] T-F2-14 Generar y someter a aprobación `docs/wireframes/panel-auditoria.svg`. Prueba: gate de aprobación antes de T-F2-15.
+- [x] T-F2-14 Generar y someter a aprobación `docs/wireframes/panel-auditoria.svg`. Prueba: gate de aprobación antes de T-F2-15.
 - [ ] T-F2-15 Visor de auditoría con filtros, cursor y pestaña `auth-events`. Prueba: `audit › "Filtros y cursor"`, `"Pestaña de eventos de autenticación"`, `"Alcance del admin de agencia"`, `"Modo plataforma del Super Admin"`, `"Sin permiso de auditoría"` y `"Sin secretos ni mensajes internos"`.
 - [ ] T-F2-16 Auditoría de las acciones del panel. Prueba: `audit › "Auditoría del override de tasa"`, `"Auditoría de la revisión de pagos"` y `"Auditoría del cambio de rol"`.
 - [ ] T-F2-17 Generar y someter a aprobación `docs/wireframes/panel-catalogo.svg`. Prueba: gate de aprobación antes de T-F2-18.
