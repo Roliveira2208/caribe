@@ -65,6 +65,11 @@ export async function SiteHeader() {
               {t("audit")}
             </Link>
           ) : null}
+          {audit.visible ? (
+            <Link href="/admin/users" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
+              {t("users")}
+            </Link>
+          ) : null}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LanguageSwitcher />
