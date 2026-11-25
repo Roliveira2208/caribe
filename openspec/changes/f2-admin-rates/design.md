@@ -126,9 +126,20 @@ inventario ajeno y que un `member` sin `booking:read` no ve reservas ni resumen 
   desactivar la protección. El inventario de rutas sin sesión se actualiza en el delta de
   `auth-access`: estas cuatro rutas siguen exigiendo sesión y el limitador no crea ninguna ruta
   pública nueva.
-- **F-FINAL-003**: `refundId` idempotente en la interfaz `PaymentProvider` y registro atómico/outbox
-  para que un rollback de la base no deje un reembolso externo sin fila; barrido de reconciliación de
-  pendientes. No cambia la interfaz pública de los otros cuatro proveedores.
+- **F-FINAL-003**: `refundId` lo genera el servidor (UUID) y viaja en `RefundIntent` al proveedor;
+  no se añade un campo al `POST /bookings/:id/cancel` ni un endpoint nuevo. La spec base `security`
+  decía «enviado por el cliente»; el delta de esta change corrige esa frase para que el dueño del
+  identificador sea el servidor, decisión confirmada con el producto antes de implementar. La
+  intención se escribe como fila `refund_dispatches` en la MISMA transacción que cancela la reserva y
+  crea el `refund` (append-only); el despacho al proveedor y el marcado `COMPLETED` ocurren después
+  del commit. Así un rollback local no deja una llamada externa sin fila y un fallo al registrar el
+  resultado deja el despacho `PENDING` para el barrido de reconciliación. El proveedor simulado es
+  idempotente por `refundId`: repetir el mismo par no provoca un segundo efecto; un `refundId`
+  distinto sobre el mismo pago ya reembolsado responde 409 `REFUND_ALREADY_ISSUED`. El barrido
+  consulta el estado con `getRefund(refundId)` antes de reintentar, sin volver a emitir. El puerto
+  `PaymentProvider` se inyecta desde un módulo compartido para que pagos y reconciliación hablen con
+  la misma instancia; el token vive en su propio archivo para evitar un ciclo con `JobsModule`. No
+  cambia la interfaz pública de los otros cuatro proveedores.
 
 **Dependencias nuevas justificadas**: `@nestjs/throttler` (rate limiting de rutas de negocio, no
 cubierto por Better Auth) y `helmet` (cabeceras de seguridad de M2). CORS usa el soporte integrado de
