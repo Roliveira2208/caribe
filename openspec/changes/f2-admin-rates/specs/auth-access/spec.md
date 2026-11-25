@@ -71,3 +71,17 @@ diseño F2 sin ampliar otros permisos de esos roles.
 - WHEN abre el panel de tasas o llama a `GET /admin/exchange-rates/current`
 - THEN recibe solo la tasa vigente, su fecha valor, su origen y su ámbito, con el texto decimal del servidor
 - AND la API responde 403 a cualquier override y la interfaz no ofrece historial ni controles de escritura
+
+### Requirement: No revelación de propiedad de productos en el panel
+Un producto ajeno SHALL responder 404 sin distinguir si pertenece a otro proveedor de la misma agencia
+o a otra agencia, en la ficha, la edición, la publicación y el archivado del panel. El código 403 SHALL
+quedarse para permisos insuficientes sobre la operación (rol sin `product:*`, Super Admin en escritura
+o proveedor sin registro), nunca para revelar la propiedad de una fila. Este comportamiento sustituye,
+para las rutas del panel de F2, el escenario «Proveedor edita el producto de otro proveedor» de la spec
+base.
+
+#### Scenario: Producto de otro proveedor de la misma agencia
+- GIVEN un Proveedor con registro en `providers.user_id` y un producto de otro proveedor de su agencia
+- WHEN consulta, edita, publica o archiva ese producto desde el panel
+- THEN la API responde 404 con el mismo cuerpo que para un producto de otra agencia
+- AND el panel no muestra botones de edición, publicación ni archivado sobre productos que no sean suyos

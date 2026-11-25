@@ -76,7 +76,10 @@ del resto de `/admin/products`; entra en el inventario de rutas como protegida, 
 precio viaja como texto decimal y la noche duplicada responde 409 `AVAILABILITY_DUPLICATED` sin crear
 una segunda fila. Además, `en` pasa a ser obligatorio en `title` y `description` de las escrituras del
 panel: la API responde 422 si falta, mientras la lectura pública conserva el fallback a `es` de la
-spec base.
+spec base. La propiedad de fila se decide en `ProductsAdminService.findProduct`: un producto de otro
+proveedor de la misma agencia devuelve ahora 404 como el de otra agencia, para no revelar propiedad;
+el 403 se reserva para permisos insuficientes. El delta de `auth-access` sustituye el escenario 403 de
+la spec base y el e2e de `products-admin` se ajusta en consecuencia.
 
 **Decisiones del panel de tasas (T-F2-8/9).** No se crea una ruta por id ni se acepta `tenantId` en el
 cuerpo: un override de otra agencia simplemente no existe en el ámbito de la agencia activa, así que no
