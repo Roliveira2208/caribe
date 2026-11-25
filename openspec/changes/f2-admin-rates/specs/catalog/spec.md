@@ -21,7 +21,9 @@ La disponibilidad SHALL guardarse por `(product_id, night)` con `capacity`, `res
 una noche repetida en la petición o un intento de crear una segunda fila para la misma noche SHALL
 responder 409 con `AVAILABILITY_DUPLICATED` y SHALL NOT escribir ninguna fila. `reserved` SHALL ser
 gestionado por el servidor: el panel SHALL enviar solo `capacity` y `priceUsd`, y una noche nueva SHALL
-empezar con `reserved` en cero. Título y descripción SHALL enviarse en JSONB con `es` y `en` en las
+empezar con `reserved` en cero. El panel SHALL leer esas noches con `GET /admin/products/:id/availability`
+(`from`/`to` opcionales), que SHALL devolver `night`, `capacity`, `reserved` y `priceUsd` del ámbito del
+actor, sin exponer agencias ajenas. Título y descripción SHALL enviarse en JSONB con `es` y `en` en las
 escrituras del panel; la falta de una traducción SHALL responder 422 `VALIDATION_ERROR`, sin contradecir
 el fallback a `es` de la spec base en las lecturas públicas. Las etiquetas y mensajes del panel SHALL
 salir de los catálogos es/en y todos los controles SHALL ser accesibles por teclado.
@@ -56,6 +58,12 @@ salir de los catálogos es/en y todos los controles SHALL ser accesibles por tec
 - THEN la noche existente se actualiza en su única fila conservando `reserved`, y la nueva empieza con `reserved` en cero
 - AND una noche repetida en la petición responde 409 con código `AVAILABILITY_DUPLICATED` y no se escribe ninguna fila
 - AND cada fila conserva `capacity`, `reserved` y `price_usd` válidos, sin ocupar la noche de salida de la estancia
+
+#### Scenario: Lectura de disponibilidad del panel
+- GIVEN un producto del ámbito del actor con noches guardadas y un rango `from`/`to`
+- WHEN el panel consulta `GET /admin/products/:id/availability`
+- THEN responde esas noches con `night`, `capacity`, `reserved` y `priceUsd` como texto decimal
+- AND un producto de otro proveedor o de otra agencia responde 404 sin revelar la propiedad
 
 #### Scenario: Precio como texto decimal
 - GIVEN el formulario de producto o de disponibilidad del panel

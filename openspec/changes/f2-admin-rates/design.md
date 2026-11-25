@@ -55,7 +55,7 @@ Endpoints existentes que reutiliza el panel (sin cambiar su contrato):
 | Pagos | `GET /admin/payments`, `PATCH /admin/payments/:id/approve`, `.../reject` | T-F1-9 |
 | Auditoría | `GET /admin/audit-logs`, `GET /admin/auth-events` | T-F0-9 |
 | Catálogo | `GET/POST/PUT /admin/products`, `.../publish`, `.../archive` | T-F1-4 |
-| Disponibilidad del panel | **`POST /admin/products/:id/availability` (nuevo)** | F2 |
+| Disponibilidad del panel | **`GET/POST /admin/products/:id/availability` (nuevo)** | F2 |
 | Usuarios y roles | `/api/auth/organization/*`, `/api/auth/admin/*` | Better Auth |
 | Reportes | **`GET /admin/reports/sales` (nuevo)** | F2 |
 
@@ -86,8 +86,10 @@ recalcula su matriz con ese valor; la API sigue siendo la única fuente de verda
 operación. El cuerpo de `POST /admin/products/:id/availability` es `{ nights: [{ night, capacity,
 priceUsd }] }`: `night` es `YYYY-MM-DD` en `America/Caracas`, `priceUsd` es texto decimal y el servidor
 guarda `reserved` (se conserva al ajustar, cero al crear). Una noche repetida en el cuerpo se detecta
-antes de escribir y responde 409 `AVAILABILITY_DUPLICATED` dentro de la misma transacción; el panel lee
-las noches de la lectura pública y nunca calcula importes.
+antes de escribir y responde 409 `AVAILABILITY_DUPLICATED` dentro de la misma transacción. `GET
+/admin/products/:id/availability` acepta `from`/`to` como la lectura pública y devuelve `night`,
+`capacity`, `reserved` y `priceUsd` para que el panel pueda mostrar cupo y reservadas sin inferirlos de
+`remaining`; el panel nunca calcula importes.
 
 **Decisiones del panel de tasas (T-F2-8/9).** No se crea una ruta por id ni se acepta `tenantId` en el
 cuerpo: un override de otra agencia simplemente no existe en el ámbito de la agencia activa, así que no

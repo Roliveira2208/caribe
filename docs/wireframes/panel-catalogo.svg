@@ -172,7 +172,7 @@
   <text x="744" y="692" class="val">26/11 · 5 · 3 · "120.50"</text>
   <text x="968" y="692" class="val">27/11 · 5 · 2 · "130.00"</text>
   <text x="32" y="718" class="note">Noche de salida no se ocupa · noche duplicada → 409 AVAILABILITY_DUPLICATED, sin segunda fila</text>
-  <text x="560" y="718" class="note">[3] La API hoy solo expone lectura de disponibilidad: ver pregunta abierta</text>
+  <text x="560" y="718" class="note">[3] GET/POST /admin/products/:id/availability: cupo y reservadas del servidor</text>
 
   <!-- Estados y notas -->
   <rect x="16" y="756" width="1168" height="38" class="notes"/>

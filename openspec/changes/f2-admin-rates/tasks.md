@@ -22,7 +22,7 @@ tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 - [x] T-F2-16 Auditoría de las acciones del panel. Prueba: `audit › "Auditoría del override de tasa"`, `"Auditoría de la revisión de pagos"` y `"Auditoría del cambio de rol"`.
 - [x] T-F2-17 Generar y someter a aprobación `docs/wireframes/panel-catalogo.svg`. Prueba: gate de aprobación antes de T-F2-18.
 - [x] T-F2-18 Catálogo: alta, edición, propiedad y estados. Prueba: `catalog › "Alta de producto en el panel"`, `"Edición de producto de la agencia"`, `"Proveedor edita solo sus productos"` y `"Publicar y archivar producto"`.
-- [ ] T-F2-19 Catálogo: disponibilidad, precios y traducciones. Prueba: `catalog › "Disponibilidad por noche"`, `"Precio como texto decimal"` y `"Traducciones es y en"`.
+- [ ] T-F2-19 Catálogo: disponibilidad, precios y traducciones. Prueba: `catalog › "Disponibilidad por noche"`, `"Lectura de disponibilidad del panel"`, `"Precio como texto decimal"` y `"Traducciones es y en"`.
 - [ ] T-F2-20 Generar y someter a aprobación `docs/wireframes/panel-usuarios-roles.svg`. Prueba: gate de aprobación antes de T-F2-21.
 - [ ] T-F2-21 Usuarios y roles sobre Better Auth. Prueba: `auth-access › "Invitar miembro con segundo factor"`, `"Cambiar rol de un miembro"`, `"Revocar sesión desde el panel"`, `"Organización objetivo ajena"`, `"Super Admin en modo plataforma"` y `"Operación sin agencia activa"`.
 - [ ] T-F2-22 Generar y someter a aprobación `docs/wireframes/panel-reportes.svg`. Prueba: gate de aprobación antes de T-F2-23.
