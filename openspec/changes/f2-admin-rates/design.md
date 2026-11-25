@@ -62,6 +62,13 @@ El endpoint de reportes se añade al módulo admin, con guard de sesión, TOTP, 
 guard dedicado que solo permite lectura a admin de agencia y Super Admin. Los totales se calculan en
 SQL con `DECIMAL`, sobre los pagos `APPROVED` y su tasa congelada; nunca se recalcula `amount_ves`.
 
+**Decisiones del panel de tasas (T-F2-8/9).** No se crea una ruta por id ni se acepta `tenantId` en el
+cuerpo: un override de otra agencia simplemente no existe en el ámbito de la agencia activa, así que no
+hay fila que ver ni reemplazar; un 404 se traduce como "tasa no disponible" sin ocultar el código. El
+historial se lee de `GET /admin/audit-logs` filtrando por `exchange-rate.override`, sin endpoint nuevo.
+La matriz del diseño se hace efectiva con un delta en `auth-access`: `agent` y `provider` reciben solo
+`exchange-rate: read`; no ven historial ni pueden escribir.
+
 **Inventario de rutas sin sesión (F-FINAL-002).** La política es «fallo cerrado»: solo se permite
 sin sesión lo que lleva `@AllowAnonymous` explícito, el guard global de Better Auth exige sesión en
 el resto y no se activa ningún plugin ni modo de autenticación nuevo.

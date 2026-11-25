@@ -59,3 +59,15 @@ teclado.
 - WHEN intenta una operación de agencia desde el panel o llama a su endpoint
 - THEN la API responde 403 con código `ACTIVE_ORGANIZATION_REQUIRED` y la interfaz no muestra datos de esa agencia
 - AND el panel ofrece el selector de membresías o el estado vacío con textos es/en y controles accesibles por teclado
+
+### Requirement: Lectura operativa de la tasa vigente
+Los roles `agent` y `provider` de una agencia SHALL tener el permiso `exchange-rate: read` para consultar
+únicamente `GET /admin/exchange-rates/current` de su agencia activa. SHALL NOT ver historial, motivos ni
+acciones de override, y SHALL NOT poder escribir tasas. Esta lectura operativa completa la matriz del
+diseño F2 sin ampliar otros permisos de esos roles.
+
+#### Scenario: Roles operativos consultan la tasa vigente
+- GIVEN un agente o proveedor con agencia activa y `exchange-rate: read`
+- WHEN abre el panel de tasas o llama a `GET /admin/exchange-rates/current`
+- THEN recibe solo la tasa vigente, su fecha valor, su origen y su ámbito, con el texto decimal del servidor
+- AND la API responde 403 a cualquier override y la interfaz no ofrece historial ni controles de escritura
