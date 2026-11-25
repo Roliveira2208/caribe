@@ -50,6 +50,7 @@ interface PanelProductBody {
 
 interface PanelPageBody {
   items: PanelProductBody[];
+  viewerProviderId: string | null;
   nextCursor: string | null;
 }
 
@@ -497,7 +498,7 @@ describe("products admin", () => {
       });
 
       const otherProvider = await call("GET", `/admin/products/${draftOther}`, provider1Cookie);
-      await expectProblem(otherProvider, 403, "FORBIDDEN");
+      await expectProblem(otherProvider, 404, "NOT_FOUND");
 
       const otherAgency = await call("GET", `/admin/products/${draftAgencyB}`, provider1Cookie);
       await expectProblem(otherAgency, 404, "NOT_FOUND");
@@ -620,7 +621,21 @@ describe("products admin", () => {
       const forbidden = await call("PUT", `/admin/products/${draftOther}`, provider1Cookie, {
         basePriceUsd: "99.00",
       });
-      await expectProblem(forbidden, 403, "FORBIDDEN");
+      await expectProblem(forbidden, 404, "NOT_FOUND");
+
+      const forbiddenPublish = await call(
+        "POST",
+        `/admin/products/${draftOther}/publish`,
+        provider1Cookie,
+      );
+      await expectProblem(forbiddenPublish, 404, "NOT_FOUND");
+
+      const forbiddenArchive = await call(
+        "POST",
+        `/admin/products/${draftOther}/archive`,
+        provider1Cookie,
+      );
+      await expectProblem(forbiddenArchive, 404, "NOT_FOUND");
 
       const admin = await call("PUT", `/admin/products/${draftOther}`, adminCookie, {
         description: { es: "Editado por admin", en: "Edited by admin" },
@@ -699,6 +714,7 @@ describe("products admin", () => {
       expect(res.status).toBe(200);
       const page = await json<PanelPageBody>(res);
       expect(page.items.every((item) => item.providerId === provider1)).toBe(true);
+      expect(page.viewerProviderId).toBe(provider1);
       expect(page.items.some((item) => item.id === draftOther)).toBe(false);
       expect(page.items.some((item) => item.id === draftAgencyB)).toBe(false);
     });
@@ -706,6 +722,7 @@ describe("products admin", () => {
     it("el admin filtra por estado, proveedor, hotel y destino", async () => {
       const byStatus = await call("GET", "/admin/products?status=ARCHIVED&limit=100", adminCookie);
       const statusPage = await json<PanelPageBody>(byStatus);
+      expect(statusPage.viewerProviderId).toBeNull();
       expect(statusPage.items.every((item) => item.status === "ARCHIVED")).toBe(true);
       expect(statusPage.items.some((item) => item.id === draftOwn)).toBe(true);
 

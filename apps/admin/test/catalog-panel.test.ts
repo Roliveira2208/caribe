@@ -1,0 +1,136 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+/**
+ * Contrato de la pantalla de catálogo (T-F2-18) sobre el código fuente: usa los
+ * endpoints existentes, no calcula importes, esconde las acciones que la API
+ * rechazaría y saca todas las etiquetas de los catálogos es/en.
+ */
+const appRoot = fileURLToPath(new URL("..", import.meta.url));
+
+function read(relativePath: string): string {
+  return readFileSync(join(appRoot, relativePath), "utf8");
+}
+
+function messages(locale: "es" | "en"): Record<string, unknown> {
+  return JSON.parse(read(`messages/${locale}.json`)) as Record<string, unknown>;
+}
+
+function flatten(node: unknown, prefix = ""): string[] {
+  if (typeof node !== "object" || node === null) return [prefix];
+  return Object.entries(node).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    return typeof value === "object" && value !== null ? flatten(value, path) : [path];
+  });
+}
+
+describe("catalog › pantalla del panel (T-F2-18)", () => {
+  it("existe la página y el componente del catálogo", () => {
+    expect(existsSync(join(appRoot, "src/app/[locale]/admin/catalog/page.tsx"))).toBe(true);
+    expect(existsSync(join(appRoot, "src/components/catalog-panel.tsx"))).toBe(true);
+  });
+
+  it("la página resuelve acceso, idioma, metadata alternativa y aviso de acceso", () => {
+    const page = read("src/app/[locale]/admin/catalog/page.tsx");
+    for (const fragment of [
+      'namespace: "catalog"',
+      'alternateLinks(locale, "/admin/catalog")',
+      "setRequestLocale(locale)",
+      "loadPanelAccess(request)",
+      "loadActiveMemberRole(request)",
+      "resolveCatalogPanelAccess(",
+      "<PanelAccessNotice",
+      "<CatalogPanel",
+    ]) {
+      expect(page, `falta "${fragment}" en la página`).toContain(fragment);
+    }
+  });
+
+  it("el panel usa la matriz antes de ofrecer alta, edición o cambio de estado", () => {
+    const panel = read("src/components/catalog-panel.tsx");
+    for (const fragment of [
+      "access.canRead",
+      "access.canCreate",
+      "access.canEdit(",
+      "access.canChangeStatus(",
+      "listCatalogProducts(",
+      "createCatalogProduct(",
+      "updateCatalogProduct(",
+      "publishCatalogProduct(",
+      "archiveCatalogProduct(",
+      "nextCursor",
+    ]) {
+      expect(panel, `falta "${fragment}" en el panel`).toContain(fragment);
+    }
+    expect(panel).not.toMatch(/<Link[^>]*>[\s\S]*?<Button/);
+  });
+
+  it("el precio es texto y el formulario no ofrece campos calculados ni tenantId", () => {
+    const panel = read("src/components/catalog-panel.tsx");
+    expect(panel).toContain('name="basePriceUsd"');
+    expect(panel).not.toContain('type="number"');
+    for (const field of ["totalUsd", "totalVes", "exchangeRate", "tenantId", "actorId"]) {
+      expect(panel, `el panel no debe enviar "${field}"`).not.toContain(`name="${field}"`);
+    }
+  });
+
+  it("todas las etiquetas usadas por la pantalla salen de es y en", () => {
+    const keys = [
+      "nav.catalog",
+      "catalog.title",
+      "catalog.description",
+      "catalog.activeAgency",
+      "catalog.newProduct",
+      "catalog.editProduct",
+      "catalog.filterQ",
+      "catalog.filterStatus",
+      "catalog.all",
+      "catalog.colProduct",
+      "catalog.colRoomType",
+      "catalog.colProvider",
+      "catalog.colStatus",
+      "catalog.colPrice",
+      "catalog.colActions",
+      "catalog.statusDraft",
+      "catalog.statusPublished",
+      "catalog.statusArchived",
+      "catalog.publish",
+      "catalog.archive",
+      "catalog.save",
+      "catalog.cancel",
+      "catalog.roomType",
+      "catalog.destinationId",
+      "catalog.providerId",
+      "catalog.basePriceUsd",
+      "catalog.titleEs",
+      "catalog.titleEn",
+      "catalog.descriptionEs",
+      "catalog.descriptionEn",
+      "catalog.previousPage",
+      "catalog.nextPage",
+      "catalog.empty",
+      "catalog.readOnly",
+      "catalog.forbidden",
+      "catalog.notFound",
+      "catalog.validationError",
+      "catalog.genericError",
+      "catalog.savedNotice",
+      "catalog.loading",
+      "catalog.noActions",
+    ];
+    for (const locale of ["es", "en"] as const) {
+      const flat = flatten(messages(locale));
+      for (const key of keys) {
+        expect(flat, `${locale} falta "${key}"`).toContain(key);
+      }
+    }
+
+    const panel = read("src/components/catalog-panel.tsx");
+    for (const key of keys.filter((entry) => entry.startsWith("catalog."))) {
+      expect(panel, `el panel no usa "${key}"`).toContain(`t("${key.slice("catalog.".length)}"`);
+    }
+    expect(read("src/components/site-header.tsx")).toContain('href="/admin/catalog"');
+  });
+});

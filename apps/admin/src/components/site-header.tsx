@@ -51,6 +51,9 @@ export async function SiteHeader() {
               {t("tagline")}
             </p>
           </Link>
+          <Link href="/admin/catalog" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
+            {t("catalog")}
+          </Link>
           <Link href="/admin/payments" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
             {t("payments")}
           </Link>

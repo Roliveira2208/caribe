@@ -161,5 +161,7 @@ export interface PanelProduct {
 
 export interface PanelProductPage {
   items: PanelProduct[];
+  /** Id del registro de proveedor del actor, para que el panel sepa qué filas puede editar. */
+  viewerProviderId: string | null;
   nextCursor: string | null;
 }

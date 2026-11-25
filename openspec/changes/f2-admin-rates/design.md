@@ -79,7 +79,11 @@ panel: la API responde 422 si falta, mientras la lectura pública conserva el fa
 spec base. La propiedad de fila se decide en `ProductsAdminService.findProduct`: un producto de otro
 proveedor de la misma agencia devuelve ahora 404 como el de otra agencia, para no revelar propiedad;
 el 403 se reserva para permisos insuficientes. El delta de `auth-access` sustituye el escenario 403 de
-la spec base y el e2e de `products-admin` se ajusta en consecuencia.
+la spec base y el e2e de `products-admin` se ajusta en consecuencia. Para que la interfaz oculte
+acciones que la API rechazaría sin adivinar la propiedad, el listado `GET /admin/products` devuelve
+`viewerProviderId`: el id del registro de proveedor del actor, o `null` si no lo tiene. El panel
+recalcula su matriz con ese valor; la API sigue siendo la única fuente de verdad y valida cada
+operación.
 
 **Decisiones del panel de tasas (T-F2-8/9).** No se crea una ruta por id ni se acepta `tenantId` en el
 cuerpo: un override de otra agencia simplemente no existe en el ámbito de la agencia activa, así que no

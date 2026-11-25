@@ -49,8 +49,10 @@ export class ProductsAdminService {
     const limit = query.limit ?? PRODUCTS_ADMIN_DEFAULT_LIMIT;
     const cursor = query.cursor ? decodeProductsAdminCursor(query.cursor) : null;
 
+    let viewerProviderId: string | null = null;
     const rows = await this.run(actor, async (tx) => {
       const providerId = await this.providerScope(tx, actor);
+      viewerProviderId = providerId;
       return tx.product.findMany({
         where: {
           AND: [
@@ -91,6 +93,7 @@ export class ProductsAdminService {
 
     return {
       items: page.map(toPanelProduct),
+      viewerProviderId,
       nextCursor:
         hasMore && last
           ? encodeProductsAdminCursor({
@@ -316,7 +319,8 @@ export class ProductsAdminService {
    * Producto de la agencia del actor, sin borrado lógico. En contexto de
    * plataforma no se filtra agencia (el Super Admin puede leer cualquiera);
    * en contexto tenant el filtro explícito convierte un producto de otra
-   * agencia en 404. El proveedor solo alcanza los de su registro (403).
+   * agencia en 404. El proveedor solo alcanza los de su registro y un producto
+   * ajeno también responde 404, sin revelar a quién pertenece.
    */
   private async findProduct(
     tx: Prisma.TransactionClient,
@@ -331,10 +335,8 @@ export class ProductsAdminService {
 
     const providerId = await this.providerScope(tx, actor);
     if (providerId !== null && product.providerId !== providerId) {
-      throw new ApiProblemException(
-        "FORBIDDEN",
-        "Solo puedes operar sobre los productos de tu registro de proveedor.",
-      );
+      // Mismo cuerpo que una agencia ajena: el 403 revelaría la propiedad.
+      throw notFound();
     }
     return product;
   }
