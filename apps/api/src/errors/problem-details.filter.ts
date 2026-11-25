@@ -157,6 +157,8 @@ export function codeForStatus(status: number): ApiErrorCode | null {
       return "CONFLICT";
     case 413:
       return "PAYLOAD_TOO_LARGE";
+    case 429:
+      return "RATE_LIMITED";
     case 500:
       return "INTERNAL_ERROR";
     default:
@@ -182,6 +184,8 @@ function detailForStatus(status: number): string {
       return "La operación entra en conflicto con el estado actual.";
     case 413:
       return "El cuerpo de la solicitud es demasiado grande.";
+    case 429:
+      return "Demasiadas peticiones. Intenta de nuevo más tarde.";
     default:
       return "Ocurrió un error inesperado.";
   }

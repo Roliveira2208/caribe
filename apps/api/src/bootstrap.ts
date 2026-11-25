@@ -3,7 +3,9 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module.js";
-import { apiConfig } from "./config.js";
+import { apiConfig, loginRateLimit, resolveTrustedProxies } from "./config.js";
+import { clientIpMiddleware } from "./security/client-ip.js";
+import { createLoginRateLimiter } from "./security/login-rate-limit.js";
 import {
   problemOf,
   writeProblem,
@@ -36,6 +38,12 @@ export async function createApp() {
   // spec auth-access: "Better Auth queda fuera del versionado /api/v1").
   app.setGlobalPrefix(apiConfig.basePath);
   app.enableShutdownHooks();
+
+  // M1: estos middleware se registran antes de `app.init()`, que es donde
+  // AuthModule monta Better Auth. Así la IP ya está resuelta cuando la lib
+  // calcula su clave de rate limit y cuando los hooks escriben auditoría.
+  app.use(clientIpMiddleware({ trustedProxies: resolveTrustedProxies() }));
+  app.use(createLoginRateLimiter(loginRateLimit));
 
   // Inicializa rutas y middleware antes de anadir el manejador de errores:
   // Express solo alcanza un error handler registrado DESPUES del middleware

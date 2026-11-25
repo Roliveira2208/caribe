@@ -41,6 +41,20 @@ export function resolveWebBaseUrl(value: string | undefined): string {
   return url.replace(/\/+$/, "");
 }
 
+/** Proxies de confianza (T-F2-2): direcciones o rangos CIDR separados por comas. */
+export function resolveTrustedProxies(env: NodeJS.ProcessEnv = process.env): string[] {
+  return (env.TRUSTED_PROXIES ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+/** Umbral de login compartido por el middleware propio y Better Auth. */
+export const loginRateLimit = {
+  windowSeconds: 60,
+  max: 10,
+} as const;
+
 export const apiConfig = {
   port: API_PORT,
   basePath: "/api/v1",

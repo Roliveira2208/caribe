@@ -28,11 +28,13 @@ import {
   superAdminRole,
   systemUserRole,
 } from "./access.js";
+import { loginRateLimit } from "./config.js";
 import { requiredEnv } from "./env.js";
 import { prisma } from "./prisma.js";
 import { CotizaveProvider } from "./rates/cotizave.provider.js";
 import { ExchangeRateService } from "./rates/exchange-rate.service.js";
 import { RateCache } from "./rates/rate-cache.js";
+import { CLIENT_IP_HEADER } from "./security/client-ip.js";
 import { TenantService } from "./tenant/tenant.service.js";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -46,11 +48,13 @@ const isProduction = process.env.NODE_ENV === "production";
  * - Cookies httpOnly + SameSite=Lax por defecto de Better Auth; Secure solo
  *   fuera de desarrollo (advanced.useSecureCookies).
  * - Rate limit activo siempre (por defecto solo aplica en produccion), mas
- *   estricto en login, registro y recuperacion de contrasena. La IP del
- *   cliente: en desarrollo/test Better Auth la resuelve como 127.0.0.1; en
- *   produccion, detras del proxy del hosting, habra que fijar
- *   advanced.ipAddress.trustedProxies (pregunta abierta de hosting). Sin IP
- *   conocida usa un bucket compartido por ruta y lo avisa en el log.
+ *   estricto en login, registro y recuperacion de contrasena (T-F2-2). La IP
+ *   real la decide el middleware de `client-ip` con `TRUSTED_PROXIES` y llega
+ *   a esta libreria por la cabecera interna `x-caribe-client-ip`: nunca se
+ *   confia en una `x-forwarded-for` aportada por el cliente. El limite propio
+ *   del login responde Problem Details 429 con `code = RATE_LIMITED` antes de
+ *   que actue el contador de Better Auth. Sin IP resuelta se usa una clave
+ *   explicita, separada del contador de las IPs reales.
  * - Hooks before/after (fix de la verificacion f0-foundations, deltas de
  *   auth-access y audit): las rutas administrativas del middleware de Better
  *   Auth (/api/auth/admin/* y las escrituras administrativas de
@@ -149,13 +153,24 @@ export const auth = betterAuth({
       },
     },
   },
-  advanced: { useSecureCookies: isProduction },
+  advanced: {
+    useSecureCookies: isProduction,
+    ipAddress: {
+      // Solo el middleware de `client-ip` escribe esta cabecera: decidir la
+      // confianza del socket en la librería no es posible y abrir
+      // x-forwarded-for permitiría falsificar IPs (deuda M1).
+      ipAddressHeaders: [CLIENT_IP_HEADER],
+    },
+  },
   rateLimit: {
     // Activo siempre (por defecto Better Auth solo lo aplica en produccion).
     // Las rutas de customRules son relativas al basePath de Better Auth.
     enabled: true,
     customRules: {
-      "/sign-in/email": { window: 60, max: 10 },
+      "/sign-in/email": {
+        window: loginRateLimit.windowSeconds,
+        max: loginRateLimit.max,
+      },
       "/sign-up/email": { window: 60, max: 5 },
       "/forget-password": { window: 60, max: 5 },
     },
