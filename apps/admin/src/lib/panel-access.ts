@@ -105,6 +105,22 @@ async function authRequest(
 }
 
 /**
+ * Rol de la membresía activa para la matriz del panel de tasas (T-F2-8).
+ * Better Auth ya expone esta lectura en `/organization/get-active-member-role`;
+ * no se añade un endpoint propio y un rol ausente o inválido falla cerrado.
+ */
+export async function loadRateRole(
+  options: LoadPanelAccessOptions,
+): Promise<string | null> {
+  const response = await authRequest("/organization/get-active-member-role", options);
+  if (!response.ok) return null;
+  const body: unknown = await response.json().catch(() => null);
+  if (typeof body !== "object" || body === null) return null;
+  const role = (body as { role?: unknown }).role;
+  return typeof role === "string" && role !== "" ? role : null;
+}
+
+/**
  * Resuelve la agencia activa en el servidor. Con una sola membresía fija la
  * agencia llamando a Better Auth; con varias no fija nada y deja elegir.
  */

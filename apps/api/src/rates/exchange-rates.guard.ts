@@ -1,6 +1,6 @@
 import { type CanActivate, type ExecutionContext, Injectable, SetMetadata } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { adminRole, ownerRole } from "../access.js";
+import { adminRole, agentRole, memberRole, ownerRole, providerRole } from "../access.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import {
   activeMembershipOf,
@@ -15,8 +15,9 @@ import { isPlatformRole } from "../tenant/tenant-context.js";
  *
  * Corre después del guard global (sesión verificada y, en /admin, TOTP ya
  * exigido a los roles administrativos). Reglas:
- * - `tenant-read` / `tenant-update`: agencia activa con membresía owner/admin
- *   y el permiso `exchange-rate:*`; el Super Admin sin agencia solo lee.
+ * - `tenant-read` / `tenant-update`: agencia activa con el permiso
+ *   `exchange-rate:*` del rol de la membresía (owner/admin escriben; agent y
+ *   provider solo leen desde F2); el Super Admin sin agencia solo lee.
  * - `platform-update`: solo el rol de plataforma y solo sin agencia activa
  *   (una agencia activa gana sobre el rol de plataforma).
  * - sin agencia y sin rol de plataforma: 403 ACTIVE_ORGANIZATION_REQUIRED.
@@ -45,7 +46,19 @@ export interface RatesRequest extends ActiveMembershipRequest {
   rateActor?: RateActor;
 }
 
-const AGENCY_ROLES = { owner: ownerRole, admin: adminRole } as const;
+/**
+ * Declaraciones de los roles de agencia, incluidos los operativos que solo
+ * leen. Se lee `statements` en lugar de guardar los objetos `Role` juntos: cada
+ * uno tiene un tipo literal distinto y no se pueden meter en un mismo mapa sin
+ * perder seguridad de tipos. Un rol desconocido cae a `member` (sin permisos).
+ */
+const AGENCY_ROLE_STATEMENTS: Record<string, Readonly<Record<string, readonly string[]>>> = {
+  owner: ownerRole.statements,
+  admin: adminRole.statements,
+  agent: agentRole.statements,
+  provider: providerRole.statements,
+  member: memberRole.statements,
+};
 
 @Injectable()
 export class ExchangeRatesGuard implements CanActivate {
@@ -83,9 +96,10 @@ export class ExchangeRatesGuard implements CanActivate {
 
     if (membership) {
       const organizationId = membership.organizationId;
-      const role = AGENCY_ROLES[membership.role as keyof typeof AGENCY_ROLES];
+      const statements =
+        AGENCY_ROLE_STATEMENTS[membership.role] ?? AGENCY_ROLE_STATEMENTS["member"]!;
       const action = access === "tenant-update" ? "update" : "read";
-      if (!role || !role.authorize({ "exchange-rate": [action] }).success) {
+      if (statements["exchange-rate"]?.includes(action) !== true) {
         throw forbidden("Tu rol no puede consultar o ajustar las tasas de la agencia.");
       }
 

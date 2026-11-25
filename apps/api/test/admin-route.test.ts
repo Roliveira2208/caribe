@@ -23,7 +23,8 @@ import {
 /** Exclusivos: concedidos a owner/admin/super_admin y a ningun otro rol. */
 const EXCLUSIVE_ADMIN_PERMISSIONS: PermissionCheck[] = [
   { payment: ["review"] },
-  { "exchange-rate": ["read", "update"] },
+  // read es operativo (agent/provider); update sigue siendo exclusivo.
+  { "exchange-rate": ["update"] },
   { report: ["read"] },
   { audit: ["read"] },
   { member: ["create", "update", "delete"] },
@@ -41,6 +42,7 @@ const NON_EXCLUSIVE_PERMISSIONS: PermissionCheck[] = [
   { product: ["create", "read", "update", "delete"] },
   { booking: ["create", "read"] },
   { payment: ["read"] },
+  { "exchange-rate": ["read"] },
 ];
 
 describe("clasificación de rutas administrativas (T-F0-8)", () => {
@@ -71,10 +73,10 @@ describe("clasificación de rutas administrativas (T-F0-8)", () => {
     expect(isAdminRoute({ path: "bookings/abc" })).toBe(false);
     // "adminfoo" no es el prefijo /admin.
     expect(isAdminRoute({ path: "adminfoo/reports" })).toBe(false);
-    // exchange-rate:read y audit:read son exclusivos.
+    // La tasa es lectura operativa (T-F2-8/9): agent y provider también la ven.
     expect(
       isAdminRoute({ path: "exchange-rates/current", permissions: { "exchange-rate": ["read"] } }),
-    ).toBe(true);
+    ).toBe(false);
     expect(isAdminRoute({ path: "audit-logs", permissions: { audit: ["read"] } })).toBe(true);
   });
 

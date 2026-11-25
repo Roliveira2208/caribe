@@ -17,8 +17,8 @@ import { createAccessControl } from "better-auth/plugins/access";
  * Capa de agencia (member.role, plugin organization; el mapa SE MEZCLA con
  * los defaults, por eso "member" se neutraliza con permisos vacios):
  * - owner / admin: gestion completa de la agencia; solo owner la disuelve.
- * - agent: crea y consulta reservas, consulta pagos.
- * - provider: gestiona productos y consulta reservas.
+ * - agent: crea y consulta reservas, consulta pagos y la tasa vigente.
+ * - provider: gestiona productos, consulta reservas y la tasa vigente.
  *
  * La propiedad de fila (proveedor edita solo SU producto, cliente ve solo SUS
  * reservas y documentos, 404 sobre lo ajeno) es de la capa de servicio y
@@ -95,16 +95,18 @@ export const adminRole = accessControl.newRole({
   invitation: ["create", "cancel"],
 });
 
-/** agent: crea y consulta reservas; consulta pagos. */
+/** agent: crea y consulta reservas; consulta pagos y la tasa vigente (F2). */
 export const agentRole = accessControl.newRole({
   booking: ["create", "read"],
   payment: ["read"],
+  "exchange-rate": ["read"],
 });
 
-/** provider: gestiona productos y consulta reservas (solo de los suyos en F1). */
+/** provider: gestiona productos y consulta reservas y la tasa vigente (F2). */
 export const providerRole = accessControl.newRole({
   product: ["create", "read", "update", "delete"],
   booking: ["read"],
+  "exchange-rate": ["read"],
 });
 
 /**

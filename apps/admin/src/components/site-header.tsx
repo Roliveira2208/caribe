@@ -45,6 +45,9 @@ export async function SiteHeader() {
           <Link href="/admin/payments" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
             {t("payments")}
           </Link>
+          <Link href="/admin/rates" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
+            {t("rates")}
+          </Link>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LanguageSwitcher />

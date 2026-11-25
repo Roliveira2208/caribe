@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SessionData } from "@caribe/shared";
 import {
   loadPanelAccess,
+  loadRateRole,
   parseAgencies,
   resolvePanelAccess,
   type AgencyOption,
@@ -123,5 +124,25 @@ describe("loadPanelAccess", () => {
     const { fetchImpl, calls } = mockFetch(session("super_admin"), agencies);
     expect(await loadPanelAccess({ ...options, fetchImpl })).toEqual({ status: "platform" });
     expect(calls.some((call) => call.url.endsWith("/set-active"))).toBe(false);
+  });
+});
+
+describe("loadRateRole", () => {
+  it("lee el rol de la membresía activa de Better Auth", async () => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      expect(String(input)).toBe("http://localhost:3002/api/auth/organization/get-active-member-role");
+      return new Response(JSON.stringify({ role: "admin" }), { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+    await expect(loadRateRole({ ...options, fetchImpl })).resolves.toBe("admin");
+  });
+
+  it("fallo cerrado: sin rol o con respuesta inválida devuelve null", async () => {
+    const unauthorised = vi.fn(async () => new Response(null, { status: 401 })) as unknown as typeof globalThis.fetch;
+    await expect(loadRateRole({ ...options, fetchImpl: unauthorised })).resolves.toBeNull();
+
+    const invalid = vi.fn(async () =>
+      new Response(JSON.stringify({ role: 42 }), { status: 200 }),
+    ) as unknown as typeof globalThis.fetch;
+    await expect(loadRateRole({ ...options, fetchImpl: invalid })).resolves.toBeNull();
   });
 });

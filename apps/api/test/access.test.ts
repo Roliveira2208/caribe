@@ -79,12 +79,20 @@ const expectations: RoleExpectation[] = [
   {
     name: "agencia: agent",
     role: agentRole,
-    allows: { booking: ["create", "read"], payment: ["read"] },
+    allows: {
+      booking: ["create", "read"],
+      payment: ["read"],
+      "exchange-rate": ["read"],
+    },
   },
   {
     name: "agencia: provider",
     role: providerRole,
-    allows: { product: ["create", "read", "update", "delete"], booking: ["read"] },
+    allows: {
+      product: ["create", "read", "update", "delete"],
+      booking: ["read"],
+      "exchange-rate": ["read"],
+    },
   },
   { name: "agencia: member (default neutralizado)", role: memberRole, allows: {} },
 ];
