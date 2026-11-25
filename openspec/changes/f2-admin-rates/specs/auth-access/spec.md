@@ -14,6 +14,11 @@ sin modificar la organización ajena ni imputarle filas de auditoría. Las opera
 organización activa SHALL responder 403 con código `ACTIVE_ORGANIZATION_REQUIRED`, y el Super Admin SHALL
 entrar en modo plataforma sin fijar agencia.
 
+La revocación de sesiones desde el panel SHALL estar disponible solo para el Super Admin en modo
+plataforma mediante `/api/auth/admin/*`; un Admin de agencia SHALL NOT ofrecer esa acción porque la
+matriz F0 no le concede `session:revoke` y Better Auth la rechazaría. Un Admin de agencia SHALL invitar
+miembros y cambiar roles con las rutas de `/api/auth/organization/*`.
+
 Cambiar el rol de un miembro y revocar una sesión desde el panel SHALL dejar una fila en `audit_logs` con
 los campos `before` y `after` (antes/después), actor, entidad, IP, fecha y agencia objetivo, o `tenant_id`
 NULL en las rutas de plataforma. Cuando el middleware de Better Auth no pueda observar el estado previo,
@@ -37,10 +42,11 @@ teclado.
 - AND sin TOTP la petición responde 403 `TWO_FACTOR_REQUIRED` antes de validar el cuerpo
 
 #### Scenario: Revocar sesión desde el panel
-- GIVEN un administrador con TOTP activo y una sesión activa de un usuario de su agencia
-- WHEN revoca esa sesión desde el panel por la ruta existente de Better Auth
+- GIVEN un Super Admin con TOTP activo en modo plataforma y una sesión activa de un usuario
+- WHEN revoca esa sesión desde el panel por `/api/auth/admin/revoke-user-session`
 - THEN la siguiente petición del usuario responde 401 y `audit_logs` recibe una fila con `before` y `after` (antes/después) de la sesión
-- AND la fila queda imputada a la agencia objetivo en `/api/auth/organization/*` o con `tenant_id` NULL en `/api/auth/admin/*`
+- AND la fila queda con `tenant_id` NULL y el panel de agencia no ofrece la acción de revocar
+- AND un Admin de agencia que intente la ruta recibe 403 de Better Auth sin modificar la sesión
 
 #### Scenario: Organización objetivo ajena
 - GIVEN un Admin de la agencia A autenticado con TOTP activo

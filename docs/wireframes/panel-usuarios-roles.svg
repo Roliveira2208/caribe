@@ -42,7 +42,7 @@
   <rect x="24" y="106" width="104" height="24" class="active"/>
   <text x="38" y="122" class="activeText">Miembros</text>
   <rect x="136" y="106" width="112" height="24" class="chip"/>
-  <text x="148" y="122" class="lbl">Sesiones</text>
+  <text x="148" y="122" class="lbl">Sesiones (solo plataforma)</text>
   <rect x="256" y="106" width="112" height="24" class="chip"/>
   <text x="268" y="122" class="lbl">Agencias</text>
   <text x="388" y="122" class="note">Agencias: solo Super Admin · sin fijar agencia activa</text>
@@ -76,7 +76,7 @@
   <rect x="480" y="284" width="64" height="24" class="ok"/>
   <text x="494" y="300" class="val">activo</text>
   <text x="576" y="300" class="val">25/11 18:02</text>
-  <text x="790" y="300" class="val">Cambiar rol · Revocar sesiones</text>
+  <text x="790" y="300" class="val">Cambiar rol</text>
 
   <text x="28" y="338" class="val">Luis Gómez · luis@ejemplo.com</text>
   <rect x="332" y="324" width="112" height="24" class="field"/>
@@ -84,24 +84,24 @@
   <rect x="480" y="324" width="64" height="24" class="ok"/>
   <text x="494" y="340" class="val">activo</text>
   <text x="576" y="340" class="val">25/11 17:41</text>
-  <text x="790" y="340" class="val">Cambiar rol · Revocar sesiones</text>
+  <text x="790" y="340" class="val">Cambiar rol</text>
 
   <text x="28" y="378" class="val">Sofía Díaz · sofia@ejemplo.com</text>
   <rect x="332" y="364" width="112" height="24" class="field"/>
   <text x="342" y="380" class="val">provider ▾</text>
   <text x="480" y="380" class="val">pendiente</text>
   <text x="576" y="380" class="val">24/11 09:15</text>
-  <text x="790" y="380" class="val">Cambiar rol · Revocar sesiones</text>
+  <text x="790" y="380" class="val">Cambiar rol</text>
 
   <text x="28" y="418" class="val">Carlos Ruiz · carlos@ejemplo.com</text>
   <rect x="332" y="404" width="112" height="24" class="field"/>
   <text x="342" y="420" class="val">member ▾</text>
   <text x="480" y="420" class="val">pendiente</text>
   <text x="576" y="420" class="val">—</text>
-  <text x="790" y="420" class="val">Cambiar rol · Revocar sesiones</text>
+  <text x="790" y="420" class="val">Cambiar rol</text>
 
   <line x1="16" y1="432" x2="1184" y2="432" class="sep"/>
-  <text x="28" y="448" class="note">owner/admin: invitar, cambiar rol y revocar · agent/provider/member: sin acciones · Super Admin: agencias, no escrituras de agencia</text>
+  <text x="28" y="448" class="note">owner/admin: invitar y cambiar rol · agent/provider/member: sin acciones · Super Admin: revocar sesiones y consultar agencias en plataforma</text>
 
   <!-- Modal de invitación -->
   <rect x="16" y="472" width="376" height="252" class="notes"/>
@@ -143,7 +143,7 @@
 
   <!-- Modal de sesiones -->
   <rect x="800" y="472" width="384" height="252" class="notes"/>
-  <text x="816" y="496" class="notetitle">Revocar sesiones</text>
+  <text x="816" y="496" class="notetitle">Revocar sesiones · solo Super Admin</text>
   <text x="816" y="522" class="lbl">Usuario</text>
   <text x="912" y="522" class="val">Sofía Díaz</text>
   <rect x="816" y="532" width="352" height="24" class="panel"/>
@@ -163,6 +163,6 @@
   <text x="32" y="790" class="note">[1] Solo /api/auth/organization/* y /api/auth/admin/* existentes: sin plugins, API keys, bearer, SSO ni OAuth nuevos.</text>
   <text x="32" y="810" class="note">[2] Sin TOTP: 403 TWO_FACTOR_REQUIRED antes de validar el cuerpo; sin agencia activa: 403 ACTIVE_ORGANIZATION_REQUIRED y estado vacío con selector.</text>
   <text x="32" y="830" class="note">[3] organizationId ajeno se rechaza sin escribir ni imputar auditoría a la otra agencia; la UI solo ofrece las membresías del actor.</text>
-  <text x="32" y="850" class="note">[4] Super Admin en plataforma: agencias, tasas globales, auditoría y auth-events; tenant_id NULL en rutas de plataforma.</text>
+  <text x="32" y="850" class="note">[4] Super Admin en plataforma: agencias, tasas globales, auditoría, auth-events y revocación de sesiones; tenant_id NULL.</text>
   <text x="32" y="870" class="note">[5] 403 / 404 / 409 y 422 se traducen desde es/en; foco visible, teclado y etiquetas en todos los controles; sin secretos ni mensajes internos.</text>
 </svg>

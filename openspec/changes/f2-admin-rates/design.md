@@ -121,7 +121,7 @@ con la misma ventana y umbral que la librería.
 | Pagos | listar y revisar (revisor ≠ pagador) | listar, no revisar | no ver | no ver | solo lectura, no revisar |
 | Auditoría | sí, su agencia | no | no | no | sí, plataforma y agencias |
 | Catálogo | CRUD | ver | solo sus productos | no ver | solo lectura |
-| Usuarios/roles | invitar, cambiar rol, revocar | no | no | no | crear/configurar agencias |
+| Usuarios/roles | invitar y cambiar rol | no | no | no | revocar sesiones, consultar agencias y crear/configurar agencias |
 | Reportes | sí, su agencia | no | no | no | sí, solo lectura |
 
 La API sigue siendo la fuente de autoridad: la UI deshabilita acciones y oculta resúmenes, y además
@@ -200,6 +200,10 @@ cursor. La IP se muestra como «—» cuando sea `null`.
   con la IP mostrada como «—». La organización objetivo se elige solo entre las membresías del actor;
   Super Admin consulta agencias en modo plataforma sin fijar agencia activa. No se incluye exportación
   ni otra acción sin ruta existente en la spec.
+- Ajuste aprobado en T-F2-21: la revocación de sesiones queda reservada al Super Admin en modo
+  plataforma. `systemUserRole` no tiene `session:revoke` y `admin({ adminRoles: ["super_admin"] })`
+  rechazaría al admin de agencia, así que su panel no ofrece la pestaña de sesiones ni el botón de
+  revocar. No se amplían permisos F0 ni se añaden rutas ni plugins.
 - **Pausa 1** tras el override de tasa: verificación independiente de los escenarios obligatorios de
   `exchange-rates` y `security`.
 - **Pausa 2** tras la aprobación/rechazo de pagos: verificación independiente y revisión de seguridad
