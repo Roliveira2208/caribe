@@ -4,7 +4,7 @@ Una tarea a la vez, tests primero y un commit por tarea. Las pausas son puertas 
 tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 
 - [x] T-F2-0 Especificar la change: deltas, specs base nuevas, `scope.md` y ROADMAP. Prueba: `node scripts/check-specs.mjs` y `pnpm exec openspec validate --all` en verde.
-- [ ] T-F2-1 Generar y someter a aprobación `docs/wireframes/panel-tasas.svg`. Prueba: gate de aprobación del wireframe antes de T-F2-8.
+- [x] T-F2-1 Generar y someter a aprobación `docs/wireframes/panel-tasas.svg`. Prueba: gate de aprobación del wireframe antes de T-F2-8.
 - [ ] T-F2-2 M1: configurar `trustedProxies`, resolver la IP real y corregir el rate limit de login. Prueba: `security › "IP tras proxy de confianza"`, `"Cabecera de proxy no confiable"` y `"Rate limit por IP real"`.
 - [ ] T-F2-3 M2: Helmet, CSP sin inline y CORS con `TRUSTED_ORIGINS`. Prueba: `security › "Cabeceras de seguridad en la API"`, `"CSP sin scripts inline"`, `"CORS con orígenes permitidos"` y `"CORS con origen desconocido"`.
 - [ ] T-F2-4 Rate limiting de rutas de negocio con 429 Problem Details. Prueba: `security › "Límite en creación de reservas"`, `"Límite en alta y revisión de pagos"` y `"Límite en descargas"`.
