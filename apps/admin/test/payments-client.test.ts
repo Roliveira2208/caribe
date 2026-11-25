@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthApiError } from "@caribe/shared";
 import {
   listAdminPayments,
+  resolvePaymentPanelAccess,
   reviewAdminPayment,
   validRejectionReason,
 } from "../src/lib/payments-client";
@@ -20,6 +21,8 @@ const page = {
       amountUsd: "240.00",
       amountVes: "8640.00",
       rate: "36.0000",
+      exchangeRateId: "rate-1",
+      valueDate: "2026-11-25",
       reference: "123456",
       reportedBy: "user-2",
       reviewedBy: null,
@@ -47,6 +50,32 @@ describe("cliente de pagos del admin", () => {
 
     expect(fetchImpl).toHaveBeenCalledWith("/api/v1/admin/payments", expect.any(Object));
     expect(result.items).toHaveLength(1);
+  });
+
+  it("pide la página siguiente con el cursor del servidor", async () => {
+    const fetchImpl = fetchJson({ ...page, nextCursor: "cursor-2" });
+    const result = await listAdminPayments(
+      { status: "APPROVED", method: "ALL", cursor: "cursor-1" },
+      { fetchImpl },
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/v1/admin/payments?status=APPROVED&cursor=cursor-1",
+      expect.any(Object),
+    );
+    expect(result.nextCursor).toBe("cursor-2");
+  });
+
+  it("conserva el par congelado como texto del servidor", async () => {
+    const fetchImpl = fetchJson(page);
+    const result = await listAdminPayments({ status: "ALL", method: "ALL" }, { fetchImpl });
+    expect(result.items[0]).toMatchObject({
+      amountUsd: "240.00",
+      amountVes: "8640.00",
+      rate: "36.0000",
+      exchangeRateId: "rate-1",
+      valueDate: "2026-11-25",
+    });
   });
 
   it("descarta filas mal formadas de la respuesta", async () => {
@@ -92,5 +121,37 @@ describe("cliente de pagos del admin", () => {
     await expect(
       reviewAdminPayment("pay-1", "approve", "", { fetchImpl }),
     ).rejects.toMatchObject({ status: 409, code: "PAYMENT_ALREADY_REVIEWED" });
+  });
+});
+
+describe("matriz de pagos en el panel", () => {
+  it("owner y admin leen y revisan", () => {
+    for (const role of ["owner", "admin"]) {
+      expect(resolvePaymentPanelAccess("ready", role)).toEqual({
+        canRead: true,
+        canReview: true,
+        scope: "agency",
+      });
+    }
+  });
+
+  it("agent lee pero no revisa; provider y member no leen", () => {
+    expect(resolvePaymentPanelAccess("ready", "agent")).toEqual({
+      canRead: true,
+      canReview: false,
+      scope: "agency",
+    });
+    for (const role of ["provider", "member", "desconocido", null]) {
+      expect(resolvePaymentPanelAccess("ready", role).canRead).toBe(false);
+    }
+  });
+
+  it("el Super Admin lee en modo plataforma sin acciones de revisión", () => {
+    expect(resolvePaymentPanelAccess("platform", null)).toEqual({
+      canRead: true,
+      canReview: false,
+      scope: "platform",
+    });
+    expect(resolvePaymentPanelAccess("platform", "owner").canReview).toBe(false);
   });
 });

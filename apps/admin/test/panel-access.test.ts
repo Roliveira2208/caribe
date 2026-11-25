@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SessionData } from "@caribe/shared";
 import {
+  loadActiveMemberRole,
   loadPanelAccess,
   loadRateRole,
   parseAgencies,
@@ -124,6 +125,16 @@ describe("loadPanelAccess", () => {
     const { fetchImpl, calls } = mockFetch(session("super_admin"), agencies);
     expect(await loadPanelAccess({ ...options, fetchImpl })).toEqual({ status: "platform" });
     expect(calls.some((call) => call.url.endsWith("/set-active"))).toBe(false);
+  });
+});
+
+describe("loadActiveMemberRole", () => {
+  it("lee el mismo rol que usa el panel de tasas", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify({ role: "agent" }), { status: 200 }),
+    ) as unknown as typeof globalThis.fetch;
+    await expect(loadActiveMemberRole({ ...options, fetchImpl })).resolves.toBe("agent");
+    expect(loadRateRole).toBe(loadActiveMemberRole);
   });
 });
 

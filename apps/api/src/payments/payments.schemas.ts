@@ -58,6 +58,8 @@ export interface PaymentResponse {
   amountUsd: string;
   amountVes: string;
   rate: string;
+  /** Id de la tasa congelada: el panel lo muestra, nunca lo calcula. */
+  exchangeRateId: string;
   valueDate: string;
   reference: string | null;
   reportedBy: string;

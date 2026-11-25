@@ -391,6 +391,7 @@ describe("payments (alta y revisión)", () => {
     amountUsd: string;
     amountVes: string;
     rate: string;
+    exchangeRateId: string;
     valueDate: string;
     reference: string | null;
     reportedBy: string;
@@ -1529,6 +1530,12 @@ describe("payments (alta y revisión)", () => {
         "2222",
         "3333",
       ]);
+      for (const item of page.items) {
+        expect(item.exchangeRateId).toBeTruthy();
+        expect(item.amountUsd).toMatch(/^\d+\.\d{2}$/);
+        expect(item.amountVes).toMatch(/^\d+\.\d{2}$/);
+        expect(item.rate).toMatch(/^\d+\.\d{4}$/);
+      }
       expect(page.nextCursor).toBeNull();
 
       const firstPage = await jsonOf<PaymentPageBody>(
@@ -1589,6 +1596,33 @@ describe("payments (alta y revisión)", () => {
       const foreign = await listPayments(cookieOwnerA, `?bookingId=${bookingB}`);
       expect(foreign.status).toBe(200);
       expect((await jsonOf<PaymentPageBody>(foreign)).items).toHaveLength(0);
+    });
+
+    it("niega el listado a member y provider; agente y plataforma solo leen", async () => {
+      // Se reutiliza la misma sesión: la membresía se revalida en cada petición,
+      // así que basta con cambiar el rol en la tabla y devolverlo al terminar.
+      const setProviderRole = (role: string) =>
+        owner.query(`UPDATE "member" SET role = $1 WHERE "organizationId" = $2 AND "userId" = $3`, [
+          role,
+          orgA,
+          providerA,
+        ]);
+
+      try {
+        await setProviderRole("member");
+        await expectProblem(await listPayments(cookieProviderA), 403, "FORBIDDEN");
+      } finally {
+        await setProviderRole("provider");
+      }
+      await expectProblem(await listPayments(cookieProviderA), 403, "FORBIDDEN");
+
+      const agentPage = await listPayments(cookieAgentA);
+      expect(agentPage.status).toBe(200);
+      expect(Array.isArray((await jsonOf<PaymentPageBody>(agentPage)).items)).toBe(true);
+
+      const platformPage = await listPayments(cookieSuper);
+      expect(platformPage.status).toBe(200);
+      expect(Array.isArray((await jsonOf<PaymentPageBody>(platformPage)).items)).toBe(true);
     });
 
     it("el detalle respeta la agencia y el Super Admin ve todas", async () => {

@@ -17,11 +17,42 @@ export interface AdminPayment {
   amountUsd: string;
   amountVes: string;
   rate: string;
+  /** Par congelado por la API; la UI solo lo muestra como texto. */
+  exchangeRateId: string;
+  valueDate: string;
   reference: string | null;
   reportedBy: string;
   reviewedBy: string | null;
   rejectionReason: string | null;
   createdAt: string;
+}
+
+/** Matriz de lectura y revisión resuelta en el servidor (spec payments). */
+export interface PaymentPanelAccess {
+  canRead: boolean;
+  canReview: boolean;
+  scope: "agency" | "platform";
+}
+
+/**
+ * La UI refleja la matriz de la API; la autoridad sigue siendo el servidor.
+ * `agent` lee sin revisar; `provider` y `member` no leen; el Super Admin lee en
+ * modo plataforma sin acciones de revisión.
+ */
+export function resolvePaymentPanelAccess(
+  status: "ready" | "platform",
+  role: string | null,
+): PaymentPanelAccess {
+  if (status === "platform") {
+    return { canRead: true, canReview: false, scope: "platform" };
+  }
+  if (role === "owner" || role === "admin") {
+    return { canRead: true, canReview: true, scope: "agency" };
+  }
+  if (role === "agent") {
+    return { canRead: true, canReview: false, scope: "agency" };
+  }
+  return { canRead: false, canReview: false, scope: "agency" };
 }
 
 export interface AdminPaymentPage {
@@ -32,6 +63,8 @@ export interface AdminPaymentPage {
 export interface PaymentFilters {
   status: PaymentFilterStatus;
   method: PaymentFilterMethod;
+  /** Cursor opaco devuelto por la API; nunca se construye en el cliente. */
+  cursor?: string | null;
 }
 
 export interface PaymentsApiOptions {
@@ -69,7 +102,11 @@ function parsePage(body: unknown): AdminPaymentPage {
           typeof row["id"] === "string" &&
           typeof row["bookingId"] === "string" &&
           typeof row["status"] === "string" &&
-          typeof row["amountUsd"] === "string"
+          typeof row["amountUsd"] === "string" &&
+          typeof row["amountVes"] === "string" &&
+          typeof row["rate"] === "string" &&
+          typeof row["exchangeRateId"] === "string" &&
+          typeof row["valueDate"] === "string"
         );
       })
     : [];
@@ -87,6 +124,7 @@ export async function listAdminPayments(
   const query = new URLSearchParams();
   if (filters.status !== "ALL") query.set("status", filters.status);
   if (filters.method !== "ALL") query.set("method", filters.method);
+  if (filters.cursor) query.set("cursor", filters.cursor);
   const suffix = query.toString();
   const doFetch = options.fetchImpl ?? globalThis.fetch;
   const response = await doFetch(`/api/v1/admin/payments${suffix ? `?${suffix}` : ""}`, {

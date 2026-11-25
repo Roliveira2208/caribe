@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
@@ -28,29 +28,38 @@ import {
   reviewAdminPayment,
   validRejectionReason,
   type AdminPayment,
+  type AdminPaymentPage,
   type PaymentFilterMethod,
   type PaymentFilterStatus,
+  type PaymentPanelAccess,
 } from "@/lib/payments-client";
 
 interface PaymentsPanelProps {
   locale: Locale;
+  access: PaymentPanelAccess;
 }
 
-/** Panel mínimo de revisión de pagos (T-F1-9c, wireframe panel-pagos.svg). */
-export function PaymentsPanel({ locale }: PaymentsPanelProps) {
+/** Panel de pagos del wireframe aprobado `panel-pagos.svg` (T-F2-11/T-F2-12). */
+export function PaymentsPanel({ locale, access }: PaymentsPanelProps) {
   const t = useTranslations("payments");
   const router = useRouter();
   const [status, setStatus] = useState<PaymentFilterStatus>("IN_REVIEW");
   const [method, setMethod] = useState<PaymentFilterMethod>("ALL");
-  const [rows, setRows] = useState<AdminPayment[]>([]);
+  const [pages, setPages] = useState<AdminPaymentPage[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
+  const generation = useRef(0);
 
   const redirectTo = `/${locale}/admin/payments`;
+  const current = pages[pageIndex];
+  const rows = current?.items ?? [];
+  const nextCursor = current?.nextCursor ?? null;
 
   const handleError = useCallback(
     (cause: unknown) => {
@@ -87,41 +96,48 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
   );
 
   useEffect(() => {
+    const token = ++generation.current;
     let active = true;
     setLoading(true);
     setNotice(null);
-    listAdminPayments({ status, method })
+    setPages([]);
+    setPageIndex(0);
+    listAdminPayments({ status, method, cursor: null })
       .then((page) => {
-        if (active) setRows(page.items);
+        if (active && token === generation.current) setPages([page]);
       })
       .catch((cause: unknown) => {
-        if (active) handleError(cause);
+        if (active && token === generation.current) handleError(cause);
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active && token === generation.current) setLoading(false);
       });
     return () => {
       active = false;
     };
   }, [status, method, reload, handleError]);
 
-  const moneyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: 2,
-      }),
-    [locale],
-  );
-  const vesFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(locale, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-    [locale],
-  );
+  async function goNext(): Promise<void> {
+    if (!nextCursor || loadingMore) return;
+    const target = pageIndex + 1;
+    if (pages[target]) {
+      setPageIndex(target);
+      return;
+    }
+    const token = generation.current;
+    setLoadingMore(true);
+    setNotice(null);
+    try {
+      const page = await listAdminPayments({ status, method, cursor: nextCursor });
+      if (token !== generation.current) return;
+      setPages((previous) => [...previous.slice(0, target), page]);
+      setPageIndex(target);
+    } catch (cause) {
+      if (token === generation.current) handleError(cause);
+    } finally {
+      if (token === generation.current) setLoadingMore(false);
+    }
+  }
 
   async function review(paymentId: string, action: "approve" | "reject", rejectionReason = "") {
     setBusy(true);
@@ -142,6 +158,17 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
     }
   }
 
+  function statusLabel(value: string): string {
+    return t(`status.${value.toLowerCase().replace(/_/g, "")}`);
+  }
+
+  function methodLabel(value: string): string {
+    if (value === "PAGO_MOVIL") return t("methodMobile");
+    if (value === "ZELLE") return t("methodZelle");
+    if (value === "BINANCE_PAY") return t("methodBinance");
+    return t("methodCard");
+  }
+
   const columns: TableColumnsType<AdminPayment> = [
     { title: t("colPayment"), dataIndex: "id", key: "id" },
     { title: t("colBooking"), dataIndex: "bookingId", key: "bookingId" },
@@ -150,26 +177,24 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
       title: t("colMethod"),
       dataIndex: "method",
       key: "method",
-      render: (value: AdminPayment["method"]) =>
-        value === "PAGO_MOVIL"
-          ? t("methodMobile")
-          : value === "ZELLE"
-            ? t("methodZelle")
-            : value === "BINANCE_PAY"
-              ? t("methodBinance")
-              : t("methodCard"),
+      render: (value: AdminPayment["method"]) => methodLabel(value),
     },
-    {
-      title: t("colAmountUsd"),
-      dataIndex: "amountUsd",
-      key: "amountUsd",
-      render: (value: AdminPayment["amountUsd"]) => moneyFormatter.format(Number(value)),
-    },
+    { title: t("colAmountUsd"), dataIndex: "amountUsd", key: "amountUsd" },
     {
       title: t("colAmountVes"),
+      dataIndex: "amountVes",
       key: "amountVes",
-      render: (_value: unknown, row: AdminPayment) =>
-        `${vesFormatter.format(Number(row.amountVes))} · ${row.rate}`,
+      render: (_value: unknown, row: AdminPayment) => `${row.amountVes} · ${row.rate}`,
+    },
+    {
+      title: t("colRateId"),
+      key: "exchangeRateId",
+      render: (_value: unknown, row: AdminPayment) => row.exchangeRateId,
+    },
+    {
+      title: t("colValueDate"),
+      key: "valueDate",
+      render: (_value: unknown, row: AdminPayment) => row.valueDate,
     },
     {
       title: t("colStatus"),
@@ -177,15 +202,17 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
       key: "status",
       render: (value: AdminPayment["status"]) => (
         <Tag color={value === "APPROVED" ? "green" : value === "REJECTED" ? "red" : "gold"}>
-          {t(`status.${value.toLowerCase().replace(/_/g, "")}`)}
+          {statusLabel(value)}
         </Tag>
       ),
     },
     {
       title: t("colActions"),
       key: "actions",
-      render: (_value: unknown, row: AdminPayment) =>
-        row.status === "IN_REVIEW" ? (
+      render: (_value: unknown, row: AdminPayment) => {
+        if (row.status !== "IN_REVIEW") return t("noActions");
+        if (!access.canReview) return t("readOnly");
+        return (
           <Space size="small">
             <Popconfirm
               title={t("approveTitle")}
@@ -202,9 +229,8 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
               {t("reject")}
             </Button>
           </Space>
-        ) : (
-          t("noActions")
-        ),
+        );
+      },
     },
   ];
 
@@ -225,7 +251,7 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
               { value: "ALL", label: t("all") },
               ...PAYMENT_FILTER_STATUSES.map((value) => ({
                 value,
-                label: t(`status.${value.toLowerCase().replace(/_/g, "")}`),
+                label: statusLabel(value),
               })),
             ]}
           />
@@ -243,14 +269,7 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
               { value: "ALL", label: t("all") },
               ...PAYMENT_METHODS.map((value) => ({
                 value,
-                label:
-                  value === "PAGO_MOVIL"
-                    ? t("methodMobile")
-                    : value === "BINANCE_PAY"
-                      ? t("methodBinance")
-                      : value === "CARD"
-                        ? t("methodCard")
-                        : t("methodZelle"),
+                label: methodLabel(value),
               })),
             ]}
           />
@@ -264,10 +283,20 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
         loading={loading}
         columns={columns}
         dataSource={rows}
-        pagination={{ pageSize: 20 }}
+        pagination={false}
         size="small"
         locale={{ emptyText: t("empty") }}
       />
+      <Space wrap style={{ marginTop: 16 }}>
+        <Button disabled={pageIndex === 0 || loading} onClick={() => setPageIndex((v) => v - 1)}>
+          {t("previousPage")}
+        </Button>
+        <span aria-live="polite">{t("page", { current: pageIndex + 1 })}</span>
+        <Button disabled={!nextCursor || loadingMore} onClick={() => void goNext()}>
+          {t("nextPage")}
+        </Button>
+        {loadingMore ? <span role="status">{t("loadingMore")}</span> : null}
+      </Space>
       <Modal
         open={rejectingId !== null}
         title={t("rejectTitle")}

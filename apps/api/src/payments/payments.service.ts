@@ -78,6 +78,7 @@ interface PaymentRow {
   amountUsd: DecimalValue;
   amountVes: DecimalValue;
   rate: DecimalValue;
+  exchangeRateId: string;
   valueDate: Date;
   reference: string | null;
   reportedBy: string;
@@ -943,6 +944,7 @@ function toPaymentResponse(row: PaymentRow): PaymentResponse {
     amountUsd: formatAmount(row.amountUsd),
     amountVes: formatAmount(row.amountVes),
     rate: formatRate(row.rate),
+    exchangeRateId: row.exchangeRateId,
     valueDate: formatValueDate(row.valueDate),
     reference: row.reference,
     reportedBy: row.reportedBy,
