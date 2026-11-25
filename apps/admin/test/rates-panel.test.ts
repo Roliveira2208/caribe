@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
- * Contrato de la pantalla de tasas de T-F2-8 sobre el código fuente: tasa
- * vigente, override con motivo, matriz de roles, validación en el cliente y
- * textos es/en. El modal antes/después y el historial llegan en T-F2-9.
+ * Contrato de la pantalla de tasas (T-F2-8/T-F2-9) sobre el código fuente:
+ * modal antes/después con confirmación explícita, cancelar sin escritura,
+ * matriz de roles, historial desde audit_logs y textos es/en.
  */
 const appRoot = fileURLToPath(new URL("..", import.meta.url));
 const panelPath = join(appRoot, "src/components/rates-panel.tsx");
@@ -35,22 +35,41 @@ const panelKeys = [
   "description",
   "currentTitle",
   "activeAgency",
-  "sourceValue",
-  "valueDateValue",
-  "scopeValue",
-  "scopePlatform",
+  "source",
+  "valueDate",
+  "scope",
   "scopeAgency",
-  "overrideValue",
+  "scopePlatform",
+  "isOverride",
   "yes",
   "no",
   "edit",
   "rateLabel",
   "reasonLabel",
   "valueDateLabel",
-  "valueDatePlaceholder",
+  "before",
+  "after",
+  "beforeValue",
+  "afterValue",
   "confirmTitle",
+  "confirmDescription",
+  "confirmStep",
   "confirmOverride",
+  "continue",
   "cancel",
+  "cancelHint",
+  "historyTitle",
+  "historyDescription",
+  "colValueDate",
+  "colRate",
+  "colSource",
+  "colScope",
+  "colOverride",
+  "colReason",
+  "colActor",
+  "actorUnknown",
+  "pending",
+  "emptyHistory",
   "forbidden",
   "twoFactorRequired",
   "rateUnavailable",
@@ -61,7 +80,7 @@ const panelKeys = [
   "loading",
 ];
 
-describe('exchange-rates › panel de tasas (T-F2-8)', () => {
+describe('exchange-rates › panel de tasas (T-F2-8/T-F2-9)', () => {
   it("la ruta y el componente existen y usan el cliente de tasas", () => {
     expect(existsSync(panelPath)).toBe(true);
     expect(existsSync(pagePath)).toBe(true);
@@ -70,31 +89,43 @@ describe('exchange-rates › panel de tasas (T-F2-8)', () => {
       'useTranslations("rates")',
       "getCurrentRate",
       "setRateOverride",
+      "listRateAudits",
       "resolveRateAccess",
       "isValidRateText",
       "<Modal",
+      "<Table",
     ]) {
       expect(panel).toContain(symbol);
     }
     expect(panel).not.toMatch(/amountUsd|amountVes|amount_ves|exchange_rate_id|type="number"/);
   });
 
-  it("el formulario envía texto decimal y motivo, sin campos calculados", () => {
+  it("el modal muestra antes → después y exige confirmación explícita", () => {
     const panel = read("src/components/rates-panel.tsx");
-    expect(panel).toContain('t("rateLabel")');
-    expect(panel).toContain('t("reasonLabel")');
-    expect(panel).toContain("setRateOverride(");
-    expect(panel).toContain("isValidRateText(rateInput)");
-    expect(panel).toContain("reason.trim() === \"\"");
-    expect(panel).toContain("onCancel={closeModal}");
+    for (const key of [
+      "beforeValue",
+      "afterValue",
+      "reasonLabel",
+      "confirmTitle",
+      "confirmDescription",
+      "confirmOverride",
+      "cancel",
+      "cancelHint",
+    ]) {
+      expect(panel).toContain(`t("${key}"`);
+    }
+    expect(panel).toContain('stage === "confirm"');
+    expect(panel).toContain('setRateOverride(');
+    expect(panel).toMatch(/onCancel=\{closeModal\}/);
     const closeModal = panel.match(/function closeModal\(\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? "";
     expect(closeModal).not.toContain("setRateOverride");
   });
 
-  it("oculta la tasa y la acción a quien no tiene permiso", () => {
+  it("oculta historial y acciones a quien no puede verlos", () => {
     const panel = read("src/components/rates-panel.tsx");
-    expect(panel).toContain("access.visible");
     expect(panel).toContain("access.canOverride");
+    expect(panel).toContain("access.canViewHistory");
+    expect(panel).toContain("access.visible");
     expect(panel).toContain('t("forbidden")');
     expect(panel).toContain('t("twoFactorRequired")');
   });

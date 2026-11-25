@@ -24,8 +24,10 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
   const suffix = randomUUID().slice(0, 8);
   const globalRateId = randomUUID();
   const today = todayInCaracas();
+  const future = shiftDate(today, 2);
 
   let orgA: string;
+  let orgB: string;
   let ownerAId: string;
   let ownerACookie: string;
   let adminACookie: string;
@@ -35,6 +37,8 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
   let noTotpCookie: string;
   let revokedCookie: string;
   let revokedMemberId: string;
+  let ownerBCookie: string;
+  let superCookie: string;
 
   async function call(
     method: string,
@@ -57,6 +61,8 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
   const current = (cookie: string) => call("GET", "/admin/exchange-rates/current", cookie);
   const override = (cookie: string, body: Record<string, unknown>) =>
     call("PUT", "/admin/exchange-rates/override", cookie, body);
+  const globalOverride = (cookie: string, body: Record<string, unknown>) =>
+    call("PUT", "/admin/exchange-rates/global-override", cookie, body);
 
   beforeAll(async () => {
     app = await createApp();
@@ -104,6 +110,15 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
     await setActiveOrg(baseUrl, revokedCookie, orgA);
     await prisma.member.deleteMany({ where: { organizationId: orgA, userId: revokedMemberId } });
 
+    const ownerB = await userWithTotp(baseUrl, `owner-f2-b-${suffix}@example.com`);
+    ownerBCookie = ownerB.cookie;
+    orgB = (await createAgency(ownerB.userId, `F2 B ${suffix}`, `f2-b-${suffix}`)).id;
+    await setActiveOrg(baseUrl, ownerBCookie, orgB);
+
+    const superAdmin = await userWithTotp(baseUrl, `super-f2-${suffix}@example.com`);
+    await prisma.user.update({ where: { id: superAdmin.userId }, data: { role: "super_admin" } });
+    superCookie = superAdmin.cookie;
+
     // El stub de setup-env apunta a un puerto muerto: se siembra la tasa global
     // de hoy para que `current` no dependa del orden de archivos de la suite.
     await prisma.$executeRaw`
@@ -147,14 +162,17 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
     ).toBe(0);
   });
 
-  it("sin permiso de tasa: member no lee y agente/provider no escriben", async () => {
-    for (const cookie of [memberACookie, agentACookie, providerACookie]) {
+  it("sin permiso de tasa: member, agente y Super Admin de agencia reciben 403", async () => {
+    for (const cookie of [memberACookie, agentACookie]) {
       const res = await current(cookie);
       expect(res.status).toBe(cookie === memberACookie ? 403 : 200);
       const write = await override(cookie, { rate: "950.0000", reason: "Intento" });
       expect(write.status).toBe(403);
       await expect(write.json()).resolves.toMatchObject({ code: "FORBIDDEN" });
     }
+    const superWrite = await override(superCookie, { rate: "950.0000", reason: "Intento" });
+    expect(superWrite.status).toBe(403);
+    await expect(superWrite.json()).resolves.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("membresía revocada: 403 ACTIVE_ORGANIZATION_REQUIRED", async () => {
@@ -221,4 +239,96 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
     expect(audit.ip === null || typeof audit.ip === "string").toBe(true);
   });
 
+  it("confirmación de override vigente: el segundo guarda el antes y el después", async () => {
+    const res = await override(adminACookie, { rate: "960.0000", reason: "Ajuste corregido" });
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({ rate: "960.0000", isOverride: true });
+
+    const row = await prisma.exchangeRate.findFirstOrThrow({
+      where: { tenantId: orgA, valueDate: new Date(today) },
+    });
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { action: "exchange-rate.override", entityId: row.id },
+      orderBy: { at: "desc" },
+    });
+    expect(audit.before).toMatchObject({ rate: "950.0000", isOverride: true });
+    expect(audit.after).toMatchObject({ rate: "960.0000", reason: "Ajuste corregido" });
+  });
+
+  it("auditoría y override de otra agencia: A no ve la fila ni el motivo de B", async () => {
+    const foreign = await override(ownerBCookie, {
+      rate: "980.0000",
+      reason: `Motivo privado de B ${suffix}`,
+    });
+    expect(foreign.status).toBe(200);
+
+    await expect((await current(ownerACookie)).json()).resolves.toMatchObject({
+      rate: "960.0000",
+      isOverride: true,
+    });
+
+    const logs = await call("GET", "/admin/audit-logs", ownerACookie);
+    expect(logs.status).toBe(200);
+    const { items } = (await logs.json()) as { items: Array<Record<string, unknown>> };
+    const reasons = JSON.stringify(items);
+    expect(reasons).toContain("Ajuste corregido");
+    expect(reasons).not.toContain(`Motivo privado de B ${suffix}`);
+    expect(orgB).not.toBe("");
+
+    // No hay ruta por id: un intento de inyectar la entidad de B en el cuerpo
+    // se rechaza como campo desconocido, sin filas ni motivo de B en A.
+    const injected = await override(ownerACookie, {
+      rate: "970.0000",
+      reason: "Intento sobre B",
+      entityId: (await prisma.exchangeRate.findFirstOrThrow({
+        where: { tenantId: orgB, valueDate: new Date(today) },
+      })).id,
+    });
+    expect(injected.status).toBe(422);
+  });
+
+  it("fecha valor futura: no se aplica como vigente antes de esa fecha", async () => {
+    const res = await override(ownerACookie, {
+      rate: "940.0000",
+      reason: "Ajuste programado",
+      valueDate: future,
+    });
+    expect(res.status).toBe(200);
+    await expect((await current(ownerACookie)).json()).resolves.toMatchObject({
+      rate: "960.0000",
+      valueDate: today,
+    });
+    const pending = await prisma.exchangeRate.findFirstOrThrow({
+      where: { tenantId: orgA, valueDate: new Date(future) },
+    });
+    expect(pending.isOverride).toBe(true);
+  });
+
+  it("tasa global del Super Admin: tenant NULL sin revelar la de las agencias", async () => {
+    const res = await globalOverride(superCookie, {
+      rate: "920.0000",
+      reason: "Contingencia global",
+    });
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      scope: "platform",
+      rate: "920.0000",
+      isOverride: true,
+    });
+    const row = await prisma.exchangeRate.findFirstOrThrow({
+      where: { tenantId: null, valueDate: new Date(today) },
+    });
+    expect(row.isOverride).toBe(true);
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { action: "exchange-rate.global-override", entityId: row.id },
+    });
+    expect(audit.tenantId).toBeNull();
+    await expect((await current(ownerACookie)).json()).resolves.toMatchObject({ rate: "960.0000" });
+  });
 });
+
+function shiftDate(date: string, days: number): string {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}

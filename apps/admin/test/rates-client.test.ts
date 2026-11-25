@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuthApiError } from "@caribe/shared";
-import { getCurrentRate, resolveRateAccess, setRateOverride } from "../src/lib/rates-client";
+import {
+  getCurrentRate,
+  listRateAudits,
+  resolveRateAccess,
+  setRateOverride,
+} from "../src/lib/rates-client";
 
 /**
- * Escenarios `exchange-rates › "Campos calculados del cliente"` y
- * "Ver tasa vigente" (T-F2-8). El cliente del panel solo entrega texto decimal
- * y motivo; la API sigue siendo la autoridad.
+ * Escenarios `exchange-rates › "Campos calculados del cliente"`,
+ * "Ver tasa vigente", "Historial de overrides" y "Tasa global del Super Admin"
+ * (T-F2-8/T-F2-9). El cliente del panel solo entrega texto decimal y motivo;
+ * la API sigue siendo la autoridad.
  */
 const rate = {
   scope: "agency",
@@ -66,6 +72,18 @@ describe('exchange-rates › "Campos calculados del cliente" (T-F2-8)', () => {
     });
   });
 
+  it("fija la tasa global con la ruta de plataforma", async () => {
+    const fetchImpl = vi.fn(async () => json({ ...rate, scope: "platform" }));
+    await setRateOverride({ rate: "920.0000", reason: "Contingencia" }, {
+      fetchImpl,
+      platform: true,
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/v1/admin/exchange-rates/global-override",
+      expect.objectContaining({ method: "PUT" }),
+    );
+  });
+
   it.each(["amountUsd", "amountVes", "amount_ves", "exchange_rate_id", "calculatedRate"])(
     "rechaza el campo calculado %s antes de fetch",
     async (field) => {
@@ -98,6 +116,61 @@ describe('exchange-rates › "Campos calculados del cliente" (T-F2-8)', () => {
     await expect(
       setRateOverride({ rate: "950.0000", reason: "BCV no publicó" }, { fetchImpl }),
     ).rejects.toMatchObject({ status: 404, code: "NOT_FOUND" });
+  });
+});
+
+describe('exchange-rates › "Historial de overrides" (T-F2-9)', () => {
+  it("toma el historial de audit_logs y no expone tenantId", async () => {
+    const fetchImpl = vi.fn(async () =>
+      json({
+        items: [
+          {
+            id: "audit-1",
+            tenantId: "otro-tenant",
+            action: "exchange-rate.override",
+            entity: "exchange-rate",
+            entityId: "rate-1",
+            actorId: "user-1",
+            ip: "127.0.0.1",
+            at: "2026-11-25T10:00:00.000Z",
+            before: { rate: "900.0000", source: "COTIZAVE" },
+            after: { rate: "950.0000", source: "MANUAL", reason: "BCV no publicó" },
+          },
+          {
+            id: "audit-2",
+            action: "booking.created",
+            entity: "booking",
+            entityId: "booking-1",
+            actorId: "user-2",
+            at: "2026-11-25T11:00:00.000Z",
+            before: null,
+            after: null,
+          },
+        ],
+      }),
+    );
+
+    const rows = await listRateAudits({ fetchImpl });
+    expect(fetchImpl).toHaveBeenCalledWith("/api/v1/admin/audit-logs", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: "audit-1",
+      actorId: "user-1",
+      before: { rate: "900.0000" },
+      after: { rate: "950.0000", reason: "BCV no publicó" },
+    });
+    expect(rows[0]).not.toHaveProperty("tenantId");
+  });
+
+  it("un 403 deja el historial vacío, sin filas residuales", async () => {
+    const fetchImpl = vi.fn(async () => problem(403, "FORBIDDEN"));
+    await expect(listRateAudits({ fetchImpl })).rejects.toMatchObject({
+      status: 403,
+      code: "FORBIDDEN",
+    });
   });
 });
 
