@@ -58,6 +58,12 @@ Endpoints existentes que reutiliza el panel (sin cambiar su contrato):
 | Usuarios y roles | `/api/auth/organization/*`, `/api/auth/admin/*` | Better Auth |
 | Reportes | **`GET /admin/reports/sales` (nuevo)** | F2 |
 
+**Excepción aditiva para el panel de pagos (T-F2-11).** `GET/POST/PATCH /admin/payments` conservan
+sus rutas, filtros, códigos y reglas de autorización; la única variación de contrato es el campo
+`exchangeRateId` en `PaymentResponse`, para que la UI muestre el par congelado `rate` +
+`exchange_rate_id` como texto del servidor sin calcularlo ni adivinarlo. No se añaden entradas nuevas
+ni se permiten campos calculados en las peticiones.
+
 El endpoint de reportes se añade al módulo admin, con guard de sesión, TOTP, memberships activa y un
 guard dedicado que solo permite lectura a admin de agencia y Super Admin. Los totales se calculan en
 SQL con `DECIMAL`, sobre los pagos `APPROVED` y su tasa congelada; nunca se recalcula `amount_ves`.
