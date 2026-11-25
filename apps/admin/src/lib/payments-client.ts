@@ -55,6 +55,19 @@ export function resolvePaymentPanelAccess(
   return { canRead: false, canReview: false, scope: "agency" };
 }
 
+/**
+ * Segunda comprobación de la matriz: quien reportó el pago no puede revisarlo,
+ * aunque tenga permiso de revisión. Sin id de sesión falla cerrado; la API sigue
+ * siendo la autoridad y devuelve 403 si se fuerza la petición.
+ */
+export function canReviewPayment(
+  access: PaymentPanelAccess,
+  reportedBy: string,
+  userId: string | null,
+): boolean {
+  return access.canReview && userId !== null && userId !== "" && reportedBy !== userId;
+}
+
 export interface AdminPaymentPage {
   items: AdminPayment[];
   nextCursor: string | null;

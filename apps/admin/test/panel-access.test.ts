@@ -4,6 +4,7 @@ import {
   loadActiveMemberRole,
   loadPanelAccess,
   loadRateRole,
+  loadSessionUser,
   parseAgencies,
   resolvePanelAccess,
   type AgencyOption,
@@ -125,6 +126,23 @@ describe("loadPanelAccess", () => {
     const { fetchImpl, calls } = mockFetch(session("super_admin"), agencies);
     expect(await loadPanelAccess({ ...options, fetchImpl })).toEqual({ status: "platform" });
     expect(calls.some((call) => call.url.endsWith("/set-active"))).toBe(false);
+  });
+});
+
+describe("loadSessionUser", () => {
+  it("devuelve el id de usuario de la sesión de Better Auth", async () => {
+    const { fetchImpl } = mockFetch(session(), agencies);
+    await expect(loadSessionUser({ ...options, fetchImpl })).resolves.toBe("user-1");
+  });
+
+  it("falla cerrado sin sesión o con un id inválido", async () => {
+    const anonymous = vi.fn(async () => new Response(JSON.stringify(null), { status: 200 })) as unknown as typeof globalThis.fetch;
+    await expect(loadSessionUser({ ...options, fetchImpl: anonymous })).resolves.toBeNull();
+
+    const invalid = vi.fn(async () =>
+      new Response(JSON.stringify({ user: { id: 42 } }), { status: 200 }),
+    ) as unknown as typeof globalThis.fetch;
+    await expect(loadSessionUser({ ...options, fetchImpl: invalid })).resolves.toBeNull();
   });
 });
 

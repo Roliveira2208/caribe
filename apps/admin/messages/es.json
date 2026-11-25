@@ -122,6 +122,7 @@
     "page": "Página {current}",
     "loadingMore": "Cargando más pagos…",
     "readOnly": "Tu rol solo puede consultar estos pagos.",
+    "selfReview": "No puedes revisar un pago que reportaste tú mismo.",
     "methodMobile": "Pago Móvil",
     "methodCard": "Tarjeta",
     "methodZelle": "Zelle",

@@ -49,6 +49,7 @@ const paymentKeys = [
   "page",
   "loadingMore",
   "readOnly",
+  "selfReview",
   "empty",
   "forbidden",
   "listForbidden",
@@ -77,9 +78,23 @@ describe("panel de pagos (T-F2-11)", () => {
     expect(panel).toContain('t("readOnly")');
   });
 
-  it("resuelve la matriz en el servidor antes de renderizar la pantalla", () => {
+  it("deshabilita la revisión del propio pago y muestra el mensaje es/en", () => {
+    expect(panel).toContain("canReviewPayment(access, row.reportedBy, userId)");
+    expect(panel).toContain('t("selfReview")');
+  });
+
+  it("recarga tras una revisión concurrente y lleva a activar el segundo factor", () => {
+    expect(panel).toContain('cause.code === "PAYMENT_ALREADY_REVIEWED"');
+    expect(panel).toContain("setReload");
+    expect(panel).toContain("isTwoFactorRequired(cause)");
+    expect(panel).toContain("/two-factor");
+  });
+
+  it("resuelve la matriz y la identidad en el servidor antes de renderizar", () => {
     expect(page).toContain("resolvePaymentPanelAccess");
     expect(page).toContain("loadActiveMemberRole");
+    expect(page).toContain("loadSessionUser");
+    expect(page).toContain("userId={userId}");
     expect(page).toContain('t("listForbidden")');
   });
 

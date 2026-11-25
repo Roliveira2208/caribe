@@ -23,6 +23,7 @@ import {
   type Locale,
 } from "@caribe/shared";
 import {
+  canReviewPayment,
   listAdminPayments,
   PAYMENT_FILTER_STATUSES,
   reviewAdminPayment,
@@ -37,10 +38,12 @@ import {
 interface PaymentsPanelProps {
   locale: Locale;
   access: PaymentPanelAccess;
+  /** Id de la sesión resuelto en el servidor; nunca se fía del cliente. */
+  userId: string | null;
 }
 
 /** Panel de pagos del wireframe aprobado `panel-pagos.svg` (T-F2-11/T-F2-12). */
-export function PaymentsPanel({ locale, access }: PaymentsPanelProps) {
+export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
   const t = useTranslations("payments");
   const router = useRouter();
   const [status, setStatus] = useState<PaymentFilterStatus>("IN_REVIEW");
@@ -211,7 +214,20 @@ export function PaymentsPanel({ locale, access }: PaymentsPanelProps) {
       key: "actions",
       render: (_value: unknown, row: AdminPayment) => {
         if (row.status !== "IN_REVIEW") return t("noActions");
-        if (!access.canReview) return t("readOnly");
+        if (!access.canReview || !canReviewPayment(access, row.reportedBy, userId)) {
+          const reason = access.canReview ? t("selfReview") : t("readOnly");
+          return (
+            <Space size="small">
+              <Button size="small" type="primary" disabled title={reason}>
+                {t("approve")}
+              </Button>
+              <Button size="small" danger disabled title={reason}>
+                {t("reject")}
+              </Button>
+              <span>{reason}</span>
+            </Space>
+          );
+        }
         return (
           <Space size="small">
             <Popconfirm

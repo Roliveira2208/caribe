@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuthApiError } from "@caribe/shared";
 import {
+  canReviewPayment,
   listAdminPayments,
   resolvePaymentPanelAccess,
   reviewAdminPayment,
@@ -153,5 +154,27 @@ describe("matriz de pagos en el panel", () => {
       scope: "platform",
     });
     expect(resolvePaymentPanelAccess("platform", "owner").canReview).toBe(false);
+  });
+});
+
+describe("revisor distinto del pagador", () => {
+  const reviewer = resolvePaymentPanelAccess("ready", "admin");
+
+  it("permite revisar el pago de otro usuario", () => {
+    expect(canReviewPayment(reviewer, "user-2", "user-1")).toBe(true);
+  });
+
+  it("deshabilita las acciones cuando el pago fue reportado por quien lo revisa", () => {
+    expect(canReviewPayment(reviewer, "user-1", "user-1")).toBe(false);
+  });
+
+  it("falla cerrado sin identidad de sesión o con permiso de solo lectura", () => {
+    expect(canReviewPayment(reviewer, "user-2", null)).toBe(false);
+    expect(
+      canReviewPayment(resolvePaymentPanelAccess("platform", null), "user-2", "user-1"),
+    ).toBe(false);
+    expect(canReviewPayment(resolvePaymentPanelAccess("ready", "agent"), "user-2", "user-1")).toBe(
+      false,
+    );
   });
 });

@@ -5,7 +5,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@caribe/shared";
 import { alternateLinks } from "@/i18n/metadata";
 import { PanelAccessNotice } from "@/components/panel-access-notice";
 import { PaymentsPanel } from "@/components/payments-panel";
-import { loadActiveMemberRole, loadPanelAccess } from "@/lib/panel-access";
+import { loadActiveMemberRole, loadPanelAccess, loadSessionUser } from "@/lib/panel-access";
 import { resolvePaymentPanelAccess } from "@/lib/payments-client";
 
 interface PaymentsPageProps {
@@ -42,6 +42,7 @@ export default async function PaymentsPage({ params }: PaymentsPageProps) {
   }
 
   const role = access.status === "platform" ? null : await loadActiveMemberRole(request);
+  const userId = await loadSessionUser(request);
   const payments = resolvePaymentPanelAccess(
     access.status === "platform" ? "platform" : "ready",
     role,
@@ -58,7 +59,7 @@ export default async function PaymentsPage({ params }: PaymentsPageProps) {
 
   return (
     <div style={{ width: "100%" }}>
-      <PaymentsPanel locale={locale} access={payments} />
+      <PaymentsPanel locale={locale} access={payments} userId={userId} />
     </div>
   );
 }

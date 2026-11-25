@@ -124,6 +124,22 @@ export async function loadActiveMemberRole(
 export const loadRateRole = loadActiveMemberRole;
 
 /**
+ * Id del usuario autenticado, leído de la misma sesión de Better Auth (T-F2-12).
+ * Se usa solo para deshabilitar la revisión del propio pago; sin sesión válida
+ * devuelve null y la UI falla cerrado.
+ */
+export async function loadSessionUser(
+  options: LoadPanelAccessOptions,
+): Promise<string | null> {
+  const response = await authRequest("/get-session", options);
+  if (!response.ok) return null;
+  const body: unknown = await response.json().catch(() => null);
+  if (typeof body !== "object" || body === null) return null;
+  const user = (body as { user?: { id?: unknown } }).user;
+  return typeof user?.id === "string" && user.id !== "" ? user.id : null;
+}
+
+/**
  * Resuelve la agencia activa en el servidor. Con una sola membresía fija la
  * agencia llamando a Better Auth; con varias no fija nada y deja elegir.
  */

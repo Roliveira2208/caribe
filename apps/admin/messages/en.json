@@ -122,6 +122,7 @@
     "page": "Page {current}",
     "loadingMore": "Loading more payments…",
     "readOnly": "Your role can only view these payments.",
+    "selfReview": "You cannot review a payment you reported yourself.",
     "methodMobile": "Mobile payment",
     "methodCard": "Card",
     "methodZelle": "Zelle",
