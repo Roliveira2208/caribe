@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -35,8 +36,11 @@ export async function generateMetadata({
 /**
  * Shell del admin con rutas /es y /en (next-intl, espanol por defecto). AntdRegistry
  * extrae los estilos cssinjs de antd en SSR y Providers fija su paquete de idioma.
+ * `connection()` fuerza renderizado por petición: con CSP por nonces una página
+ * prerenderizada no tendría el nonce de la respuesta actual (guía de Next 16).
  */
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
+  await connection();
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) {
     notFound();

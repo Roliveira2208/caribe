@@ -19,7 +19,14 @@ import { TenantSettingsModule } from "./tenant-settings/tenant-settings.module.j
   // disableGlobalAuthGuard: la subclase AdminTwoFactorGuard (AdminModule) es
   // el unico guard global y extiende el AuthGuard de la lib (T-F0-8).
   imports: [
-    AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
+    // El CORS lo configura bootstrap (T-F2-3): la integración regala un `origin`
+    // de lista que devuelve `Access-Control-Allow-Credentials` incluso a un
+    // origen desconocido, y la spec exige no autorizar credenciales en ese caso.
+    AuthModule.forRoot({
+      auth,
+      disableGlobalAuthGuard: true,
+      disableTrustedOriginsCors: true,
+    }),
     AdminModule,
     AuditModule,
     CatalogModule,

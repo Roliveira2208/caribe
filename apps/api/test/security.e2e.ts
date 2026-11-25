@@ -154,6 +154,61 @@ describe("security", () => {
       expect(attempt.ip).not.toBe(clientA);
     });
 
+    it("Cabeceras de seguridad en la API", async () => {
+      const ok = await fetch(`${baseUrl}/api/v1/rates/today`);
+      const error = await fetch(`${baseUrl}/api/v1/admin/payments`);
+      const limitedIp = "203.0.113.20";
+      for (let i = 0; i < 10; i += 1) {
+        await postAuth(
+          "/sign-in/email",
+          { email: `headers-${suffix}@example.com`, password: "PasswordIncorrecta123!" },
+          { forwardedFor: chainOf(limitedIp) },
+        );
+      }
+      const limited = await postAuth(
+        "/sign-in/email",
+        { email: `headers-${suffix}@example.com`, password: "PasswordIncorrecta123!" },
+        { forwardedFor: chainOf(limitedIp) },
+      );
+      expect(limited.status).toBe(429);
+
+      expect(error.status).toBeGreaterThanOrEqual(400);
+      for (const response of [ok, error, limited]) {
+        expect(response.headers.get("strict-transport-security")).toMatch(/max-age=\d+/);
+        expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+        expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+      }
+    });
+
+    it("CORS con orígenes permitidos", async () => {
+      const origin = "http://localhost:3000";
+      const res = await fetch(`${baseUrl}/api/v1/rates/today`, {
+        method: "OPTIONS",
+        headers: {
+          origin,
+          "access-control-request-method": "GET",
+          "access-control-request-headers": "content-type",
+        },
+      });
+      expect(res.headers.get("access-control-allow-origin")).toBe(origin);
+      expect(res.headers.get("access-control-allow-credentials")).toBe("true");
+      expect(res.headers.get("access-control-allow-methods") ?? "").toContain("GET");
+      expect(res.headers.get("access-control-allow-headers") ?? "").toContain("content-type");
+    });
+
+    it("CORS con origen desconocido", async () => {
+      const res = await fetch(`${baseUrl}/api/v1/rates/today`, {
+        method: "OPTIONS",
+        headers: {
+          origin: "https://origen-desconocido.example",
+          "access-control-request-method": "GET",
+          "access-control-request-headers": "content-type",
+        },
+      });
+      expect(res.headers.get("access-control-allow-origin")).toBeNull();
+      expect(res.headers.get("access-control-allow-credentials")).toBeNull();
+    });
+
     it("Rate limit por IP real", async () => {
       const email = `rate-${suffix}@example.com`;
       await createUser(email);

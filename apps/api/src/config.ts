@@ -49,6 +49,14 @@ export function resolveTrustedProxies(env: NodeJS.ProcessEnv = process.env): str
     .filter(Boolean);
 }
 
+/** Orígenes autorizados para CORS (T-F2-3): lista exacta, sin comodines. */
+export function resolveTrustedOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
+  return (env.TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
 /** Umbral de login compartido por el middleware propio y Better Auth. */
 export const loginRateLimit = {
   windowSeconds: 60,

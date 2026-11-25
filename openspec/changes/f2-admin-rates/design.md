@@ -88,9 +88,18 @@ inventario ajeno y que un `member` sin `booking:read` no ve reservas ni resumen 
   login se aplica antes del handler con la misma ventana/umbral (60 s, 10 intentos) y devuelve 429
   Problem Details con `code = RATE_LIMITED`. Si no hay IP resoluble, el valor es `null` y la auditoría
   lo registra así, sin fingir uno ni compartir bucket global.
-- **M2**: Helmet con CSP sin `unsafe-inline`, HSTS y `X-Content-Type-Options`; CORS con
-  `TRUSTED_ORIGINS` y credenciales solo para esos orígenes; preflight desconocido rechazado sin
-  cabeceras de autorización.
+- **M2**: Helmet con HSTS y `X-Content-Type-Options` en **toda** respuesta de la API (éxito, error y
+  429); CORS con `TRUSTED_ORIGINS` y credenciales solo para esos orígenes; preflight desconocido
+  rechazado sin cabeceras de autorización. Se desactiva el CORS que la integración de Better Auth
+  registraba por su cuenta: devolvía `Access-Control-Allow-Credentials` incluso a orígenes no
+  autorizados.
+- **CSP del panel**: se eligen **nonces por petición**, no hashes. `src/proxy.ts` genera el nonce,
+  lo publica en `Content-Security-Policy` y lo entrega a Next por `x-nonce` para que marque sus
+  propios scripts; el layout llama a `connection()` para forzar renderizado por petición (guía de
+  CSP de Next 16, donde los hashes estáticos no cubren scripts generados en cada respuesta).
+  `script-src` usa `'nonce-…'` y `'strict-dynamic'`, nunca `'unsafe-inline'`; `style-src` lo permite
+  únicamente por el cssinjs de Ant Design. La cabecera se fija en el proxy, de modo que también la
+  reciben las páginas de error.
 - **F-FINAL-002**: `@nestjs/throttler` aplicado a `POST /bookings`, alta y revisión de pagos y
   descargas, con 429 en formato Problem Details. Los umbrales se deciden antes de la tarea y quedan
   en variables de entorno; se actualiza el inventario de rutas sin sesión.

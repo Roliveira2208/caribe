@@ -2,8 +2,14 @@
 // de NestJS; este archivo es el unico punto de arranque (main y tests).
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import helmet from "helmet";
 import { AppModule } from "./app.module.js";
-import { apiConfig, loginRateLimit, resolveTrustedProxies } from "./config.js";
+import {
+  apiConfig,
+  loginRateLimit,
+  resolveTrustedOrigins,
+  resolveTrustedProxies,
+} from "./config.js";
 import { clientIpMiddleware } from "./security/client-ip.js";
 import { createLoginRateLimiter } from "./security/login-rate-limit.js";
 import {
@@ -38,6 +44,26 @@ export async function createApp() {
   // spec auth-access: "Better Auth queda fuera del versionado /api/v1").
   app.setGlobalPrefix(apiConfig.basePath);
   app.enableShutdownHooks();
+
+  // M2: Helmet se registra antes que cualquier ruta, filtro o manejador de
+  // errores para que también las respuestas 4xx/5xx y el 429 del limitador
+  // salgan con HSTS, nosniff y el resto de cabeceras.
+  app.use(helmet());
+  const trustedOrigins = resolveTrustedOrigins();
+  app.enableCors({
+    // Un callback que devuelve `false` omite TODAS las cabeceras CORS: así un
+    // origen desconocido no recibe ni ACAO ni Access-Control-Allow-Credentials.
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean | string) => void,
+    ) => {
+      callback(null, origin && trustedOrigins.includes(origin) ? origin : false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["content-type", "authorization", "cookie", "x-caribe-client-ip"],
+    exposedHeaders: ["X-Correlation-Id"],
+  });
 
   // M1: estos middleware se registran antes de `app.init()`, que es donde
   // AuthModule monta Better Auth. Así la IP ya está resuelta cuando la lib
