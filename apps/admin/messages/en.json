@@ -8,7 +8,8 @@
     "language": "Language",
     "spanish": "Español",
     "english": "English",
-    "payments": "Payments"
+    "payments": "Payments",
+    "skipToContent": "Skip to main content"
   },
   "metadata": {
     "title": "Caribe · Agency dashboard",
@@ -64,9 +65,10 @@
     "invalidPassword": "The password is not correct.",
     "genericError": "Something went wrong. Please try again.",
     "scanDescription": "Scan the QR with your authenticator app (Google Authenticator, Authy…) and confirm the code to finish the setup.",
+    "qrAlt": "QR code to set up the authenticator app",
     "manualKeyTitle": "Or enter it manually",
-    "accountLabel": "Account",
-    "issuerLabel": "Service",
+    "accountLabelValue": "Account: {value}",
+    "issuerLabelValue": "Service: {value}",
     "copy": "Copy",
     "copied": "Copied",
     "backupCodesTitle": "Save your recovery codes",
@@ -114,6 +116,9 @@
     "colActions": "Actions",
     "methodMobile": "Mobile payment",
     "methodCard": "Card",
+    "methodZelle": "Zelle",
+    "methodBinance": "Binance Pay",
+    "noActions": "No actions",
     "status": {
       "pending": "Pending",
       "inreview": "Under review",
@@ -137,6 +142,57 @@
     "validationError": "Check the entered data and try again.",
     "approvedNotice": "Payment approved and booking confirmed.",
     "rejectedNotice": "Payment rejected with the given reason."
+  },
+  "antd": {
+    "global": {
+      "placeholder": "Select",
+      "close": "Close"
+    },
+    "table": {
+      "emptyText": "No data",
+      "filterTitle": "Filter menu",
+      "filterConfirm": "OK",
+      "filterReset": "Reset",
+      "filterEmptyText": "No filters",
+      "filterCheckAll": "Select all",
+      "filterSearchPlaceholder": "Search in filters",
+      "sortTitle": "Sort",
+      "triggerDesc": "Click to sort descending",
+      "triggerAsc": "Click to sort ascending",
+      "cancelSort": "Click to cancel sorting"
+    },
+    "modal": {
+      "okText": "OK",
+      "cancelText": "Cancel",
+      "justOkText": "OK"
+    },
+    "popconfirm": {
+      "okText": "OK",
+      "cancelText": "Cancel"
+    },
+    "pagination": {
+      "itemsPerPage": "/ page",
+      "jumpTo": "Go to",
+      "jumpToConfirm": "confirm",
+      "page": "Page",
+      "prevPage": "Previous page",
+      "nextPage": "Next page",
+      "prev5": "Previous 5 pages",
+      "next5": "Next 5 pages",
+      "prev3": "Previous 3 pages",
+      "next3": "Next 3 pages",
+      "pageSize": "Page size"
+    },
+    "emptyDescription": "No data",
+    "form": {
+      "optional": "(optional)",
+      "default": "Field {label} failed validation",
+      "required": "Please enter {label}",
+      "whitespace": "{label} cannot be empty",
+      "type": "{label} is not a valid {type}",
+      "stringLen": "{label} must be {len} characters",
+      "patternMismatch": "{label} does not match the pattern {pattern}"
+    }
   },
   "notFound": {
     "title": "Page not found",

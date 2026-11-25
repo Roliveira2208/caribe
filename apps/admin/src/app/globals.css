@@ -25,6 +25,22 @@ h4 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--caribe-amber);
+  outline: 2px solid var(--caribe-ink);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--caribe-amber);
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 8px 12px;
+  background: var(--caribe-ink);
+  color: var(--caribe-bone);
+}
+
+.skip-link:focus {
+  left: 8px;
+  top: 8px;
 }

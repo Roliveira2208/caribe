@@ -231,7 +231,11 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
         <>
           {errorAlert}
           {totpUri ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: 12 }}>
+            <div
+              role="img"
+              aria-label={t("qrAlt")}
+              style={{ display: "flex", justifyContent: "center", padding: 12 }}
+            >
               <QRCode value={totpUri} size={180} />
             </div>
           ) : null}
@@ -250,12 +254,12 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
             </Typography.Text>
             {parsed?.account ? (
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {t("accountLabel")}: {parsed.account}
+                {t("accountLabelValue", { value: parsed.account })}
               </Typography.Text>
             ) : null}
             {parsed?.issuer ? (
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {t("issuerLabel")}: {parsed.issuer}
+                {t("issuerLabelValue", { value: parsed.issuer })}
               </Typography.Text>
             ) : null}
             <Space align="center" style={{ justifyContent: "space-between" }}>

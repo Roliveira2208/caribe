@@ -8,7 +8,8 @@
     "language": "Idioma",
     "spanish": "Español",
     "english": "English",
-    "payments": "Pagos"
+    "payments": "Pagos",
+    "skipToContent": "Saltar al contenido principal"
   },
   "metadata": {
     "title": "Caribe · Panel de agencia",
@@ -64,9 +65,10 @@
     "invalidPassword": "La contraseña no es correcta.",
     "genericError": "Algo salió mal. Inténtalo de nuevo.",
     "scanDescription": "Escanea el QR con tu app autenticadora (Google Authenticator, Authy…) y confirma el código para terminar la activación.",
+    "qrAlt": "Código QR para configurar la app autenticadora",
     "manualKeyTitle": "O introdúcelo a mano",
-    "accountLabel": "Cuenta",
-    "issuerLabel": "Servicio",
+    "accountLabelValue": "Cuenta: {value}",
+    "issuerLabelValue": "Servicio: {value}",
     "copy": "Copiar",
     "copied": "Copiado",
     "backupCodesTitle": "Guarda tus códigos de recuperación",
@@ -114,6 +116,9 @@
     "colActions": "Acciones",
     "methodMobile": "Pago Móvil",
     "methodCard": "Tarjeta",
+    "methodZelle": "Zelle",
+    "methodBinance": "Binance Pay",
+    "noActions": "Sin acciones",
     "status": {
       "pending": "Pendiente",
       "inreview": "En revisión",
@@ -137,6 +142,57 @@
     "validationError": "Revisa los datos introducidos e inténtalo de nuevo.",
     "approvedNotice": "Pago aprobado y reserva confirmada.",
     "rejectedNotice": "Pago rechazado con el motivo indicado."
+  },
+  "antd": {
+    "global": {
+      "placeholder": "Seleccione",
+      "close": "Cerrar"
+    },
+    "table": {
+      "emptyText": "Sin datos",
+      "filterTitle": "Filtrar menú",
+      "filterConfirm": "Aceptar",
+      "filterReset": "Reiniciar",
+      "filterEmptyText": "Sin filtros",
+      "filterCheckAll": "Seleccionar todo",
+      "filterSearchPlaceholder": "Buscar en filtros",
+      "sortTitle": "Ordenar",
+      "triggerDesc": "Haz clic para ordenar de forma descendente",
+      "triggerAsc": "Haz clic para ordenar de forma ascendente",
+      "cancelSort": "Haz clic para cancelar la ordenación"
+    },
+    "modal": {
+      "okText": "Aceptar",
+      "cancelText": "Cancelar",
+      "justOkText": "Aceptar"
+    },
+    "popconfirm": {
+      "okText": "Aceptar",
+      "cancelText": "Cancelar"
+    },
+    "pagination": {
+      "itemsPerPage": "/ página",
+      "jumpTo": "Ir a",
+      "jumpToConfirm": "confirmar",
+      "page": "Página",
+      "prevPage": "Página anterior",
+      "nextPage": "Página siguiente",
+      "prev5": "5 páginas previas",
+      "next5": "5 páginas siguientes",
+      "prev3": "3 páginas previas",
+      "next3": "3 páginas siguientes",
+      "pageSize": "Tamaño de página"
+    },
+    "emptyDescription": "No hay datos",
+    "form": {
+      "optional": "(opcional)",
+      "default": "Error de validación del campo {label}",
+      "required": "Completa {label}",
+      "whitespace": "{label} no puede estar vacío",
+      "type": "{label} no es un {type} válido",
+      "stringLen": "{label} debe tener {len} caracteres",
+      "patternMismatch": "{label} no coincide con el patrón {pattern}"
+    }
   },
   "notFound": {
     "title": "Página no encontrada",

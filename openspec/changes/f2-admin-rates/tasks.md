@@ -10,7 +10,7 @@ tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 - [x] T-F2-4 Rate limiting de rutas de negocio con 429 Problem Details. Prueba: `security › "Límite en creación de reservas"`, `"Límite en alta y revisión de pagos"` y `"Límite en descargas"`.
 - [x] T-F2-5 Reembolso idempotente: `refundId`, registro atómico/outbox y reconciliación. Prueba: `security › "Reembolso idempotente"`, `"Rollback sin reembolso externo"` y `"Reconciliación de reembolsos"`.
 - [x] T-F2-6 Paquete compartido de fuentes y `ConfigProvider` con tokens Caribe. Prueba: `admin-ui › "Tokens Caribe"`, `"Tipografía compartida"` y `"Cabecera del panel"`.
-- [ ] T-F2-7 Textos es/en y accesibilidad del shell del panel. Prueba: `admin-ui › "Textos es y en"` y `"Accesibilidad básica"`.
+- [x] T-F2-7 Textos es/en y accesibilidad del shell del panel. Prueba: `admin-ui › "Textos es y en"` y `"Accesibilidad básica"`.
 - [ ] T-F2-8 Tasas: tasa vigente, validaciones y permisos. Prueba: `exchange-rates › "Ver tasa vigente"`, `"Override con motivo desde el panel"`, `"Sin segundo factor"`, `"Sin permiso de tasa"`, `"Campos calculados del cliente"` y `"Membresía revocada"`.
 - [ ] T-F2-9 Tasas: modal antes/después, ámbitos y auditoría. Prueba: `exchange-rates › "Confirmación de override vigente"`, `"Override de otra agencia"` y `"Auditoría del override"`.
 - [ ] T-F2-10 **PAUSA 1**: verificación independiente del override de tasa en sesión limpia. Prueba: todos los escenarios obligatorios de `exchange-rates` y `security` con evidencia; informe en `verify.md`.

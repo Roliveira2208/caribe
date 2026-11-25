@@ -34,39 +34,56 @@ function sourceFiles(): string[] {
 }
 
 /**
- * Recolecta las claves de mensajes usadas en cada archivo de src componiendo el
- * namespace (useTranslations/getTranslations) con cada llamada t("clave").
- * Un archivo sin namespace declarado se trata como namespace raiz.
+ * Recolecta las claves usadas en cada archivo asociando cada llamada al
+ * traductor con su declaración más reciente. Así un archivo con dos namespaces
+ * (por ejemplo `metadata` en generateMetadata y `nav` en el layout) no aplica
+ * todas las claves a ambos. También cubre alias como `tOrg`.
  */
-function usedKeysByFile(): Array<[string, string[]]> {
-  const stringArg = /(?:useTranslations|getTranslations)\(\s*(?:"([^"]*)"|'([^']*)')\s*\)/g;
-  const objectArg = /getTranslations\(\s*\{[^}]*?namespace:\s*(?:"([^"]*)"|'([^']*)')/g;
-  const tCall = /\bt\(\s*(?:"([^"]*)"|'([^']*)')\s*[,)]/g;
+interface TranslatorDeclaration {
+  name: string;
+  namespace: string;
+  index: number;
+}
 
-  const firstGroup = (match: RegExpExecArray): string | null => match[1] ?? match[2] ?? null;
+function usedKeysByFile(): Array<[string, string[]]> {
+  const declaration =
+    /(?:const|let|var)\s+(\w+)\s*=\s*(?:await\s+)?(?:useTranslations|getTranslations)\(\s*(?:"([^"]*)"|'([^']*)')\s*\)|(?:const|let|var)\s+(\w+)\s*=\s*(?:await\s+)?getTranslations\(\s*\{[^}]*?namespace:\s*(?:"([^"]*)"|'([^']*)')/g;
+  const call = /\b(\w+)\(\s*(?:"([^"]*)"|'([^']*)')\s*[,)]/g;
+  const group = (match: RegExpExecArray, positions: number[]): string | null => {
+    for (const position of positions) {
+      if (match[position] !== undefined) return match[position] ?? null;
+    }
+    return null;
+  };
 
   return sourceFiles().map((file) => {
     const text = readFileSync(file, "utf8");
-    const namespaces = new Set<string>();
-    for (const re of [stringArg, objectArg]) {
-      re.lastIndex = 0;
-      let match = re.exec(text);
-      while (match) {
-        const namespace = firstGroup(match);
-        if (namespace !== null) namespaces.add(namespace);
-        match = re.exec(text);
+    const declarations: TranslatorDeclaration[] = [];
+    declaration.lastIndex = 0;
+    let found = declaration.exec(text);
+    while (found) {
+      const name = group(found, [1, 4]);
+      const namespace = group(found, [2, 3, 5, 6]);
+      if (name !== null) {
+        declarations.push({ name, namespace: namespace ?? "", index: found.index });
       }
+      found = declaration.exec(text);
     }
+
     const keys: string[] = [];
-    tCall.lastIndex = 0;
-    let match = tCall.exec(text);
-    while (match) {
-      const key = firstGroup(match);
-      if (key !== null) {
-        if (namespaces.size === 0) keys.push(key);
-        else for (const ns of namespaces) keys.push(ns ? `${ns}.${key}` : key);
+    call.lastIndex = 0;
+    found = call.exec(text);
+    while (found) {
+      const name = found[1];
+      const key = group(found, [2, 3]);
+      const position = found.index;
+      const owner = declarations
+        .filter((entry) => entry.name === name && entry.index < position)
+        .at(-1);
+      if (key !== null && owner) {
+        keys.push(owner.namespace ? `${owner.namespace}.${key}` : key);
       }
-      match = tCall.exec(text);
+      found = call.exec(text);
     }
     return [file, keys];
   });

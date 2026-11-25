@@ -74,20 +74,25 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   setRequestLocale(locale);
 
   const messages = await getMessages();
+  const tNav = await getTranslations("nav");
   return (
     <html lang={locale} className={`${clashDisplay.variable} ${generalSans.variable}`}>
       <body>
         <AntdRegistry>
-          <Providers locale={locale}>
-            <NextIntlClientProvider locale={locale} messages={messages}>
+          <NextIntlClientProvider locale={locale} messages={messages}>
+            <Providers locale={locale}>
+              <a href="#contenido-principal" className="skip-link">
+                {tNav("skipToContent")}
+              </a>
               <SiteHeader />
               <main
+                id="contenido-principal"
                 style={{ width: "100%", maxWidth: 1080, margin: "0 auto", padding: "24px 16px" }}
               >
                 {children}
               </main>
-            </NextIntlClientProvider>
-          </Providers>
+            </Providers>
+          </NextIntlClientProvider>
         </AntdRegistry>
       </body>
     </html>

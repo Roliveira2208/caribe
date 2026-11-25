@@ -44,7 +44,7 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
   const [method, setMethod] = useState<PaymentFilterMethod>("ALL");
   const [rows, setRows] = useState<AdminPayment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -64,24 +64,24 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
           return;
         }
         if (cause.status === 403) {
-          setNotice(t("forbidden"));
+          setNotice({ kind: "error", message: t("forbidden") });
           return;
         }
         if (cause.status === 409 && cause.code === "PAYMENT_ALREADY_REVIEWED") {
-          setNotice(t("alreadyReviewed"));
+          setNotice({ kind: "error", message: t("alreadyReviewed") });
           setReload((value) => value + 1);
           return;
         }
         if (cause.status === 410 && cause.code === "HOLD_EXPIRED") {
-          setNotice(t("holdExpired"));
+          setNotice({ kind: "error", message: t("holdExpired") });
           return;
         }
         if (cause.status === 422) {
-          setNotice(t("validationError"));
+          setNotice({ kind: "error", message: t("validationError") });
           return;
         }
       }
-      setNotice(t("genericError"));
+      setNotice({ kind: "error", message: t("genericError") });
     },
     [locale, redirectTo, router, t],
   );
@@ -128,7 +128,10 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
     setNotice(null);
     try {
       await reviewAdminPayment(paymentId, action, rejectionReason);
-      setNotice(action === "approve" ? t("approvedNotice") : t("rejectedNotice"));
+      setNotice({
+        kind: "success",
+        message: action === "approve" ? t("approvedNotice") : t("rejectedNotice"),
+      });
       setRejectingId(null);
       setReason("");
       setReload((value) => value + 1);
@@ -151,9 +154,9 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
         value === "PAGO_MOVIL"
           ? t("methodMobile")
           : value === "ZELLE"
-            ? "Zelle"
+            ? t("methodZelle")
             : value === "BINANCE_PAY"
-              ? "Binance Pay"
+              ? t("methodBinance")
               : t("methodCard"),
     },
     {
@@ -200,7 +203,7 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
             </Button>
           </Space>
         ) : (
-          "—"
+          t("noActions")
         ),
     },
   ];
@@ -244,16 +247,18 @@ export function PaymentsPanel({ locale }: PaymentsPanelProps) {
                   value === "PAGO_MOVIL"
                     ? t("methodMobile")
                     : value === "BINANCE_PAY"
-                      ? "Binance Pay"
+                      ? t("methodBinance")
                       : value === "CARD"
                         ? t("methodCard")
-                        : "Zelle",
+                        : t("methodZelle"),
               })),
             ]}
           />
         </div>
       </Space>
-      {notice ? <Alert type="info" showIcon title={notice} style={{ marginBottom: 16 }} /> : null}
+      {notice ? (
+        <Alert type={notice.kind} showIcon title={notice.message} style={{ marginBottom: 16 }} />
+      ) : null}
       <Table<AdminPayment>
         rowKey="id"
         loading={loading}
