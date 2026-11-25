@@ -62,8 +62,8 @@ export interface CatalogProductQuery {
 export interface CatalogProductInput {
   hotelKey?: string;
   roomType: string;
-  title: Partial<LocalizedText>;
-  description: Partial<LocalizedText>;
+  title: LocalizedText;
+  description: LocalizedText;
   destinationId: string;
   basePriceUsd: string;
   attributes: {
@@ -76,6 +76,33 @@ export interface CatalogProductInput {
   providerId?: string;
   /** Se admite para detectar campos calculados y rechazarlos antes de `fetch`. */
   [key: string]: unknown;
+}
+
+export interface CatalogAvailabilityNight {
+  night: string;
+  capacity: number;
+  reserved: number;
+  priceUsd: string;
+}
+
+export interface CatalogAvailability {
+  productId: string;
+  from: string;
+  to: string;
+  nights: CatalogAvailabilityNight[];
+}
+
+/** Entrada del panel: `reserved` lo fija el servidor, nunca el cliente. */
+export interface CatalogAvailabilityInput {
+  night: string;
+  capacity: number;
+  priceUsd: string;
+  [key: string]: unknown;
+}
+
+export interface CatalogAvailabilityQuery {
+  from?: string;
+  to?: string;
 }
 
 export interface CatalogApiOptions {
@@ -91,6 +118,7 @@ export interface CatalogPanelAccess {
   canCreate: boolean;
   canEdit: (product: CatalogProduct) => boolean;
   canChangeStatus: (product: CatalogProduct) => boolean;
+  canManageAvailability: (product: CatalogProduct) => boolean;
 }
 
 interface CatalogAccessInput {
@@ -100,6 +128,7 @@ interface CatalogAccessInput {
 }
 
 const MONEY_PATTERN = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ROOM_TYPE_PATTERN = /^[a-z][a-z0-9_-]*$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CREATE_FIELDS = [
@@ -176,14 +205,13 @@ export async function listCatalogProducts(
 }
 
 function validateLocalized(value: unknown, path: string): void {
-  if (!isRecord(value) || typeof value["es"] !== "string" || value["es"].trim() === "") {
-    throw validationError(path);
+  if (!isRecord(value)) throw validationError(path);
+  for (const locale of ["es", "en"] as const) {
+    const text = value[locale];
+    if (typeof text !== "string" || text.trim() === "") throw validationError(`${path}.${locale}`);
   }
-  for (const [key, text] of Object.entries(value)) {
+  for (const key of Object.keys(value)) {
     if (key !== "es" && key !== "en") throw validationError(path);
-    if (text !== undefined && (typeof text !== "string" || text.trim() === "")) {
-      throw validationError(path);
-    }
   }
 }
 
@@ -247,11 +275,8 @@ function buildBody(body: CatalogProductInput, isCreate: boolean): Record<string,
     const value = body[field];
     if (value === undefined) continue;
     if (field === "title" || field === "description") {
-      const localized = value as Partial<LocalizedText>;
-      payload[field] = {
-        es: localized.es,
-        ...(typeof localized.en === "string" ? { en: localized.en } : {}),
-      };
+      const localized = value as LocalizedText;
+      payload[field] = { es: localized.es, en: localized.en };
       continue;
     }
     if (field === "attributes") {
@@ -269,12 +294,12 @@ function buildBody(body: CatalogProductInput, isCreate: boolean): Record<string,
   return payload;
 }
 
-async function mutate(
+async function mutateJson<T>(
   path: string,
   method: "POST" | "PUT",
   body: Record<string, unknown> | null,
   options: CatalogApiOptions,
-): Promise<CatalogProduct> {
+): Promise<T> {
   const doFetch = options.fetchImpl ?? globalThis.fetch;
   const init: RequestInit = {
     method,
@@ -285,7 +310,16 @@ async function mutate(
   if (body !== null) init.body = JSON.stringify(body);
   const response = await doFetch(path, init);
   if (!response.ok) throw await readError(response);
-  return (await response.json().catch(() => null)) as CatalogProduct;
+  return (await response.json().catch(() => null)) as T;
+}
+
+function mutate(
+  path: string,
+  method: "POST" | "PUT",
+  body: Record<string, unknown> | null,
+  options: CatalogApiOptions,
+): Promise<CatalogProduct> {
+  return mutateJson<CatalogProduct>(path, method, body, options);
 }
 
 /** POST /admin/products: el producto vuelve `DRAFT` desde el servidor. */
@@ -326,6 +360,77 @@ export function archiveCatalogProduct(
   return mutate(`/api/v1/admin/products/${encodeURIComponent(id)}/archive`, "POST", null, options);
 }
 
+/** GET /admin/products/:id/availability: cupo y reservadas vienen del servidor. */
+export async function listCatalogAvailability(
+  productId: string,
+  query: CatalogAvailabilityQuery = {},
+  options: CatalogApiOptions = {},
+): Promise<CatalogAvailability> {
+  const params = new URLSearchParams();
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+  const doFetch = options.fetchImpl ?? globalThis.fetch;
+  const response = await doFetch(
+    `/api/v1/admin/products/${encodeURIComponent(productId)}/availability${suffix}`,
+    { credentials: "same-origin", cache: "no-store" },
+  );
+  if (!response.ok) throw await readError(response);
+  const body: unknown = await response.json().catch(() => null);
+  if (!isRecord(body) || !Array.isArray(body["nights"])) {
+    throw new AuthApiError(503, "Respuesta de disponibilidad no válida.", "CATALOG_UNAVAILABLE");
+  }
+  return body as unknown as CatalogAvailability;
+}
+
+function validateAvailabilityNight(night: CatalogAvailabilityInput): void {
+  for (const key of Object.keys(night)) {
+    if (!["night", "capacity", "priceUsd"].includes(key)) throw validationError(key);
+  }
+  if (typeof night.night !== "string" || !DATE_PATTERN.test(night.night)) {
+    throw validationError("nights.night");
+  }
+  if (!Number.isInteger(night.capacity) || night.capacity < 1) {
+    throw validationError("nights.capacity");
+  }
+  if (
+    typeof night.priceUsd !== "string" ||
+    !MONEY_PATTERN.test(night.priceUsd) ||
+    Number(night.priceUsd) <= 0
+  ) {
+    throw validationError("nights.priceUsd");
+  }
+}
+
+/**
+ * POST /admin/products/:id/availability: el cuerpo se construye campo por
+ * campo. `reserved` y cualquier importe calculado se rechazan antes de `fetch`.
+ */
+export async function writeCatalogAvailability(
+  productId: string,
+  nights: CatalogAvailabilityInput[],
+  options: CatalogApiOptions = {},
+): Promise<CatalogAvailability> {
+  if (nights.length === 0) throw validationError("nights");
+  for (const night of nights) validateAvailabilityNight(night);
+  if (new Set(nights.map((night) => night.night)).size !== nights.length) {
+    throw new AuthApiError(409, "Solicitud no válida: nights", "AVAILABILITY_DUPLICATED");
+  }
+  const payload = {
+    nights: nights.map((night) => ({
+      night: night.night,
+      capacity: night.capacity,
+      priceUsd: night.priceUsd,
+    })),
+  };
+  return mutateJson<CatalogAvailability>(
+    `/api/v1/admin/products/${encodeURIComponent(productId)}/availability`,
+    "POST",
+    payload,
+    options,
+  );
+}
+
 /**
  * Matriz de la UI, fallo cerrado. Owner/admin gestionan la agencia; el
  * proveedor solo sus filas (el id llega del listado de la API, nunca del
@@ -343,6 +448,7 @@ export function resolveCatalogPanelAccess({
     canCreate: false,
     canEdit: () => false,
     canChangeStatus: () => false,
+    canManageAvailability: () => false,
   };
 
   if (mode === "platform") return { ...base, canRead: true };
@@ -353,6 +459,7 @@ export function resolveCatalogPanelAccess({
       canCreate: true,
       canEdit: () => true,
       canChangeStatus: () => true,
+      canManageAvailability: () => true,
     };
   }
   if (role === "provider" && typeof providerId === "string" && providerId !== "") {
@@ -362,6 +469,7 @@ export function resolveCatalogPanelAccess({
       canCreate: true,
       canEdit: (product) => product.providerId === providerId,
       canChangeStatus: (product) => product.providerId === providerId,
+      canManageAvailability: (product) => product.providerId === providerId,
     };
   }
   return base;

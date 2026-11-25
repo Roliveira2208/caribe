@@ -1,15 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
-import { formatAmount, formatTimestamp } from "@caribe/shared";
+import { formatAmount, formatTimestamp, formatValueDate, todayInCaracas } from "@caribe/shared";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
-import type { Prisma } from "../generated/prisma/client.js";
+import { Prisma } from "../generated/prisma/client.js";
 import { TenantService } from "../tenant/tenant.service.js";
+import { AVAILABILITY_DEFAULT_NIGHTS, addDays, type AvailabilityQuery } from "./catalog.schemas.js";
 import { toAttributes, toLocalized } from "./catalog.mappers.js";
 import {
   PRODUCTS_ADMIN_DEFAULT_LIMIT,
   normalizeLocalized,
+  type AvailabilityWriteBody,
   type CreateProductBody,
   type LocalizedInput,
+  type PanelAvailabilityNight,
+  type PanelAvailabilityRead,
+  type PanelAvailabilityWrite,
   type PanelProduct,
   type PanelProductPage,
   type ProductsAdminQuery,
@@ -34,9 +39,9 @@ type ProductWithDestination = Prisma.ProductGetPayload<{ include: { destination:
  * conexión.
  *
  * La propiedad de fila se comprueba aquí, no en el guard: un proveedor solo
- * ve y edita los productos de su registro `providers.user_id`; el de otro
- * proveedor de la misma agencia responde 403 y el de otra agencia 404. Los
- * campos de hotel (`title`, `stars`, `amenities`, `images`) se propagan a
+ * ve y edita los productos de su registro `providers.user_id`; un producto
+ * ajeno (otro proveedor u otra agencia) responde 404 sin revelar propiedad.
+ * Los campos de hotel (`title`, `stars`, `amenities`, `images`) se propagan a
  * todos los tipos con la misma `hotel_key` en la misma transacción; el resto
  * son del tipo editado (design §2.2).
  */
@@ -240,6 +245,112 @@ export class ProductsAdminService {
     return this.setStatus(actor, id, "ARCHIVED");
   }
 
+  /** Noches del ámbito del actor con cupo y reservadas, nunca inferidas. */
+  async readAvailability(
+    actor: ProductActor,
+    id: string,
+    query: AvailabilityQuery,
+  ): Promise<PanelAvailabilityRead> {
+    const from = query.from ?? todayInCaracas();
+    const to = query.to ?? addDays(from, AVAILABILITY_DEFAULT_NIGHTS);
+    return this.run(actor, async (tx) => {
+      const product = await this.findProduct(tx, actor, id);
+      const rows = await tx.availability.findMany({
+        where: {
+          productId: product.id,
+          night: { gte: nightDate(from), lt: nightDate(to) },
+        },
+        orderBy: { night: "asc" },
+        select: { night: true, capacity: true, reserved: true, priceUsd: true },
+      });
+      return {
+        productId: product.id,
+        from,
+        to,
+        nights: rows.map((row) => ({
+          night: formatValueDate(row.night),
+          capacity: row.capacity,
+          reserved: row.reserved,
+          priceUsd: formatAmount(row.priceUsd),
+        })),
+      };
+    });
+  }
+
+  /**
+   * Crea o ajusta noches en una sola transacción. Una noche repetida en el
+   * cuerpo se detecta antes de escribir; `reserved` nunca viaja del cliente:
+   * se conserva en la fila existente y nace en cero en la nueva.
+   */
+  async writeAvailability(
+    actor: ProductActor,
+    id: string,
+    body: AvailabilityWriteBody,
+  ): Promise<PanelAvailabilityWrite> {
+    return this.run(actor, async (tx) => {
+      const product = await this.findProduct(tx, actor, id);
+      const nights = new Set<string>();
+      for (const night of body.nights) {
+        if (nights.has(night.night)) {
+          throw duplicatedNight();
+        }
+        nights.add(night.night);
+      }
+
+      const written: PanelAvailabilityNight[] = [];
+      try {
+        for (const night of body.nights) {
+          const date = nightDate(night.night);
+          const current = await tx.availability.findUnique({
+            where: { productId_night: { productId: id, night: date } },
+            select: { reserved: true },
+          });
+          const reserved = current?.reserved ?? 0;
+          if (night.capacity < reserved) {
+            throw validationError(
+              "nights.capacity",
+              "La capacidad no puede ser menor que las habitaciones reservadas",
+            );
+          }
+
+          if (current) {
+            await tx.availability.update({
+              where: { productId_night: { productId: id, night: date } },
+              data: { capacity: night.capacity, priceUsd: night.priceUsd },
+            });
+          } else {
+            await tx.availability.create({
+              data: {
+                id: randomUUID(),
+                tenantId: product.tenantId,
+                productId: id,
+                night: date,
+                capacity: night.capacity,
+                reserved: 0,
+                priceUsd: night.priceUsd,
+              },
+            });
+          }
+          written.push({
+            night: night.night,
+            capacity: night.capacity,
+            reserved,
+            priceUsd: formatAmount(night.priceUsd),
+          });
+        }
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          throw duplicatedNight();
+        }
+        throw error;
+      }
+      return { productId: id, nights: written };
+    });
+  }
+
   /** Borrado lógico: todas las lecturas posteriores responden 404. */
   async remove(actor: ProductActor, id: string): Promise<void> {
     await this.run(actor, async (tx) => {
@@ -440,6 +551,18 @@ function toPanelProduct(row: ProductWithDestination): PanelProduct {
 
 function notFound(): ApiProblemException {
   return new ApiProblemException("NOT_FOUND", "El recurso no existe.");
+}
+
+/** Fecha calendario de Caracas como DATE de Prisma (medianoche UTC). */
+function nightDate(night: string): Date {
+  return new Date(`${night}T00:00:00.000Z`);
+}
+
+function duplicatedNight(): ApiProblemException {
+  return new ApiProblemException(
+    "AVAILABILITY_DUPLICATED",
+    "La noche ya está registrada para este producto.",
+  );
 }
 
 function validationError(path: string, message: string): ApiProblemException {

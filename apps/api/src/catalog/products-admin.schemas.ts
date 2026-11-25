@@ -44,18 +44,19 @@ export const roomTypeSchema = z
     message: "El tipo de habitación debe ser un código en minúsculas",
   });
 
-/** Texto i18n de entrada: `es` obligatorio y `en` opcional (cae a `es`). */
+/** Texto i18n de entrada: `es` y `en` obligatorios en las escrituras del panel. */
 export const titleSchema = z.strictObject({
   es: z.string().trim().min(1).max(200),
-  en: z.string().trim().min(1).max(200).optional(),
+  en: z.string().trim().min(1).max(200),
 });
 
 export const descriptionSchema = z.strictObject({
   es: z.string().trim().min(1).max(2000),
-  en: z.string().trim().min(1).max(2000).optional(),
+  en: z.string().trim().min(1).max(2000),
 });
 
-export type LocalizedInput = z.infer<typeof titleSchema>;
+/** Formato de entrada admitido por el normalizador de texto localizado. */
+export type LocalizedInput = { es: string; en?: string };
 
 /** Dominios permitidos de imagen, leídos del entorno en cada arranque. */
 export function allowedImageHosts(): readonly string[] {
@@ -110,6 +111,43 @@ export const updateProductSchema = z
   });
 
 export type UpdateProductBody = z.infer<typeof updateProductSchema>;
+
+/**
+ * Escritura de disponibilidad del panel (T-F2-19). `night` es una fecha
+ * calendario `YYYY-MM-DD` en `America/Caracas`; el servidor gestiona
+ * `reserved`, por lo que cualquier clave adicional se rechaza con 422.
+ */
+export const availabilityNightSchema = z.strictObject({
+  night: z.iso.date(),
+  capacity: z.number().int().min(1),
+  priceUsd: productMoneySchema,
+});
+
+export const availabilityWriteSchema = z.strictObject({
+  nights: z.array(availabilityNightSchema).min(1),
+});
+
+export type AvailabilityWriteBody = z.infer<typeof availabilityWriteSchema>;
+
+export interface PanelAvailabilityNight {
+  night: string;
+  capacity: number;
+  reserved: number;
+  priceUsd: string;
+}
+
+export interface PanelAvailabilityWrite {
+  productId: string;
+  nights: PanelAvailabilityNight[];
+}
+
+/** Lectura del panel: mismas noches con cupo y reservadas, sin calcular importes. */
+export interface PanelAvailabilityRead {
+  productId: string;
+  from: string;
+  to: string;
+  nights: PanelAvailabilityNight[];
+}
 
 /** Filtros del listado de panel; el cursor lo valida el servicio. */
 export const productsAdminQuerySchema = z.strictObject({

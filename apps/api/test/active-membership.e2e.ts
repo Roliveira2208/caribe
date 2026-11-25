@@ -87,6 +87,17 @@ describe("agencia activa (membresía revocada)", () => {
       method: "POST",
       path: `/admin/products/${id}/archive`,
     },
+    {
+      name: "catálogo del panel: leer disponibilidad",
+      method: "GET",
+      path: `/admin/products/${id}/availability`,
+    },
+    {
+      name: "catálogo del panel: disponibilidad",
+      method: "POST",
+      path: `/admin/products/${id}/availability`,
+      body: { nights: [] },
+    },
     { name: "reservas: crear", method: "POST", path: "/bookings", body: {} },
     { name: "reservas: listar", method: "GET", path: "/bookings" },
     { name: "reservas: detalle", method: "GET", path: `/bookings/${id}` },

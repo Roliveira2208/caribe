@@ -16,14 +16,17 @@ import {
   Tag,
   type TableColumnsType,
 } from "antd";
-import { AuthApiError, isTwoFactorRequired, type Locale } from "@caribe/shared";
+import { AuthApiError, isTwoFactorRequired, todayInCaracas, type Locale } from "@caribe/shared";
 import {
   archiveCatalogProduct,
   createCatalogProduct,
+  listCatalogAvailability,
   listCatalogProducts,
   publishCatalogProduct,
   resolveCatalogPanelAccess,
   updateCatalogProduct,
+  writeCatalogAvailability,
+  type CatalogAvailabilityNight,
   type CatalogProduct,
   type CatalogProductInput,
   type CatalogProductPage,
@@ -53,6 +56,13 @@ function splitList(value: unknown): string[] {
     : [];
 }
 
+/** Días calendario en UTC para el rango por defecto del editor de noches. */
+function addDaysToDate(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
 /** Panel de catálogo del wireframe aprobado `panel-catalogo.svg` (T-F2-18). */
 export function CatalogPanel({ locale, access: baseAccess, agencyName }: CatalogPanelProps) {
   const t = useTranslations("catalog");
@@ -69,6 +79,12 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
   const [modal, setModal] = useState<{ mode: ModalMode; product: CatalogProduct | null } | null>(
     null,
   );
+  const [availabilityProduct, setAvailabilityProduct] = useState<CatalogProduct | null>(null);
+  const [availabilityRange, setAvailabilityRange] = useState({ from: "", to: "" });
+  const [availabilityNights, setAvailabilityNights] = useState<CatalogAvailabilityNight[]>([]);
+  const [availabilityDraft, setAvailabilityDraft] = useState<
+    Record<string, { capacity: string; priceUsd: string }>
+  >({});
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
   const generation = useRef(0);
@@ -89,6 +105,14 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
     return t("statusArchived");
   };
 
+  const draftFromNights = (nights: CatalogAvailabilityNight[]) =>
+    Object.fromEntries(
+      nights.map((night) => [
+        night.night,
+        { capacity: String(night.capacity), priceUsd: night.priceUsd },
+      ]),
+    );
+
   const current = pages[pageIndex];
   const rows = current?.items ?? [];
   const nextCursor = current?.nextCursor ?? null;
@@ -97,6 +121,10 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
   const handleError = useCallback(
     (cause: unknown, listing = false) => {
       if (cause instanceof AuthApiError) {
+        if (cause.code === "AVAILABILITY_DUPLICATED") {
+          setNotice({ kind: "error", message: t("duplicatedNight") });
+          return;
+        }
         if (cause.status === 401) {
           router.replace(`/${locale}/login?redirectTo=${encodeURIComponent(redirectTo)}`);
           return;
@@ -203,12 +231,12 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
   async function submit(): Promise<void> {
     if (!modal) return;
     const values = await form.validateFields();
-    const title = values["title"] as { es: string; en?: string };
-    const description = values["description"] as { es: string; en?: string };
+    const title = values["title"] as { es: string; en: string };
+    const description = values["description"] as { es: string; en: string };
     const common: CatalogProductInput = {
       roomType: String(values["roomType"]),
-      title: { es: title.es, ...(title.en ? { en: title.en } : {}) },
-      description: { es: description.es, ...(description.en ? { en: description.en } : {}) },
+      title: { es: title.es, en: title.en },
+      description: { es: description.es, en: description.en },
       destinationId: String(values["destinationId"]),
       basePriceUsd: String(values["basePriceUsd"]),
       attributes: {
@@ -265,6 +293,107 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
     }
   }
 
+  function openAvailability(product: CatalogProduct): void {
+    const from = todayInCaracas();
+    const range = { from, to: addDaysToDate(from, 7) };
+    setAvailabilityProduct(product);
+    setAvailabilityRange(range);
+    setAvailabilityNights([]);
+    setAvailabilityDraft({});
+    void applyAvailability(product, range);
+  }
+
+  async function applyAvailability(
+    product: CatalogProduct | null = availabilityProduct,
+    range = availabilityRange,
+  ): Promise<void> {
+    if (!product || !range.from || !range.to || range.to <= range.from) {
+      setNotice({ kind: "error", message: t("validationError") });
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await listCatalogAvailability(product.id, range);
+      setAvailabilityNights(result.nights);
+      setAvailabilityDraft(draftFromNights(result.nights));
+    } catch (cause: unknown) {
+      handleError(cause);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveAvailability(): Promise<void> {
+    if (!availabilityProduct) return;
+    const nights = availabilityNights.map((night) => ({
+      night: night.night,
+      capacity: Number(availabilityDraft[night.night]?.capacity ?? String(night.capacity)),
+      priceUsd: availabilityDraft[night.night]?.priceUsd ?? night.priceUsd,
+    }));
+    if (nights.length === 0) {
+      setNotice({ kind: "error", message: t("validationError") });
+      return;
+    }
+    setBusy(true);
+    try {
+      const saved = await writeCatalogAvailability(availabilityProduct.id, nights);
+      setAvailabilityNights(saved.nights);
+      setAvailabilityDraft(draftFromNights(saved.nights));
+      setNotice({ kind: "success", message: t("availabilitySaved") });
+      setAvailabilityProduct(null);
+      setReload((value) => value + 1);
+    } catch (cause: unknown) {
+      handleError(cause);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const availabilityColumns: TableColumnsType<CatalogAvailabilityNight> = [
+    { title: t("colNight"), dataIndex: "night" },
+    {
+      title: t("colCapacity"),
+      key: "capacity",
+      render: (_value, night) => (
+        <Input
+          aria-label={`${t("colCapacity")} ${night.night}`}
+          inputMode="numeric"
+          value={availabilityDraft[night.night]?.capacity ?? String(night.capacity)}
+          onChange={(event) =>
+            setAvailabilityDraft((previous) => ({
+              ...previous,
+              [night.night]: {
+                capacity: event.target.value,
+                priceUsd: previous[night.night]?.priceUsd ?? night.priceUsd,
+              },
+            }))
+          }
+        />
+      ),
+    },
+    { title: t("colReserved"), dataIndex: "reserved" },
+    {
+      title: t("colNightPrice"),
+      key: "priceUsd",
+      render: (_value, night) => (
+        <Input
+          aria-label={`${t("colNightPrice")} ${night.night}`}
+          inputMode="decimal"
+          value={availabilityDraft[night.night]?.priceUsd ?? night.priceUsd}
+          onChange={(event) =>
+            setAvailabilityDraft((previous) => ({
+              ...previous,
+              [night.night]: {
+                capacity: previous[night.night]?.capacity ?? String(night.capacity),
+                priceUsd: event.target.value,
+              },
+            }))
+          }
+        />
+      ),
+    },
+  ];
+
   const columns: TableColumnsType<CatalogProduct> = [
     {
       title: t("colProduct"),
@@ -283,12 +412,18 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
       render: (_value, product) => {
         const editable = access.canEdit(product);
         const statusable = access.canChangeStatus(product);
-        if (!editable && !statusable) return <span>{t("noActions")}</span>;
+        const availability = access.canManageAvailability(product);
+        if (!editable && !statusable && !availability) return <span>{t("noActions")}</span>;
         return (
           <Space wrap>
             {editable ? (
               <Button type="link" onClick={() => openEdit(product)}>
                 {t("editProduct")}
+              </Button>
+            ) : null}
+            {availability ? (
+              <Button type="link" disabled={busy} onClick={() => openAvailability(product)}>
+                {t("manageAvailability")}
               </Button>
             ) : null}
             {statusable && product.status !== "PUBLISHED" ? (
@@ -386,16 +521,32 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
           <Form.Item name="basePriceUsd" label={t("basePriceUsd")}>
             <Input id="catalog-basePriceUsd" inputMode="decimal" />
           </Form.Item>
-          <Form.Item name={["title", "es"]} label={t("titleEs")}>
+          <Form.Item
+            name={["title", "es"]}
+            label={t("titleEs")}
+            rules={[{ required: true, message: t("required") }]}
+          >
             <Input id="catalog-titleEs" />
           </Form.Item>
-          <Form.Item name={["title", "en"]} label={t("titleEn")}>
+          <Form.Item
+            name={["title", "en"]}
+            label={t("titleEn")}
+            rules={[{ required: true, message: t("required") }]}
+          >
             <Input id="catalog-titleEn" />
           </Form.Item>
-          <Form.Item name={["description", "es"]} label={t("descriptionEs")}>
+          <Form.Item
+            name={["description", "es"]}
+            label={t("descriptionEs")}
+            rules={[{ required: true, message: t("required") }]}
+          >
             <Input.TextArea id="catalog-descriptionEs" />
           </Form.Item>
-          <Form.Item name={["description", "en"]} label={t("descriptionEn")}>
+          <Form.Item
+            name={["description", "en"]}
+            label={t("descriptionEn")}
+            rules={[{ required: true, message: t("required") }]}
+          >
             <Input.TextArea id="catalog-descriptionEn" />
           </Form.Item>
           <Form.Item name="stars" label={t("stars")}>
@@ -414,6 +565,47 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
             <Input id="catalog-cancellationPolicyId" />
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        open={availabilityProduct !== null}
+        title={t("availabilityTitle")}
+        okText={t("saveAvailability")}
+        cancelText={t("cancel")}
+        confirmLoading={busy}
+        onCancel={() => setAvailabilityProduct(null)}
+        onOk={() => void saveAvailability()}
+      >
+        <Space wrap style={{ marginBottom: 12 }}>
+          <label htmlFor="catalog-availability-from">{t("from")}</label>
+          <Input
+            id="catalog-availability-from"
+            type="date"
+            value={availabilityRange.from}
+            onChange={(event) =>
+              setAvailabilityRange((previous) => ({ ...previous, from: event.target.value }))
+            }
+          />
+          <label htmlFor="catalog-availability-to">{t("to")}</label>
+          <Input
+            id="catalog-availability-to"
+            type="date"
+            value={availabilityRange.to}
+            onChange={(event) =>
+              setAvailabilityRange((previous) => ({ ...previous, to: event.target.value }))
+            }
+          />
+          <Button disabled={busy} onClick={() => void applyAvailability()}>
+            {t("apply")}
+          </Button>
+        </Space>
+        <Table
+          rowKey="night"
+          columns={availabilityColumns}
+          dataSource={availabilityNights}
+          loading={busy}
+          pagination={false}
+          locale={{ emptyText: t("noNights") }}
+        />
       </Modal>
     </div>
   );

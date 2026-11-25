@@ -15,15 +15,23 @@ import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
 import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { ProductsAdminService } from "./products-admin.service.js";
 import {
+  availabilityWriteSchema,
   createProductSchema,
   productsAdminQuerySchema,
   updateProductSchema,
+  type AvailabilityWriteBody,
   type CreateProductBody,
+  type PanelAvailabilityRead,
+  type PanelAvailabilityWrite,
   type PanelProduct,
   type PanelProductPage,
   type ProductsAdminQuery,
   type UpdateProductBody,
 } from "./products-admin.schemas.js";
+import {
+  availabilityQuerySchema,
+  type AvailabilityQuery,
+} from "./catalog.schemas.js";
 import {
   ProductPermission,
   ProductsGuard,
@@ -47,6 +55,8 @@ import {
  * - DELETE /admin/products/:id        (borrado lógico)
  * - POST   /admin/products/:id/publish
  * - POST   /admin/products/:id/archive
+ * - GET    /admin/products/:id/availability (T-F2-19)
+ * - POST   /admin/products/:id/availability (T-F2-19)
  */
 @Controller("admin/products")
 @UseGuards(ActiveMembershipGuard, ProductsGuard)
@@ -80,6 +90,16 @@ export class ProductsAdminController {
     return this.productsAdminService.detail(actorOf(request), id);
   }
 
+  @Get(":id/availability")
+  @ProductPermission("read")
+  readAvailability(
+    @Req() request: ProductsRequest,
+    @Param("id") id: string,
+    @Query(new ZodValidationPipe(availabilityQuerySchema)) query: AvailabilityQuery,
+  ): Promise<PanelAvailabilityRead> {
+    return this.productsAdminService.readAvailability(actorOf(request), id, query);
+  }
+
   @Put(":id")
   @ProductPermission("update")
   update(
@@ -109,6 +129,17 @@ export class ProductsAdminController {
   @HttpCode(200)
   archive(@Req() request: ProductsRequest, @Param("id") id: string): Promise<PanelProduct> {
     return this.productsAdminService.archive(actorOf(request), id);
+  }
+
+  @Post(":id/availability")
+  @ProductPermission("update")
+  @HttpCode(200)
+  writeAvailability(
+    @Req() request: ProductsRequest,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(availabilityWriteSchema)) body: AvailabilityWriteBody,
+  ): Promise<PanelAvailabilityWrite> {
+    return this.productsAdminService.writeAvailability(actorOf(request), id, body);
   }
 }
 

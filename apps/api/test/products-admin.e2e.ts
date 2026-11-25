@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { todayInCaracas } from "@caribe/shared";
 import { createApp, type ApiApplication } from "../src/bootstrap.js";
 import { prisma } from "../src/prisma.js";
 import {
@@ -810,6 +811,163 @@ describe("products admin", () => {
       const created = await json<PanelProductBody>(res);
       expect(created.hotelKey).not.toBe(hotelFull);
       expect(created.hotelKey).toMatch(/^[0-9a-f-]{36}$/);
+    });
+  });
+
+  describe("disponibilidad del panel (T-F2-19)", () => {
+    interface AvailabilityWriteBody {
+      productId: string;
+      nights: Array<{ night: string; capacity: number; reserved: number; priceUsd: string }>;
+    }
+
+    interface AvailabilityReadBody extends AvailabilityWriteBody {
+      from: string;
+      to: string;
+    }
+
+    let availabilityProductId: string;
+    const caracasDay = (offset: number): string =>
+      todayInCaracas(new Date(Date.now() + offset * 24 * 60 * 60 * 1000));
+    const nightA = caracasDay(2);
+    const nightB = caracasDay(3);
+
+    beforeAll(async () => {
+      const res = await call("POST", "/admin/products", adminCookie, {
+        ...validCreate(),
+        providerId: provider1,
+        roomType: "availability",
+      });
+      expect(res.status).toBe(201);
+      availabilityProductId = (await json<PanelProductBody>(res)).id;
+    });
+
+    function nightsOf(productId: string) {
+      return prisma.availability.findMany({ where: { productId }, orderBy: { night: "asc" } });
+    }
+
+    async function write(nights: unknown[], cookie = adminCookie, productId = availabilityProductId) {
+      return call("POST", `/admin/products/${productId}/availability`, cookie, { nights });
+    }
+
+    it("crea noches con precio decimal como texto y reserved en cero", async () => {
+      const res = await write([
+        { night: nightA, capacity: 5, priceUsd: "120.50" },
+        { night: nightB, capacity: 4, priceUsd: "130.00" },
+      ]);
+      expect(res.status).toBe(200);
+      const body = await json<AvailabilityWriteBody>(res);
+      expect(body.productId).toBe(availabilityProductId);
+      expect(body.nights).toMatchObject([
+        { night: nightA, capacity: 5, reserved: 0, priceUsd: "120.50" },
+        { night: nightB, capacity: 4, reserved: 0, priceUsd: "130.00" },
+      ]);
+
+      const rows = await nightsOf(availabilityProductId);
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.reserved).toBe(0);
+      expect(rows[0]?.priceUsd.toFixed(2)).toBe("120.50");
+    });
+
+    it("ajusta una noche existente conservando reserved y sin crear otra fila", async () => {
+      await prisma.availability.updateMany({
+        where: {
+          productId: availabilityProductId,
+          night: new Date(`${nightA}T00:00:00.000Z`),
+        },
+        data: { reserved: 3 },
+      });
+
+      const res = await write([{ night: nightA, capacity: 8, priceUsd: "140.00" }]);
+      expect(res.status).toBe(200);
+      const body = await json<AvailabilityWriteBody>(res);
+      expect(body.nights).toMatchObject([
+        { night: nightA, capacity: 8, reserved: 3, priceUsd: "140.00" },
+      ]);
+
+      const rows = await nightsOf(availabilityProductId);
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toMatchObject({ capacity: 8, reserved: 3 });
+      expect(rows[0]?.priceUsd.toFixed(2)).toBe("140.00");
+    });
+
+    it("lee cupo, reservadas y precio como texto del ámbito del panel", async () => {
+      const res = await call(
+        "GET",
+        `/admin/products/${availabilityProductId}/availability?from=${nightA}&to=${caracasDay(4)}`,
+        adminCookie,
+      );
+      expect(res.status).toBe(200);
+      const body = await json<AvailabilityReadBody>(res);
+      expect(body.productId).toBe(availabilityProductId);
+      expect(body.from).toBe(nightA);
+      expect(body.nights).toMatchObject([
+        { night: nightA, capacity: 8, reserved: 3, priceUsd: "140.00" },
+        { night: nightB, capacity: 4, reserved: 0, priceUsd: "130.00" },
+      ]);
+    });
+
+    it("rechaza una noche repetida con 409 y no escribe ninguna fila", async () => {
+      const before = await nightsOf(availabilityProductId);
+      const res = await write([
+        { night: nightB, capacity: 2, priceUsd: "150.00" },
+        { night: nightB, capacity: 3, priceUsd: "160.00" },
+      ]);
+      await expectProblem(res, 409, "AVAILABILITY_DUPLICATED");
+
+      const after = await nightsOf(availabilityProductId);
+      expect(after.map((row) => row.night.toISOString().slice(0, 10))).toEqual(
+        before.map((row) => row.night.toISOString().slice(0, 10)),
+      );
+      expect(after.map((row) => row.capacity)).toEqual(before.map((row) => row.capacity));
+      expect(after.map((row) => row.priceUsd.toFixed(2))).toEqual(
+        before.map((row) => row.priceUsd.toFixed(2)),
+      );
+    });
+
+    it("rechaza reserved del cliente, precio numérico, campos calculados y capacidad menor que reservadas", async () => {
+      for (const night of [
+        { night: nightA, capacity: 2, reserved: 1, priceUsd: "120.50" },
+        { night: nightA, capacity: 2, priceUsd: 120.5 },
+        { night: nightA, capacity: 2, priceUsd: "120.50", totalVes: "100000.00" },
+        { night: nightA, capacity: 0, priceUsd: "120.50" },
+        { night: nightA, capacity: 2, priceUsd: "120.50" },
+        { night: "no-es-fecha", capacity: 2, priceUsd: "120.50" },
+      ]) {
+        await expectProblem(await write([night]), 422, "VALIDATION_ERROR");
+      }
+    });
+
+    it("aplica propiedad de fila, permisos y sesión", async () => {
+      const nights = [{ night: nightA, capacity: 5, priceUsd: "120.50" }];
+      const range = `?from=${nightA}&to=${caracasDay(4)}`;
+      const read = (productId: string, cookie = "") =>
+        call("GET", `/admin/products/${productId}/availability${range}`, cookie);
+
+      await expectProblem(await write(nights, provider1Cookie, draftOther), 404, "NOT_FOUND");
+      await expectProblem(await write(nights, adminCookie, draftAgencyB), 404, "NOT_FOUND");
+      await expectProblem(await write(nights, agentCookie), 403, "FORBIDDEN");
+      await expectProblem(await write(nights, superCookie), 403, "FORBIDDEN");
+      await expectProblem(await write(nights, ""), 401, "UNAUTHENTICATED");
+
+      await expectProblem(await read(draftOther, provider1Cookie), 404, "NOT_FOUND");
+      await expectProblem(await read(draftAgencyB, adminCookie), 404, "NOT_FOUND");
+      await expectProblem(await read(availabilityProductId, agentCookie), 403, "FORBIDDEN");
+      await expectProblem(await read(availabilityProductId, ""), 401, "UNAUTHENTICATED");
+    });
+
+    it("exige la traducción en en alta y en edición", async () => {
+      const create = await call("POST", "/admin/products", provider1Cookie, {
+        ...validCreate(),
+        title: { es: "Sin inglés" },
+      });
+      const createBody = await expectProblem(create, 422, "VALIDATION_ERROR");
+      expect(createBody.errors?.map((issue) => issue.path)).toContain("title.en");
+
+      const update = await call("PUT", `/admin/products/${draftOwn}`, provider1Cookie, {
+        description: { es: "Sin inglés" },
+      });
+      const updateBody = await expectProblem(update, 422, "VALIDATION_ERROR");
+      expect(updateBody.errors?.map((issue) => issue.path)).toContain("description.en");
     });
   });
 });

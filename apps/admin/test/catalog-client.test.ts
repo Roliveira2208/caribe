@@ -3,10 +3,12 @@ import { AuthApiError } from "@caribe/shared";
 import {
   archiveCatalogProduct,
   createCatalogProduct,
+  listCatalogAvailability,
   listCatalogProducts,
   publishCatalogProduct,
   resolveCatalogPanelAccess,
   updateCatalogProduct,
+  writeCatalogAvailability,
   type CatalogProduct,
   type CatalogProductInput,
 } from "../src/lib/catalog-client";
@@ -163,13 +165,16 @@ describe('catalog › "Proveedor edita solo sus productos" (T-F2-18)', () => {
     });
     expect(provider.canEdit(draft)).toBe(true);
     expect(provider.canChangeStatus(draft)).toBe(true);
+    expect(provider.canManageAvailability(draft)).toBe(true);
     expect(provider.canEdit(other)).toBe(false);
     expect(provider.canChangeStatus(other)).toBe(false);
+    expect(provider.canManageAvailability(other)).toBe(false);
     expect(provider.canCreate).toBe(true);
 
     const admin = resolveCatalogPanelAccess({ mode: "agency", role: "admin" });
     expect(admin.canEdit(other)).toBe(true);
     expect(admin.canChangeStatus(other)).toBe(true);
+    expect(admin.canManageAvailability(other)).toBe(true);
     expect(admin.canCreate).toBe(true);
   });
 
@@ -179,6 +184,7 @@ describe('catalog › "Proveedor edita solo sus productos" (T-F2-18)', () => {
     expect(platform.canCreate).toBe(false);
     expect(platform.canEdit(draft)).toBe(false);
     expect(platform.canChangeStatus(draft)).toBe(false);
+    expect(platform.canManageAvailability(draft)).toBe(false);
 
     const agent = resolveCatalogPanelAccess({ mode: "agency", role: "agent" });
     const unregistered = resolveCatalogPanelAccess({ mode: "agency", role: "provider" });
@@ -186,6 +192,7 @@ describe('catalog › "Proveedor edita solo sus productos" (T-F2-18)', () => {
       expect(access.canRead).toBe(false);
       expect(access.canCreate).toBe(false);
       expect(access.canEdit(draft)).toBe(false);
+      expect(access.canManageAvailability(draft)).toBe(false);
     }
   });
 
@@ -238,5 +245,122 @@ describe('catalog › "Publicar y archivar producto" (T-F2-18)', () => {
       status: 404,
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe('catalog › "Lectura de disponibilidad del panel" (T-F2-19)', () => {
+  const nights = [
+    { night: "2026-11-27", capacity: 5, reserved: 3, priceUsd: "120.50" },
+    { night: "2026-11-28", capacity: 4, reserved: 0, priceUsd: "130.00" },
+  ];
+
+  it("pide el rango al endpoint del panel y conserva cupo y reservadas del servidor", async () => {
+    const fetchImpl = fetchSpy(
+      json({ productId: draft.id, from: nights[0]?.night, to: "2026-11-29", nights }),
+    );
+    const result = await listCatalogAvailability(
+      draft.id,
+      { from: "2026-11-27", to: "2026-11-29" },
+      { fetchImpl },
+    );
+
+    expect(result.nights).toEqual(nights);
+    const [url, init] = vi.mocked(fetchImpl).mock.calls[0] ?? [];
+    const parsed = new URL(String(url), "http://localhost:3001");
+    expect(parsed.pathname).toBe(`/api/v1/admin/products/${draft.id}/availability`);
+    expect(parsed.searchParams.get("from")).toBe("2026-11-27");
+    expect(parsed.searchParams.get("to")).toBe("2026-11-29");
+    expect(init?.method).toBeUndefined();
+  });
+
+  it("traduce 404 sin revelar propiedad y conserva 403", async () => {
+    const missing = fetchSpy(problem(404, "NOT_FOUND"));
+    await expect(
+      listCatalogAvailability(draft.id, {}, { fetchImpl: missing }),
+    ).rejects.toMatchObject({ status: 404, code: "NOT_FOUND" });
+
+    const forbidden = fetchSpy(problem(403, "FORBIDDEN"));
+    await expect(
+      listCatalogAvailability(draft.id, {}, { fetchImpl: forbidden }),
+    ).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+});
+
+describe('catalog › "Precio como texto decimal" (T-F2-19)', () => {
+  it("escribe noches sin reserved ni campos calculados y con precio como texto", async () => {
+    const fetchImpl = fetchSpy(
+      json({
+        productId: draft.id,
+        nights: [{ night: "2026-11-27", capacity: 6, reserved: 3, priceUsd: "120.50" }],
+      }),
+    );
+    const result = await writeCatalogAvailability(
+      draft.id,
+      [{ night: "2026-11-27", capacity: 6, priceUsd: "120.50" }],
+      { fetchImpl },
+    );
+
+    expect(result.nights[0]).toMatchObject({ reserved: 3, priceUsd: "120.50" });
+    const [url, init] = vi.mocked(fetchImpl).mock.calls[0] ?? [];
+    expect(url).toBe(`/api/v1/admin/products/${draft.id}/availability`);
+    expect(init?.method).toBe("POST");
+    const body = JSON.parse(String(init?.body)) as { nights: Array<Record<string, unknown>> };
+    expect(body.nights).toEqual([{ night: "2026-11-27", capacity: 6, priceUsd: "120.50" }]);
+  });
+
+  it("rechaza localmente reserved, precio numérico y noche repetida sin llamar a la API", async () => {
+    const fetchImpl = fetchSpy(json({ productId: draft.id, nights: [] }));
+    const base = { night: "2026-11-27", capacity: 5, priceUsd: "120.50" };
+
+    for (const night of [
+      { ...base, reserved: 1 },
+      { ...base, priceUsd: 120.5 },
+      { ...base, totalVes: "100000.00" },
+      { ...base, capacity: 0 },
+      { ...base, night: "no-es-fecha" },
+    ]) {
+      await expect(
+        writeCatalogAvailability(draft.id, [night as never], { fetchImpl }),
+      ).rejects.toMatchObject({ status: 422, code: "VALIDATION_ERROR" });
+    }
+    await expect(
+      writeCatalogAvailability(draft.id, [base, base], { fetchImpl }),
+    ).rejects.toMatchObject({ status: 409, code: "AVAILABILITY_DUPLICATED" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('catalog › "Traducciones es y en" (T-F2-19)', () => {
+  it("exige en en alta y en edición antes de llamar a la API", async () => {
+    const fetchImpl = fetchSpy(json(draft, { status: 201 }));
+
+    for (const field of ["title", "description"] as const) {
+      await expect(
+        createCatalogProduct(
+          { ...validInput, [field]: { es: "Solo español" } } as unknown as CatalogProductInput,
+          { fetchImpl },
+        ),
+      ).rejects.toMatchObject({ status: 422, code: "VALIDATION_ERROR" });
+    }
+    await expect(
+      updateCatalogProduct(
+        draft.id,
+        { title: { es: "Solo español" } } as unknown as CatalogProductInput,
+        { fetchImpl },
+      ),
+    ).rejects.toMatchObject({ status: 422, code: "VALIDATION_ERROR" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("envía ambas claves cuando están presentes", async () => {
+    const fetchImpl = fetchSpy(json({ ...draft, status: "DRAFT" }, { status: 201 }));
+    await createCatalogProduct(validInput, { fetchImpl });
+    const [, init] = vi.mocked(fetchImpl).mock.calls[0] ?? [];
+    const body = JSON.parse(String(init?.body)) as {
+      title: { es: string; en: string };
+      description: { es: string; en: string };
+    };
+    expect(body.title).toEqual({ es: "Hab. doble", en: "Double room" });
+    expect(body.description).toEqual({ es: "Descripción", en: "Description" });
   });
 });
