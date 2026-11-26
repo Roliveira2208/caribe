@@ -4,12 +4,15 @@ import type { SalesReport } from "./reports.schemas.js";
 /**
  * Serialización del CSV del reporte (T-F2-23). Usa la MISMA respuesta JSON que
  * ya aplicó filtros, validaciones y alcance, así que aquí no se vuelve a filtrar
- * ni a calcular nada. Solo se formatean las celdas y se escapan las comas, las
- * comillas y los saltos de línea. No hay secretos ni datos de tarjeta en el
- * contrato de la fila.
+ * ni a calcular nada. Solo se formatean las celdas, se escapan las comas, las
+ * comillas y los saltos de línea, y se prefija con `'` toda celda que empiece
+ * por `=`, `+`, `-` o `@` para que Excel/Sheets la abran como texto (delta
+ * reports, "Exportación CSV del reporte"). No hay secretos ni datos de tarjeta
+ * en el contrato de la fila.
  */
 function cell(value: string): string {
-  return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 
 export function reportCsv(report: SalesReport, locale: ReportLocale): string {

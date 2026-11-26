@@ -360,6 +360,9 @@ Evidencia del reporte de ventas y del listado de agencias que puebla su filtro:
   agencias (`id`, `name`, `slug`, sin secretos ni memberships) y un owner recibe 403.
 - `apps/api/test/active-membership.e2e.ts` → **2/2** con el inventario sin cambios: la ruta de
   agencias es de plataforma y no consume la agencia activa, así que no pertenece a ese inventario.
+- `apps/api/test/reports-csv.test.ts` → **3/3**: el CSV prefija con `'` las celdas que empiezan por
+  `=`, `+`, `-` o `@`, mantiene el doble comillas y no altera los valores ordinarios. Corrección
+  añadida tras la revisión de T-F2-23, con su THEN en el delta `reports`.
 - `apps/admin/test/reports-client.test.ts` y `reports-panel.test.ts` → **16/16**: el selector usa
   `GET /api/v1/admin/organizations`, no las membresías de Better Auth; rechaza respuestas que no sean
   un listado y conserva el `agencyId` elegido en la descarga CSV.
