@@ -29,7 +29,7 @@ tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 - [x] T-F2-19d **PAUSA 3**: verificación independiente del catálogo en sesión limpia. Prueba: los 8 escenarios obligatorios de `catalog` con evidencia; informe en `verify.md`.
 - [x] T-F2-20 Generar y someter a aprobación `docs/wireframes/panel-usuarios-roles.svg`. Prueba: gate de aprobación antes de T-F2-21.
 - [x] T-F2-21 Usuarios y roles sobre Better Auth. Prueba: `auth-access › "Invitar miembro con segundo factor"`, `"Cambiar rol de un miembro"`, `"Revocar sesión desde el panel"`, `"Organización objetivo ajena"`, `"Super Admin en modo plataforma"` y `"Operación sin agencia activa"`.
-- [ ] T-F2-22 Generar y someter a aprobación `docs/wireframes/panel-reportes.svg`. Prueba: gate de aprobación antes de T-F2-23.
+- [x] T-F2-22 Generar y someter a aprobación `docs/wireframes/panel-reportes.svg`. Prueba: gate de aprobación antes de T-F2-23.
 - [ ] T-F2-23 Reporte de ventas `GET /admin/reports/sales`. Prueba: `reports › "Reporte por rango de fechas"`, `"Totales calculados en el servidor"`, `"Desglose por método y estado"`, `"Alcance por rol"` y `"Exportación CSV del reporte"`.
 - [ ] T-F2-24 Matriz F1 en la UI: proveedor, `member` sin `booking:read` y Super Admin. Prueba: `admin-ui › "Matriz de permisos F1 en la UI"` y `"Sin datos negados por la API"`.
 - [ ] T-F2-25 Escenarios deseables que quepan. Prueba: `exchange-rates › "Tasa global del Super Admin"`, `"Fecha valor futura"` y `"Historial de overrides"`; `payments › "Exportación CSV de pagos"`, `"Columnas configurables"`, `"Estado vacío"` y `"Estado de error"`; `audit › "Exportación CSV de auditoría"`; `admin-ui › "Selector de agencia en la cabecera"`, `"Bandera del modo de aprobación"` e `"Idioma persistido"`.

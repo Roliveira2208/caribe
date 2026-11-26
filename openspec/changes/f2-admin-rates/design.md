@@ -195,15 +195,14 @@ cursor. La IP se muestra como «—» cuando sea `null`.
 ## 8. Wireframes y puertas
 
 - Ya aprobados: `docs/wireframes/panel-pagos.svg`, `panel-tasas.svg`, `panel-auditoria.svg`,
-  `panel-catalogo.svg` y `panel-usuarios-roles.svg`.
-- Pendiente de aprobación, antes de implementar su pantalla: `panel-reportes.svg`.
+  `panel-catalogo.svg`, `panel-usuarios-roles.svg` y `panel-reportes.svg`.
   Todos siguen `docs/wireframes/README.md` y el formato de baja fidelidad de `panel-pagos.svg`.
 - Decisiones aprobadas de usuarios/roles (T-F2-20): el listado muestra miembro, rol, estado de 2FA y
   última sesión; los modales cubren invitación, cambio de rol antes/después y revocación de sesiones
   con la IP mostrada como «—». La organización objetivo se elige solo entre las membresías del actor;
   Super Admin consulta agencias en modo plataforma sin fijar agencia activa. No se incluye exportación
   ni otra acción sin ruta existente en la spec.
-- Decisiones propuestas del wireframe de reportes (T-F2-22): rango inclusivo en `America/Caracas`,
+- Decisiones aprobadas del wireframe de reportes (T-F2-22): rango inclusivo en `America/Caracas`,
   selector de agencia solo para el Super Admin, totales USD/VES y desglose por método/estado calculados
   en servidor con importes y tasa congelados, y CSV con los mismos filtros y encabezados es/en. Siguen
   abiertas las preguntas sobre límite/streaming del CSV y el idioma sin preferencia explícita.
