@@ -22,8 +22,8 @@ una ruta nueva al inventario, y SHALL compartir exactamente las mismas validacio
 Los totales SHALL calcularse en el servidor con `DECIMAL`, nunca con punto flotante. Cada pago SHALL
 aportar su `amount_ves` y su `exchange_rate_id` congelados, sin recalcular con la tasa actual. Los montos
 SHALL serializarse como cadenas con dos decimales y las tasas con cuatro, según `api-errors`. Los totales
-SHALL sumar todos los pagos del rango con independencia de su estado (`APPROVED`, `IN_REVIEW` o
-`REJECTED`); el desglose SHALL presentarlos agrupados por estado sin excluir ninguno del total.
+SHALL sumar todos los pagos del rango con independencia de su estado, cualquiera que sea el estado de
+la máquina de pagos; el desglose SHALL presentarlos agrupados por estado sin excluir ninguno del total.
 
 #### Scenario: Totales calculados en el servidor
 - GIVEN pagos con sus montos USD, montos VES y tasas congeladas, y una tasa vigente distinta al consultar

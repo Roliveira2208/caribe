@@ -52,8 +52,9 @@ Estas se deciden antes de la tarea correspondiente; no se rellenan con suposicio
 - Umbrales numéricos de rate limiting por ruta y ventana de tiempo.
 - Direcciones IP o red de proxies de confianza según el hosting final (M1) y valor de
   `TRUSTED_ORIGINS` para CORS (M2).
-- Métricas exactas del reporte de ventas: moneda de los totales (USD, VES o ambas), columnas del CSV
-  y si los pagos rechazados cuentan como venta.
+- ~~Métricas exactas del reporte de ventas~~ **resuelta antes de T-F2-23**: totales USD y VES, CSV con
+  desglose método/estado y totales, y todos los estados suman (incluidos rechazados y en revisión).
+  El límite/idioma del CSV también quedó resuelto: sin límite en el MVP, `lang=es` por defecto.
 - Nombre y ubicación del paquete compartido de fuentes (`packages/fonts` es la propuesta) y si
   `next/font/local` necesita configuración adicional de build para resolverlo desde el workspace.
 - Si los límites de rate limiting aplican también a rutas públicas (`GET /products`,

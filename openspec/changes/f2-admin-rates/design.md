@@ -66,8 +66,11 @@ sus rutas, filtros, códigos y reglas de autorización; la única variación de 
 ni se permiten campos calculados en las peticiones.
 
 El endpoint de reportes se añade al módulo admin, con guard de sesión, TOTP, memberships activa y un
-guard dedicado que solo permite lectura a admin de agencia y Super Admin. Los totales se calculan en
-SQL con `DECIMAL`, sobre los pagos `APPROVED` y su tasa congelada; nunca se recalcula `amount_ves`.
+guard dedicado que solo permite lectura a owner/admin de agencia y Super Admin. Los totales se calculan
+en SQL con `DECIMAL`, sobre todos los estados del rango y con la tasa congelada de cada pago; nunca se
+recalcula `amount_ves`. El CSV comparte la ruta con `format=csv` y el idioma se elige con `lang=es|en`
+(`es` por defecto), sin límite de filas en el MVP. Decisión aprobada antes de T-F2-23: los pagos
+rechazados y en revisión también suman y se muestran en el desglose.
 
 **Decisiones del panel de catálogo (T-F2-17/18/19).** La delta hablaba de «endpoints de escritura ya
 existentes» para disponibilidad, pero solo existe la lectura pública. Se añade una ruta de escritura
