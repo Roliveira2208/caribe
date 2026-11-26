@@ -203,6 +203,10 @@ cursor. La IP se muestra como «—» cuando sea `null`.
   con la IP mostrada como «—». La organización objetivo se elige solo entre las membresías del actor;
   Super Admin consulta agencias en modo plataforma sin fijar agencia activa. No se incluye exportación
   ni otra acción sin ruta existente en la spec.
+- Decisiones propuestas del wireframe de reportes (T-F2-22): rango inclusivo en `America/Caracas`,
+  selector de agencia solo para el Super Admin, totales USD/VES y desglose por método/estado calculados
+  en servidor con importes y tasa congelados, y CSV con los mismos filtros y encabezados es/en. Siguen
+  abiertas las preguntas sobre límite/streaming del CSV y el idioma sin preferencia explícita.
 - Ajuste aprobado en T-F2-21: la revocación de sesiones queda reservada al Super Admin en modo
   plataforma. `systemUserRole` no tiene `session:revoke` y `admin({ adminRoles: ["super_admin"] })`
   rechazaría al admin de agencia, así que su panel no ofrece la pestaña de sesiones ni el botón de
