@@ -86,6 +86,21 @@ teclado.
 - THEN la API responde 403 con código `ACTIVE_ORGANIZATION_REQUIRED` y la interfaz no muestra datos de esa agencia
 - AND el panel ofrece el selector de membresías o el estado vacío con textos es/en y controles accesibles por teclado
 
+### Requirement: Listado de agencias para el filtro de reportes
+`GET /admin/organizations` SHALL exigir sesión y rol de plataforma, y SHALL devolver únicamente `id`,
+`name` y `slug` de todas las agencias, ordenadas por nombre, para poblar el selector del Super Admin en
+el reporte de ventas. El listado SHALL ejecutarse en contexto `platform` y SHALL NOT incluir secretos,
+datos de tarjeta ni información de membresías. Un rol de agencia SHALL recibir 403 sin ver opciones;
+la interfaz SHALL mostrar el selector solo en modo plataforma y SHALL enviar el `agencyId` elegido a
+`GET /admin/reports/sales` con los mismos filtros que la descarga CSV.
+
+#### Scenario: Listado de agencias para el filtro de reportes
+- GIVEN dos agencias y un Super Admin sin membresías ni organización activa
+- WHEN consulta `GET /admin/organizations` y abre el panel de reportes
+- THEN recibe ambas agencias con su `id`, `name` y `slug`, sin secretos ni datos de tarjeta
+- THEN el selector ofrece «Todas las agencias» y cada agencia, y al elegir una se envía su `agencyId` al reporte y al CSV con el mismo rango
+- THEN un owner o admin de agencia que llame a la ruta recibe 403 y su panel no ofrece el selector
+
 ### Requirement: Lectura operativa de la tasa vigente
 Los roles `agent` y `provider` de una agencia SHALL tener el permiso `exchange-rate: read` para consultar
 únicamente `GET /admin/exchange-rates/current` de su agencia activa. SHALL NOT ver historial, motivos ni

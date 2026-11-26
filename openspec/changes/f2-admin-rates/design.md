@@ -58,6 +58,7 @@ Endpoints existentes que reutiliza el panel (sin cambiar su contrato):
 | Disponibilidad del panel | **`GET/POST /admin/products/:id/availability` (nuevo)** | F2 |
 | Usuarios y roles | `/api/auth/organization/*`, `/api/auth/admin/*` | Better Auth |
 | Reportes | **`GET /admin/reports/sales` (nuevo)** | F2 |
+| Filtro de agencias del reporte | **`GET /admin/organizations` (nuevo, solo plataforma)** | F2 |
 
 **Excepción aditiva para el panel de pagos (T-F2-11).** `GET/POST/PATCH /admin/payments` conservan
 sus rutas, filtros, códigos y reglas de autorización; la única variación de contrato es el campo
@@ -70,7 +71,9 @@ guard dedicado que solo permite lectura a owner/admin de agencia y Super Admin. 
 en SQL con `DECIMAL`, sobre todos los estados del rango y con la tasa congelada de cada pago; nunca se
 recalcula `amount_ves`. El CSV comparte la ruta con `format=csv` y el idioma se elige con `lang=es|en`
 (`es` por defecto), sin límite de filas en el MVP. Decisión aprobada antes de T-F2-23: los pagos
-rechazados y en revisión también suman y se muestran en el desglose.
+rechazados y en revisión también suman y se muestran en el desglose. El selector de agencia del Super
+Admin se puebla con `GET /admin/organizations`, que corre en contexto `platform` y responde `id`,
+`name` y `slug` de todas las agencias; un rol de agencia recibe 403 y no ve opciones ajenas.
 
 **Decisiones del panel de catálogo (T-F2-17/18/19).** La delta hablaba de «endpoints de escritura ya
 existentes» para disponibilidad, pero solo existe la lectura pública. Se añade una ruta de escritura
@@ -113,6 +116,7 @@ el resto y no se activa ningún plugin ni modo de autenticación nuevo.
 | `GET /api/v1/products`, `GET /api/v1/products/:id/availability`, `GET /api/v1/products/:id` | Público (`@AllowAnonymous`), solo datos `PUBLISHED` y no borrados |
 | `GET /api/v1/rates/today` | Público (`@AllowAnonymous`), tasa global vigente |
 | `/api/auth/*` | Rutas propias de Better Auth (alta/inicio de sesión y las ya existentes de organización/admin); no cambia su clasificación ni se añaden plugins |
+| `GET /api/v1/admin/organizations` | Protected: sesión + rol de plataforma; solo lectura de `id`, `name` y `slug` para el filtro de reportes |
 | `POST /api/v1/bookings`, `POST /api/v1/bookings/:id/payments`, `PATCH /api/v1/admin/payments/:id/approve`, `PATCH /api/v1/admin/payments/:id/reject`, `GET /api/v1/documents/:id/download` | Protected: sesión + permiso + TOTP donde aplica; T-F2-4 añade límite pero no acceso anónimo |
 
 El guard de T-F2-4 no crea rutas públicas y no altera este inventario: las cinco rutas limitadas ya
@@ -208,6 +212,9 @@ cursor. La IP se muestra como «—» cuando sea `null`.
 - Decisiones aprobadas del wireframe de reportes (T-F2-22): rango inclusivo en `America/Caracas`,
   selector de agencia solo para el Super Admin, totales USD/VES y desglose por método/estado calculados
   en servidor con importes y tasa congelados, y CSV con los mismos filtros y encabezados es/en.
+- Decisión aprobada durante T-F2-23: el selector de agencia del Super Admin usa la nueva ruta de
+  plataforma `GET /admin/organizations` en lugar de `/api/auth/organization/list`, porque esta última
+  solo devuelve membresías y no basta para consultar todas las agencias.
 - Decisiones aprobadas antes de T-F2-23 (delta `reports`): el CSV se sirve por
   `GET /admin/reports/sales?format=csv` sin nueva ruta; los totales suman todos los estados del rango;
   en el MVP no hay límite de filas y, sin preferencia explícita de idioma, los encabezados son `es`. El

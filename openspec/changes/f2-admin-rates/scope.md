@@ -20,7 +20,9 @@ ya exigía la spec `security`; por eso el total pasó de 75 a 76 escenarios y de
 La PAUSA 3 corrigió el inventario de `catalog`, que tenía 7 escenarios en lugar de los 8 del delta
 (faltaba «Lectura de disponibilidad del panel»): el total vigente es 77 escenarios y 63 obligatorios.
 El delta `reports` es MODIFIED sobre los cinco escenarios ya contabilizados: precise CSV por
-`format=csv`, totales de todos los estados y límite/idioma del CSV, sin cambiar el total.
+`format=csv`, totales de todos los estados y límite/idioma del CSV, sin cambiar el total. Durante
+T-F2-23 se añadió un escenario obligatorio en `auth-access` para el listado de agencias de plataforma
+que pobla el filtro del reporte: el total vigente es 78 escenarios y 64 obligatorios.
 
 | Spec | Escenarios | Obligatorio | Deseable | Aplazable |
 | --- | ---: | ---: | ---: | ---: |
@@ -29,13 +31,13 @@ El delta `reports` es MODIFIED sobre los cinco escenarios ya contabilizados: pre
 | payments | 12 | 8 | 4 | 0 |
 | audit | 10 | 6 | 4 | 0 |
 | catalog | 8 | 8 | 0 | 0 |
-| auth-access | 6 | 6 | 0 | 0 |
+| auth-access | 7 | 7 | 0 | 0 |
 | admin-ui | 10 | 7 | 3 | 0 |
 | reports | 5 | 5 | 0 | 0 |
 | security | 13 | 13 | 0 | 0 |
-| **Total** | **77** | **63** | **14** | **0** |
+| **Total** | **78** | **64** | **14** | **0** |
 
-**Regla de cierre:** solo los **63 obligatorios** bloquean F2. Ningún obligatorio se recorta para
+**Regla de cierre:** solo los **64 obligatorios** bloquean F2. Ningún obligatorio se recorta para
 meter un deseable. Las dos pausas (T-F2-10 y T-F2-13) son obligatorias antes de catálogo y usuarios.
 
 ## api-errors (1)
@@ -70,11 +72,11 @@ meter un deseable. Las dos pausas (T-F2-10 y T-F2-13) son obligatorias antes de 
   edita solo sus productos · Publicar y archivar producto · Disponibilidad por noche · Lectura de
   disponibilidad del panel · Precio como texto decimal · Traducciones es y en.
 
-## auth-access (6)
+## auth-access (7)
 
-- **Obligatorio (6)**: Invitar miembro con segundo factor · Cambiar rol de un miembro · Revocar sesión
+- **Obligatorio (7)**: Invitar miembro con segundo factor · Cambiar rol de un miembro · Revocar sesión
   desde el panel · Organización objetivo ajena · Super Admin en modo plataforma · Operación sin agencia
-  activa.
+  activa · Listado de agencias para el filtro de reportes.
 
 ## admin-ui (10)
 

@@ -20,13 +20,15 @@ idempotente con un proveedor real). El dueño decidió cerrar todas esas deudas 
   vacío/error.
 - Visor de auditoría con filtros por acción, entidad, actor y rango, paginación por cursor y pestaña
   de eventos de autenticación, con el alcance por rol que ya define la spec `audit`.
-- Gestión de catálogo, usuarios/roles (sobre las rutas existentes de Better Auth) y reporte de ventas.
+- Gestión de catálogo, usuarios/roles (sobre las rutas existentes de Better Auth), reporte de ventas y
+  listado de agencias de plataforma para poblar el filtro del reporte.
 - Seguridad de red: IP real tras proxies de confianza, cabeceras Helmet/CSP, CORS restringido,
   límites en rutas de negocio y reembolsos con `refundId`/outbox y reconciliación.
 
 ## Impacto en specs
 
-- Deltas `ADDED Requirements` en `exchange-rates`, `payments`, `audit`, `catalog` y `auth-access`.
+- Deltas `ADDED Requirements` en `exchange-rates`, `payments`, `audit`, `catalog` y `auth-access`;
+  el nuevo requisito de `auth-access` cubre el listado de agencias para el filtro de reportes.
 - Specs base nuevas creadas en esta change porque no existían: `admin-ui`, `reports` y `security`.
 - Clasificación escenario por escenario y conteos en `scope.md`: **75 escenarios nuevos, 61
   obligatorios y 14 deseables**. Los 103 escenarios base de `exchange-rates` (31), `payments` (38) y
@@ -44,6 +46,9 @@ idempotente con un proveedor real). El dueño decidió cerrar todas esas deudas 
    clasificación en el inventario, porque hoy solo existe la lectura pública.
 6. `en` es obligatorio en `title` y `description` del panel: la API refuerza Zod y responde 422 si
    falta, sin depender del fallback de lectura a `es`.
+7. El filtro de agencia del reporte se puebla con `GET /admin/organizations`, lectura de plataforma
+   con su scenario en `auth-access`. `/api/auth/organization/list` solo devuelve membresías y el Super
+   Admin no es miembro de todas las agencias, así que el selector quedaría vacío sin esta ruta.
 
 ## Preguntas abiertas
 
