@@ -204,8 +204,11 @@ cursor. La IP se muestra como «—» cuando sea `null`.
   ni otra acción sin ruta existente en la spec.
 - Decisiones aprobadas del wireframe de reportes (T-F2-22): rango inclusivo en `America/Caracas`,
   selector de agencia solo para el Super Admin, totales USD/VES y desglose por método/estado calculados
-  en servidor con importes y tasa congelados, y CSV con los mismos filtros y encabezados es/en. Siguen
-  abiertas las preguntas sobre límite/streaming del CSV y el idioma sin preferencia explícita.
+  en servidor con importes y tasa congelados, y CSV con los mismos filtros y encabezados es/en.
+- Decisiones aprobadas antes de T-F2-23 (delta `reports`): el CSV se sirve por
+  `GET /admin/reports/sales?format=csv` sin nueva ruta; los totales suman todos los estados del rango;
+  en el MVP no hay límite de filas y, sin preferencia explícita de idioma, los encabezados son `es`. El
+  delta MODIFIED no añade escenarios nuevos, solo precisa los cinco ya contabilizados.
 - Ajuste aprobado en T-F2-21: la revocación de sesiones queda reservada al Super Admin en modo
   plataforma. `systemUserRole` no tiene `session:revoke` y `admin({ adminRoles: ["super_admin"] })`
   rechazaría al admin de agencia, así que su panel no ofrece la pestaña de sesiones ni el botón de

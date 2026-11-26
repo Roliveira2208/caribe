@@ -19,6 +19,8 @@ El delta de `api-errors` se añadió durante T-F2-2 para dar un `code` estable a
 ya exigía la spec `security`; por eso el total pasó de 75 a 76 escenarios y de 61 a 62 obligatorios.
 La PAUSA 3 corrigió el inventario de `catalog`, que tenía 7 escenarios en lugar de los 8 del delta
 (faltaba «Lectura de disponibilidad del panel»): el total vigente es 77 escenarios y 63 obligatorios.
+El delta `reports` es MODIFIED sobre los cinco escenarios ya contabilizados: precise CSV por
+`format=csv`, totales de todos los estados y límite/idioma del CSV, sin cambiar el total.
 
 | Spec | Escenarios | Obligatorio | Deseable | Aplazable |
 | --- | ---: | ---: | ---: | ---: |
