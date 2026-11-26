@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { Body, ConflictException, Controller, ForbiddenException, Post, Req } from "@nestjs/common";
+import { Body, ConflictException, Controller, ForbiddenException, Get, Post, Req } from "@nestjs/common";
 import { z } from "@caribe/shared";
 import { Auditable } from "../audit/auditable.js";
 import { attachAuditData, currentAuditTx } from "../audit/audit-storage.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
+import { TenantService } from "../tenant/tenant.service.js";
 
 /** Lo minimo que el handler necesita de la sesion (estructural). */
 interface SessionInfo {
@@ -13,6 +14,13 @@ interface SessionInfo {
 
 interface AuthenticatedRequest {
   session?: SessionInfo;
+}
+
+/** Opciones del selector de agencia del Super Admin (delta de auth-access). */
+interface AgencyOption {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 /** Mismo formato de slug que usa Better Auth: minusculas, numeros y guiones. */
@@ -44,6 +52,28 @@ type CreateOrganizationBody = z.infer<typeof createOrganizationSchema>;
  */
 @Controller("admin/organizations")
 export class OrganizationsController {
+  constructor(private readonly tenant: TenantService) {}
+
+  /**
+   * Listado de plataforma para el filtro del reporte (T-F2-23). No usa
+   * `/api/auth/organization/list` porque ese endpoint solo devuelve membresías
+   * y el Super Admin no es miembro de todas las agencias. Solo id, nombre y
+   * slug: ni secretos, ni datos de tarjeta, ni memberships.
+   */
+  @Get()
+  async list(@Req() request: AuthenticatedRequest): Promise<AgencyOption[]> {
+    const session = request.session;
+    if (!session || !isPlatformRole(session.user.role)) {
+      throw new ForbiddenException("Solo el rol de plataforma puede listar agencias");
+    }
+    return this.tenant.withPlatform((tx) =>
+      tx.organization.findMany({
+        select: { id: true, name: true, slug: true },
+        orderBy: { name: "asc" },
+      }),
+    );
+  }
+
   @Auditable({ action: "organization.create", entity: "organization", platform: true })
   @Post()
   async create(

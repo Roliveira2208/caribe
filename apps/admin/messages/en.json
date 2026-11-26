@@ -13,6 +13,7 @@
     "rates": "Rates",
     "audit": "Audit",
     "users": "Users & roles",
+    "reports": "Reports",
     "skipToContent": "Skip to main content"
   },
   "metadata": {
@@ -422,6 +423,38 @@
       "stringLen": "{label} must be {len} characters",
       "patternMismatch": "{label} does not match the pattern {pattern}"
     }
+  },
+  "reports": {
+    "title": "Sales report",
+    "description": "Totals and breakdown calculated on the server from each payment's frozen amounts and rate.",
+    "activeAgency": "Active agency: {agency}",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "filterAgency": "Agency",
+    "allAgencies": "All agencies",
+    "apply": "Apply",
+    "downloadCsv": "Download CSV",
+    "csvFileName": "sales-report.csv",
+    "totalsTitle": "Totals for the range",
+    "totalUsd": "Total USD",
+    "totalVes": "Total VES · frozen amounts",
+    "paymentCount": "Payments in range",
+    "breakdownTitle": "Breakdown by method and status",
+    "colMethod": "Method",
+    "colStatus": "Status",
+    "colCount": "Count",
+    "colAmountUsd": "Sum USD",
+    "colAmountVes": "Sum VES",
+    "empty": "No payments in the range: zero totals and no invented rows.",
+    "loading": "Loading…",
+    "forbidden": "Your role cannot view the sales report.",
+    "twoFactorRequired": "Turn on two-step security to view the report.",
+    "validationError": "Check the date range and try again.",
+    "genericError": "Could not load the report. Please try again.",
+    "csvError": "Could not download the CSV. Please try again.",
+    "rangeNote": "Dates are YYYY-MM-DD, inclusive in America/Caracas. An invalid range returns 422 with no partial data.",
+    "scopeNoteAgency": "Only payments from your agency are shown.",
+    "scopeNotePlatform": "In platform mode, no agency shows all agencies; choosing one filters to that agency."
   },
   "notFound": {
     "title": "Page not found",

@@ -1,5 +1,9 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
+import { ReportsController } from "../reports/reports.controller.js";
+import { ReportsGuard } from "../reports/reports.guard.js";
+import { ReportsService } from "../reports/reports.service.js";
+import { TenantModule } from "../tenant/tenant.module.js";
 import { AdminTwoFactorGuard } from "./admin-two-factor.guard.js";
 import { OrganizationsController } from "./organizations.controller.js";
 
@@ -12,7 +16,12 @@ import { OrganizationsController } from "./organizations.controller.js";
  * (T-F1-5).
  */
 @Module({
-  controllers: [OrganizationsController],
-  providers: [{ provide: APP_GUARD, useClass: AdminTwoFactorGuard }],
+  imports: [TenantModule],
+  controllers: [OrganizationsController, ReportsController],
+  providers: [
+    { provide: APP_GUARD, useClass: AdminTwoFactorGuard },
+    ReportsService,
+    ReportsGuard,
+  ],
 })
 export class AdminModule {}

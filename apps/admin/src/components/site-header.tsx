@@ -70,6 +70,11 @@ export async function SiteHeader() {
               {t("users")}
             </Link>
           ) : null}
+          {audit.visible ? (
+            <Link href="/admin/reports" style={{ fontSize: 14, color: "var(--caribe-ink)" }}>
+              {t("reports")}
+            </Link>
+          ) : null}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LanguageSwitcher />

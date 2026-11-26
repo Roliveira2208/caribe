@@ -13,6 +13,7 @@
     "rates": "Tasas",
     "audit": "Auditoría",
     "users": "Usuarios y roles",
+    "reports": "Reportes",
     "skipToContent": "Saltar al contenido principal"
   },
   "metadata": {
@@ -422,6 +423,38 @@
       "stringLen": "{label} debe tener {len} caracteres",
       "patternMismatch": "{label} no coincide con el patrón {pattern}"
     }
+  },
+  "reports": {
+    "title": "Reporte de ventas",
+    "description": "Totales y desglose calculados en el servidor con los importes y la tasa congelados de cada pago.",
+    "activeAgency": "Agencia activa: {agency}",
+    "filterFrom": "Desde",
+    "filterTo": "Hasta",
+    "filterAgency": "Agencia",
+    "allAgencies": "Todas las agencias",
+    "apply": "Aplicar",
+    "downloadCsv": "Descargar CSV",
+    "csvFileName": "reporte-de-ventas.csv",
+    "totalsTitle": "Totales del rango",
+    "totalUsd": "Total USD",
+    "totalVes": "Total VES · montos congelados",
+    "paymentCount": "Pagos en rango",
+    "breakdownTitle": "Desglose por método y estado",
+    "colMethod": "Método",
+    "colStatus": "Estado",
+    "colCount": "Recuento",
+    "colAmountUsd": "Suma USD",
+    "colAmountVes": "Suma VES",
+    "empty": "Sin pagos en el rango: totales 0.00 y ninguna fila inventada.",
+    "loading": "Cargando…",
+    "forbidden": "Tu rol no puede consultar el reporte de ventas.",
+    "twoFactorRequired": "Activa el segundo factor para consultar el reporte.",
+    "validationError": "Revisa el rango de fechas e inténtalo de nuevo.",
+    "genericError": "No se pudo cargar el reporte. Inténtalo de nuevo.",
+    "csvError": "No se pudo descargar el CSV. Inténtalo de nuevo.",
+    "rangeNote": "Fechas AAAA-MM-DD, inclusivas en America/Caracas. Un rango inválido responde 422 sin datos parciales.",
+    "scopeNoteAgency": "Solo se muestran los pagos de tu agencia.",
+    "scopeNotePlatform": "En plataforma, sin agencia se muestran todas; al elegir una se filtra a esa agencia."
   },
   "notFound": {
     "title": "Página no encontrada",
