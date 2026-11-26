@@ -355,9 +355,12 @@ Evidencia del reporte de ventas y del listado de agencias que puebla su filtro:
 
 - `apps/api/test/reports.e2e.ts` → **5/5**: rango inclusivo y agencia permitida, totales calculados en
   el servidor con importes y tasa congelados, desglose por método y estado, alcance por rol y CSV por
-  la misma ruta con encabezados es/en.
-- `apps/api/test/organizations-admin.e2e.ts` → **1/1**: el Super Admin sin membresías ve todas las
-  agencias (`id`, `name`, `slug`, sin secretos ni memberships) y un owner recibe 403.
+  la misma ruta con encabezados es/en. La matriz incluye un admin de agencia (miembro con rol
+  `admin`, no Super Admin): recibe **200** con los totales de su agencia y no ve los de otra aunque pida
+  `agencyId`; agent, provider y member reciben **403** sin datos, y el Super Admin ve todas.
+- `apps/api/test/organizations-admin.e2e.ts` → **3/3**: el Super Admin sin membresías ve todas las
+  agencias (`id`, `name`, `slug`, sin secretos ni memberships); owner y admin de agencia con agencia
+  activa reciben **403** en `GET /admin/organizations`, porque ese selector es solo de plataforma.
 - `apps/api/test/active-membership.e2e.ts` → **2/2** con el inventario sin cambios: la ruta de
   agencias es de plataforma y no consume la agencia activa, así que no pertenece a ese inventario.
 - `apps/api/test/reports-csv.test.ts` → **3/3**: el CSV prefija con `'` las celdas que empiezan por

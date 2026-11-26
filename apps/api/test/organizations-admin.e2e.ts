@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp, type ApiApplication } from "../src/bootstrap.js";
 import { prisma } from "../src/prisma.js";
-import { authOrigin, createAgency, userWithTotp } from "./auth-helpers.js";
+import { addMember, authOrigin, createAgency, setActiveOrg, userWithTotp } from "./auth-helpers.js";
 
 /**
  * E2E del listado de agencias para el filtro de reportes (T-F2-23, delta de
- * auth-access). El Super Admin sin membresías ve TODAS las agencias; un rol de
- * agencia recibe 403 y no obtiene opciones.
+ * auth-access). El Super Admin sin membresías ve TODAS las agencias; owner y
+ * admin de agencia reciben 403 y no obtienen opciones, aunque tengan agencia
+ * activa y puedan consultar su propio reporte de ventas.
  */
 interface AgencyOption {
   id: string;
@@ -24,6 +25,7 @@ describe("auth-access › listado de agencias para el filtro de reportes", () =>
   const orgIds: string[] = [];
   let superCookie = "";
   let ownerCookie = "";
+  let agencyAdminCookie = "";
 
   beforeAll(async () => {
     app = await createApp();
@@ -39,6 +41,12 @@ describe("auth-access › listado de agencias para el filtro de reportes", () =>
     );
     orgIds.push(agencyA.id);
     ownerCookie = owner.cookie;
+
+    const agencyAdmin = await userWithTotp(baseUrl, `admin-org-list-${suffix}@example.com`);
+    userIds.push(agencyAdmin.userId);
+    await addMember(agencyA.id, agencyAdmin.userId, "admin");
+    await setActiveOrg(baseUrl, agencyAdmin.cookie, agencyA.id);
+    agencyAdminCookie = agencyAdmin.cookie;
 
     const otherOwner = await userWithTotp(baseUrl, `owner-org-list-b-${suffix}@example.com`);
     userIds.push(otherOwner.userId);
@@ -89,8 +97,17 @@ describe("auth-access › listado de agencias para el filtro de reportes", () =>
     expect(body.findIndex((agency) => agency.id === orgIds[0])).toBeLessThan(
       body.findIndex((agency) => agency.id === orgIds[1]),
     );
+  });
 
-    const forbidden = await call(ownerCookie);
-    expect(forbidden.status).toBe(403);
+  it("niega 403 al owner de agencia con agencia activa", async () => {
+    const response = await call(ownerCookie);
+
+    expect(response.status).toBe(403);
+  });
+
+  it("niega 403 al admin de agencia con agencia activa", async () => {
+    const response = await call(agencyAdminCookie);
+
+    expect(response.status).toBe(403);
   });
 });

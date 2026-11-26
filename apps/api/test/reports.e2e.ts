@@ -64,6 +64,7 @@ describe("reports (reporte de ventas del panel)", () => {
   const userIds: string[] = [];
   let adminACookie = "";
   let ownerACookie = "";
+  let agencyAdminCookie = "";
   let agentACookie = "";
   let providerACookie = "";
   let memberACookie = "";
@@ -121,6 +122,14 @@ describe("reports (reporte de ventas del panel)", () => {
     await addMember(orgA, ownerA.userId, "owner");
     await setActiveOrg(baseUrl, ownerA.cookie, orgA);
     ownerACookie = ownerA.cookie;
+
+    // Admin de agencia, sin rol de plataforma: según la spec aprobada lee su
+    // propio reporte, igual que el owner, pero no el de otra agencia.
+    const agencyAdmin = await userWithTotp(baseUrl, `admin-member-reports-${suffix}@example.com`);
+    userIds.push(agencyAdmin.userId);
+    await addMember(orgA, agencyAdmin.userId, "admin");
+    await setActiveOrg(baseUrl, agencyAdmin.cookie, orgA);
+    agencyAdminCookie = agencyAdmin.cookie;
 
     for (const [role, label] of [
       ["agent", "agente"],
@@ -376,6 +385,10 @@ describe("reports (reporte de ventas del panel)", () => {
     }
     const owner = await report(`?${range}`, ownerACookie);
     expect(owner.totals.count).toBe(3);
+    const agencyAdmin = await report(`?${range}`, agencyAdminCookie);
+    expect(agencyAdmin.totals).toEqual({ count: 3, amountUsd: "170.50", amountVes: "153450.00" });
+    const agencyAdminForeign = await report(`?${range}&agencyId=${orgB}`, agencyAdminCookie);
+    expect(agencyAdminForeign.totals).toEqual({ count: 0, amountUsd: "0.00", amountVes: "0.00" });
     const adminB = await report(`?${range}`, adminBCookie);
     expect(adminB.totals).toEqual({ count: 1, amountUsd: "200.00", amountVes: "180000.00" });
 
