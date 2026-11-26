@@ -45,4 +45,5 @@ idioma, los encabezados SHALL salir de `es`.
 - THEN las filas y los totales coinciden con el JSON del reporte y respetan el alcance por rol
 - THEN los encabezados salen de los mensajes `es` o `en` según el idioma activo, y por defecto de `es` sin preferencia explícita
 - THEN el archivo no contiene números de tarjeta, CVV, tokens, credenciales ni valores de secretos
+- THEN toda celda cuyo primer carácter sea `=`, `+`, `-` o `@` se escribe con un apóstrofo como prefijo para que Excel y Sheets la abran como texto y no como fórmula
 - THEN en el MVP no hay límite de filas ni paginación del CSV

@@ -215,6 +215,9 @@ cursor. La IP se muestra como «—» cuando sea `null`.
 - Decisión aprobada durante T-F2-23: el selector de agencia del Super Admin usa la nueva ruta de
   plataforma `GET /admin/organizations` en lugar de `/api/auth/organization/list`, porque esta última
   solo devuelve membresías y no basta para consultar todas las agencias.
+- Ajuste de seguridad del CSV aprobado tras la revisión de T-F2-23: además de comas, comillas y saltos
+  de línea, cada celda que empiece por `=`, `+`, `-` o `@` se prefija con `'` para evitar inyección de
+  fórmulas al abrir el archivo en Excel o Sheets. No cambia filtros, totales ni contrato de la ruta.
 - Decisiones aprobadas antes de T-F2-23 (delta `reports`): el CSV se sirve por
   `GET /admin/reports/sales?format=csv` sin nueva ruta; los totales suman todos los estados del rango;
   en el MVP no hay límite de filas y, sin preferencia explícita de idioma, los encabezados son `es`. El
