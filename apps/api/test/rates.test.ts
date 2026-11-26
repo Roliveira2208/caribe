@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   isValidRateText,
   parseRateText,
@@ -350,6 +350,85 @@ describe("servicio de tasas", () => {
     await expect(service.globalRate(shiftDate(today, -2))).rejects.toMatchObject({
       code: "RATE_UNAVAILABLE",
     });
+  });
+
+  it("override con fecha valor futura no se aplica antes y el refresco no lo pisa al llegar", async () => {
+    const today = todayInCaracas();
+    const future = shiftDate(today, 2);
+    const actor = { tenantId: "org-a", userId: "user-a", isPlatform: false };
+    // El override se crea hoy con fecha valor futura: `fetched_at` es hoy,
+    // aunque la fecha a la que aplica sea pasada mañana.
+    const overrideFuture = {
+      ...rowAt("override-agency-future", future, "940.0000", "org-a"),
+      fetchedAt: new Date(`${today}T12:00:00.000Z`),
+    };
+
+    const { tx: txBefore } = fakeTx([
+      rowAt("global-today", today, "900.0000"),
+      overrideFuture,
+    ]);
+    const before = new ExchangeRateService(
+      fakeTenantService(txBefore),
+      failingProvider,
+      new RateCache(undefined),
+    );
+    // Antes de la fecha valor: la agencia ve la global y la futura queda guardada.
+    await expect(before.currentRate(actor)).resolves.toMatchObject({
+      scope: "agency",
+      valueDate: today,
+      rate: "900.0000",
+      isOverride: false,
+    });
+    await expect(before.agencyRate("org-a", future)).resolves.toMatchObject({
+      valueDate: future,
+      rate: "940.0000",
+      isOverride: true,
+    });
+
+    // Llega la fecha valor: el refresco perezoso consulta al proveedor porque
+    // la fila global se consultó ayer, pero no debe pisar el override.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(`${future}T12:00:00.000Z`));
+      let calls = 0;
+      const provider = {
+        getRate: async (date: string) => {
+          calls += 1;
+          return { rate: "910.0000", valueDate: date };
+        },
+      };
+      const { tx: txAfter, executed } = fakeTx([
+        rowAt("global-today", today, "900.0000"),
+        overrideFuture,
+      ]);
+      const after = new ExchangeRateService(
+        fakeTenantService(txAfter),
+        provider,
+        new RateCache(undefined),
+      );
+      await after.ensureTodayRate();
+      expect(calls).toBe(1);
+      expect(executed).toHaveLength(1);
+      const sql = (executed[0] as { strings: readonly string[] }).strings.join("?");
+      expect(sql).toContain('"tenant_id" IS NULL');
+      expect(sql).toContain('"exchange_rates"."is_override" = false');
+
+      // Precedencia agencia > global > BCV: en su fecha el override gana y la
+      // lectura de plataforma sigue siendo la fila global, sin filtrar la agencia.
+      await expect(after.agencyRate("org-a", future)).resolves.toMatchObject({
+        scope: "agency",
+        valueDate: future,
+        rate: "940.0000",
+        isOverride: true,
+      });
+      await expect(after.globalRate(future)).resolves.toMatchObject({
+        scope: "platform",
+        rate: "900.0000",
+        isOverride: false,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("sin ninguna fila y fuente caída responde RATE_UNAVAILABLE", async () => {
