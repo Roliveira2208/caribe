@@ -618,6 +618,47 @@ describe("products admin", () => {
       expect(siblingBody.basePriceUsd).toBe("120.00");
     });
 
+    it("la propagación del hotel no alcanza los tipos de otro proveedor", async () => {
+      const hotelKey = randomUUID();
+      const own = await call("POST", "/admin/products", adminCookie, {
+        ...validCreate(),
+        hotelKey,
+        providerId: provider1,
+        roomType: "propia",
+      });
+      expect(own.status).toBe(201);
+      const ownBody = await json<PanelProductBody>(own);
+
+      const other = await call("POST", "/admin/products", adminCookie, {
+        ...validCreate(),
+        hotelKey,
+        providerId: provider2,
+        roomType: "ajena",
+        title: titleOther,
+      });
+      expect(other.status).toBe(201);
+      const otherBody = await json<PanelProductBody>(other);
+      expect(otherBody.title).toEqual(titleOther);
+
+      const update = await call("PUT", `/admin/products/${ownBody.id}`, provider1Cookie, {
+        title: { es: "Solo mi hotel", en: "Only my hotel" },
+        attributes: {
+          stars: 5,
+          maxGuests: 3,
+          amenities: ["spa"],
+          images: [image],
+        },
+      });
+      expect(update.status).toBe(200);
+
+      const untouched = await call("GET", `/admin/products/${otherBody.id}`, adminCookie);
+      await expect(json<PanelProductBody>(untouched)).resolves.toMatchObject({
+        id: otherBody.id,
+        title: titleOther,
+        attributes: { stars: 4, maxGuests: 2, amenities: ["wifi"], images: [image] },
+      });
+    });
+
     it("el proveedor no edita el producto de otro proveedor y el admin sí", async () => {
       const forbidden = await call("PUT", `/admin/products/${draftOther}`, provider1Cookie, {
         basePriceUsd: "99.00",

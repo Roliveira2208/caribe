@@ -174,6 +174,14 @@ export class ProductsAdminService {
     const product = await this.run(actor, async (tx) => {
       const current = await this.findProduct(tx, actor, id);
       const tenantId = this.requireTenant(actor);
+      const providerId = await this.providerScope(tx, actor);
+      // La propagación por hotel no puede alcanzar productos que el actor no puede editar.
+      const hotelScope: Prisma.ProductWhereInput = {
+        tenantId,
+        hotelKey: current.hotelKey,
+        deletedAt: null,
+        ...(providerId !== null ? { providerId } : {}),
+      };
 
       if (body.destinationId !== undefined) {
         await this.assertDestination(tx, tenantId, body.destinationId);
@@ -184,14 +192,14 @@ export class ProductsAdminService {
 
       if (body.title !== undefined) {
         await tx.product.updateMany({
-          where: { tenantId, hotelKey: current.hotelKey, deletedAt: null },
+          where: hotelScope,
           data: { title: localizedJson(body.title) },
         });
       }
 
       if (body.attributes !== undefined) {
         const siblings = await tx.product.findMany({
-          where: { tenantId, hotelKey: current.hotelKey, deletedAt: null },
+          where: hotelScope,
           select: { id: true, attributes: true },
         });
         for (const sibling of siblings) {
