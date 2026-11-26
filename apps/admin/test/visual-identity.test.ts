@@ -93,9 +93,11 @@ describe("identidad visual del panel (T-F2-6)", () => {
   it("Cabecera del panel: marca, navegación, idioma y sesión desde mensajes", () => {
     const header = read("apps/admin/src/components/site-header.tsx");
     expect(header).toContain('getTranslations("nav")');
-    for (const key of ["appName", "tagline", "payments"]) {
+    for (const key of ["appName", "tagline"]) {
       expect(header).toContain(`t("${key}")`);
     }
+    expect(header).toContain("t(module)");
+    expect(read("apps/admin/src/lib/panel-navigation.ts")).toContain('"payments"');
     expect(header).toContain("<LanguageSwitcher />");
     expect(header).toContain("<SessionNav />");
     expect(header).not.toContain("Caribe Admin");

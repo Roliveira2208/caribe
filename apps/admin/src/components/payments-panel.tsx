@@ -35,6 +35,7 @@ import {
   type PaymentFilterStatus,
   type PaymentPanelAccess,
 } from "@/lib/payments-client";
+import { deniedStatusOf } from "@/lib/denied-data";
 
 interface PaymentsPanelProps {
   locale: Locale;
@@ -76,8 +77,13 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
           router.replace(`/${locale}/two-factor?redirectTo=${encodeURIComponent(redirectTo)}`);
           return;
         }
-        if (cause.status === 403) {
-          setNotice({ kind: "error", message: t("forbidden") });
+        const denied = deniedStatusOf(cause);
+        if (denied !== null) {
+          setPages([]);
+          setNotice({
+            kind: "error",
+            message: denied === "forbidden" ? t("forbidden") : t("genericError"),
+          });
           return;
         }
         if (isReviewConflict(cause)) {

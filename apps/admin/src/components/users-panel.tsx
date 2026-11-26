@@ -32,6 +32,7 @@ import {
   type SessionItem,
   type UsersPanelAccess,
 } from "@/lib/users-client";
+import { deniedStatusOf } from "@/lib/denied-data";
 
 interface UsersPanelProps {
   locale: Locale;
@@ -78,6 +79,9 @@ export function UsersPanel({ locale, access, agencyName }: UsersPanelProps) {
     (cause: unknown) => {
       if (cause instanceof AuthApiError) {
         if (isUsersOrganizationError(cause)) {
+          setOrganizations([]);
+          setMembers([]);
+          setSessions([]);
           setNotice({ kind: "error", message: t("accessDenied") });
           return;
         }
@@ -89,12 +93,15 @@ export function UsersPanel({ locale, access, agencyName }: UsersPanelProps) {
           router.replace(`/${locale}/two-factor?redirectTo=${encodeURIComponent(redirectTo)}`);
           return;
         }
-        if (cause.status === 403) {
-          setNotice({ kind: "error", message: t("forbidden") });
-          return;
-        }
-        if (cause.status === 404) {
-          setNotice({ kind: "error", message: t("notFound") });
+        const denied = deniedStatusOf(cause);
+        if (denied !== null) {
+          setOrganizations([]);
+          setMembers([]);
+          setSessions([]);
+          setNotice({
+            kind: "error",
+            message: denied === "forbidden" ? t("forbidden") : t("notFound"),
+          });
           return;
         }
         if (cause.status === 422) {

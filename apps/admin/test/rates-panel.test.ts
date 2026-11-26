@@ -145,8 +145,9 @@ describe('exchange-rates › panel de tasas (T-F2-8/T-F2-9)', () => {
     expect(page).toContain("/admin/rates");
 
     const header = read("src/components/site-header.tsx");
-    expect(header).toContain('href="/admin/rates"');
-    expect(header).toContain('t("rates")');
+    expect(read("src/lib/panel-navigation.ts")).toContain('"rates"');
+    expect(header).toContain("PANEL_MODULES.map(navLink)");
+    expect(header).toContain("t(module)");
   });
 
   it("todos los textos del panel existen en es y en", () => {

@@ -147,8 +147,9 @@ describe("reports › panel de reportes (T-F2-23)", () => {
     expect(page).toContain("/admin/reports");
 
     const header = read("src/components/site-header.tsx");
-    expect(header).toContain('href="/admin/reports"');
-    expect(header).toContain('t("reports")');
+    expect(read("src/lib/panel-navigation.ts")).toContain('"reports"');
+    expect(header).toContain("PANEL_MODULES.map(navLink)");
+    expect(header).toContain("t(module)");
   });
 
   it("todos los textos del panel existen en es y en", () => {

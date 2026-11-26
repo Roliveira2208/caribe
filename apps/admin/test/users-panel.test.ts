@@ -78,7 +78,8 @@ describe('auth-access › escenarios del panel de usuarios y roles (T-F2-21)', (
     expect(panel).not.toContain("{session.token}");
     expect(panel).not.toContain("{session.ipAddress}");
     expect(panel).toContain('t("ipHidden")');
-    expect(read("src/components/site-header.tsx")).toContain('href="/admin/users"');
+    expect(read("src/lib/panel-navigation.ts")).toContain('"users"');
+    expect(read("src/components/site-header.tsx")).toContain("PANEL_MODULES.map(navLink)");
   });
 
   it("saca todos los textos visibles de es y en", () => {

@@ -375,3 +375,29 @@ Evidencia del reporte de ventas y del listado de agencias que puebla su filtro:
 
 Las observaciones F4 y F5 siguen siendo no bloqueantes. `scope.md` queda actualizado en 78 escenarios
 y 64 obligatorios tras añadir el scenario de `auth-access`.
+
+## 6. Matriz F1 en la UI (T-F2-24)
+
+Evidencia de los dos escenarios obligatorios de `admin-ui`:
+
+- `apps/admin/src/lib/panel-navigation.ts` centraliza los seis módulos del panel y
+  `resolvePanelModules(status, role)` deriva la navegación de la matriz F1: owner y admin ven todo,
+  agente ve catálogo/pagos/tasas, proveedor ve catálogo/tasas, `member` no ve ninguno y el Super Admin
+  entra en modo plataforma con todos los módulos en solo lectura. El inventario no incluye módulo de
+  reservas ni enlace o resumen de reservas.
+- `apps/admin/src/components/site-header.tsx` solo pinta los módulos resueltos
+  (`PANEL_MODULES.map(navLink)`) con las etiquetas `nav.*` en es/en. Antes ofrecía catálogo, pagos y
+  tasas a cualquier sesión, incluido un `member` sin `booking:read`.
+- `apps/admin/src/lib/denied-data.ts` clasifica 403 y 404. Catálogo, pagos, tasas, reportes y usuarios
+  descartan filas, importes, historial y resúmenes del recurso antes de mostrar el aviso localizado;
+  auditoría ya lo hacía con su estado `forbidden`. Las respuestas tardías se descartan con
+  `generation.current` en catálogo y pagos.
+- `apps/admin/test/panel-navigation.test.ts` → **11/11**: matriz por rol, ausencia de reservas,
+  cabecera derivada y limpieza ante 403/404. Falló en rojo antes de crear los dos módulos nuevos.
+- Suite de admin → **21 archivos / 200 tests en verde**. Seis tests de pantalla existentes se ajustaron
+  a la navegación derivada sin cambiar sus contratos. `pnpm lint`, `pnpm typecheck`, `pnpm test`,
+  `node scripts/check-specs.mjs` (15 specs) y `openspec validate --all` (16 passed, 0 failed) en verde.
+- Observación informativa: el inventario del proveedor sigue limitado por `viewerProviderId` de la API
+  (`catalog-client.ts` y `catalog-panel.tsx`), nunca por un id elegido por el cliente. El panel F2 no
+  tiene pantalla de reservas; la matriz F1 se materializa ocultando cualquier resumen de reservas,
+  como indica `design.md:137-139`.

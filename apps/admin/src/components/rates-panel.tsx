@@ -29,6 +29,7 @@ import {
   type RateAccessMode,
   type RateAudit,
 } from "@/lib/rates-client";
+import { deniedStatusOf } from "@/lib/denied-data";
 
 interface RatesPanelProps {
   locale: Locale;
@@ -74,11 +75,19 @@ export function RatesPanel({ locale, mode, role, agencyName }: RatesPanelProps) 
           router.replace(`/${locale}/two-factor?redirectTo=${encodeURIComponent(redirectTo)}`);
           return;
         }
-        if (cause.status === 403) {
-          setNotice({ kind: "error", message: t("forbidden") });
+        const denied = deniedStatusOf(cause);
+        if (denied !== null) {
+          setCurrent(null);
+          setHistory([]);
+          setNotice({
+            kind: "error",
+            message: denied === "forbidden" ? t("forbidden") : t("rateUnavailable"),
+          });
           return;
         }
-        if (cause.status === 404 || cause.status === 503) {
+        if (cause.status === 503) {
+          setCurrent(null);
+          setHistory([]);
           setNotice({ kind: "error", message: t("rateUnavailable") });
           return;
         }

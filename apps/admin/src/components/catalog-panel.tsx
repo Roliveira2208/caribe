@@ -34,6 +34,7 @@ import {
   type CatalogProductStatus,
   type CatalogPanelAccess,
 } from "@/lib/catalog-client";
+import { deniedStatusOf } from "@/lib/denied-data";
 
 interface CatalogPanelProps {
   locale: Locale;
@@ -136,12 +137,19 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
           router.replace(`/${locale}/two-factor?redirectTo=${encodeURIComponent(redirectTo)}`);
           return;
         }
-        if (cause.status === 403) {
-          setNotice({ kind: "error", message: listing ? t("readOnly") : t("forbidden") });
-          return;
-        }
-        if (cause.status === 404) {
-          setNotice({ kind: "error", message: t("notFound") });
+        const denied = deniedStatusOf(cause);
+        if (denied !== null) {
+          setPages([]);
+          setViewerProviderId(null);
+          setNotice({
+            kind: "error",
+            message:
+              denied === "forbidden"
+                ? listing
+                  ? t("readOnly")
+                  : t("forbidden")
+                : t("notFound"),
+          });
           return;
         }
         if (cause.status === 422) {

@@ -21,6 +21,7 @@ import {
   type SalesReportFilters,
   type SalesReportRow,
 } from "@/lib/reports-client";
+import { deniedStatusOf } from "@/lib/denied-data";
 
 interface ReportsPanelProps {
   locale: Locale;
@@ -84,8 +85,14 @@ export function ReportsPanel({ locale, mode, role, agencyName }: ReportsPanelPro
           setNotice({ kind: "error", message: t("validationError") });
           return;
         }
-        if (cause.status === 403) {
-          setNotice({ kind: "error", message: t("forbidden") });
+        const denied = deniedStatusOf(cause);
+        if (denied !== null) {
+          setReport(null);
+          setAgencies([]);
+          setNotice({
+            kind: "error",
+            message: denied === "forbidden" ? t("forbidden") : fallback,
+          });
           return;
         }
       }

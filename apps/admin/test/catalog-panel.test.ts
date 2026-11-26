@@ -191,6 +191,7 @@ describe("catalog › pantalla del panel (T-F2-18)", () => {
     for (const key of keys.filter((entry) => entry.startsWith("catalog."))) {
       expect(panel, `el panel no usa "${key}"`).toContain(`t("${key.slice("catalog.".length)}"`);
     }
-    expect(read("src/components/site-header.tsx")).toContain('href="/admin/catalog"');
+    expect(read("src/lib/panel-navigation.ts")).toContain('"catalog"');
+    expect(read("src/components/site-header.tsx")).toContain("PANEL_MODULES.map(navLink)");
   });
 });

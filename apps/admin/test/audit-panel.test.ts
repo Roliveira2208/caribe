@@ -103,14 +103,16 @@ describe("visor de auditoría del admin (T-F2-15)", () => {
 
   it("la matriz se resuelve en servidor y bloquea resumen y enlaces", () => {
     expect(access).toContain("export async function loadAuditActor");
-    for (const file of [rootPage, auditPage, header]) {
+    for (const file of [rootPage, auditPage]) {
       expect(file).toContain("resolveAuditAccess");
     }
     expect(rootPage).toContain("canRead");
     expect(auditPage).toContain("canRead");
-    expect(header).toContain("audit.visible");
+    expect(header).toContain("resolvePanelModules(actor.status, actor.role)");
+    expect(header).toContain('href={`/admin/${module}`}');
     expect(rootPage).toContain("loadActiveMemberRole");
     expect(auditPage).toContain("PanelAccessNotice");
-    expect(header).toContain('t("audit")');
+    expect(header).toContain("t(module)");
+    expect(read("src/lib/panel-navigation.ts")).toContain('"audit"');
   });
 });
