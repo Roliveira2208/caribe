@@ -288,6 +288,8 @@
     "from": "From",
     "to": "To",
     "apply": "Apply",
+    "newNight": "New night",
+    "addNight": "Add night",
     "colNight": "Night",
     "colCapacity": "Capacity",
     "colReserved": "Reserved",

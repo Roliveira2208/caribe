@@ -403,6 +403,26 @@ function validateAvailabilityNight(night: CatalogAvailabilityInput): void {
 }
 
 /**
+ * Fila nueva del editor de noches. Valida el texto del formulario sin inventar
+ * importes: `reserved` nace en cero y el servidor es quien lo gestiona después.
+ */
+export function newAvailabilityNight(input: {
+  night: string;
+  capacity: string;
+  priceUsd: string;
+}): CatalogAvailabilityNight | null {
+  if (!DATE_PATTERN.test(input.night)) return null;
+  const date = new Date(`${input.night}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== input.night) {
+    return null;
+  }
+  const capacity = Number(input.capacity);
+  if (!Number.isInteger(capacity) || capacity < 1) return null;
+  if (!MONEY_PATTERN.test(input.priceUsd) || Number(input.priceUsd) <= 0) return null;
+  return { night: input.night, capacity, reserved: 0, priceUsd: input.priceUsd };
+}
+
+/**
  * POST /admin/products/:id/availability: el cuerpo se construye campo por
  * campo. `reserved` y cualquier importe calculado se rechazan antes de `fetch`.
  */

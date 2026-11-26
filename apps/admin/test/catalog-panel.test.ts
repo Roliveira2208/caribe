@@ -79,6 +79,23 @@ describe("catalog › pantalla del panel (T-F2-18)", () => {
     }
   });
 
+  it("el modal de disponibilidad permite dar de alta noches nuevas", () => {
+    const panel = read("src/components/catalog-panel.tsx");
+    for (const fragment of [
+      't("newNight")',
+      't("addNight")',
+      "newAvailabilityNight(",
+      "setAvailabilityNights(",
+      "catalog-new-night-night",
+      "catalog-new-night-capacity",
+      "catalog-new-night-price",
+    ]) {
+      expect(panel, `falta "${fragment}" en el panel`).toContain(fragment);
+    }
+    // El cliente construye la fila nueva con reserved=0; el panel no lo calcula.
+    expect(panel).not.toContain("reserved: 0");
+  });
+
   it("todas las etiquetas usadas por la pantalla salen de es y en", () => {
     const keys = [
       "nav.catalog",
@@ -117,6 +134,8 @@ describe("catalog › pantalla del panel (T-F2-18)", () => {
       "catalog.from",
       "catalog.to",
       "catalog.apply",
+      "catalog.newNight",
+      "catalog.addNight",
       "catalog.colNight",
       "catalog.colCapacity",
       "catalog.colReserved",

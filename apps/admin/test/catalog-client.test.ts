@@ -5,6 +5,7 @@ import {
   createCatalogProduct,
   listCatalogAvailability,
   listCatalogProducts,
+  newAvailabilityNight,
   publishCatalogProduct,
   resolveCatalogPanelAccess,
   updateCatalogProduct,
@@ -283,6 +284,51 @@ describe('catalog › "Lectura de disponibilidad del panel" (T-F2-19)', () => {
     await expect(
       listCatalogAvailability(draft.id, {}, { fetchImpl: forbidden }),
     ).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+});
+
+describe('catalog › "Disponibilidad por noche" (T-F2-19b)', () => {
+  it("prepara una noche nueva con precio decimal y reserved cero del servidor", () => {
+    expect(
+      newAvailabilityNight({ night: "2026-12-01", capacity: "5", priceUsd: "120.50" }),
+    ).toEqual({ night: "2026-12-01", capacity: 5, priceUsd: "120.50", reserved: 0 });
+  });
+
+  it("rechaza localmente fechas, cupo y precios inválidos sin crear la fila", () => {
+    for (const input of [
+      { night: "no-es-fecha", capacity: "5", priceUsd: "120.50" },
+      { night: "2026-12-01", capacity: "0", priceUsd: "120.50" },
+      { night: "2026-12-01", capacity: "5", priceUsd: "120,50" },
+      { night: "2026-12-01", capacity: "5", priceUsd: "0" },
+    ]) {
+      expect(newAvailabilityNight(input)).toBeNull();
+    }
+  });
+
+  it("envía la noche nueva junto a las existentes sin campos calculados", async () => {
+    const created = newAvailabilityNight({
+      night: "2026-12-01",
+      capacity: "5",
+      priceUsd: "120.50",
+    });
+    expect(created).not.toBeNull();
+    if (!created) throw new Error("la noche nueva debería ser válida");
+    const fetchImpl = fetchSpy(json({ productId: draft.id, nights: [created] }));
+    await writeCatalogAvailability(
+      draft.id,
+      [
+        { night: "2026-11-27", capacity: 5, priceUsd: "130.00" },
+        // El panel solo envía los tres campos admitidos; `reserved` no viaja.
+        { night: created.night, capacity: created.capacity, priceUsd: created.priceUsd },
+      ],
+      { fetchImpl },
+    );
+    const [, init] = vi.mocked(fetchImpl).mock.calls[0] ?? [];
+    const body = JSON.parse(String(init?.body)) as { nights: Array<Record<string, unknown>> };
+    expect(body.nights).toEqual([
+      { night: "2026-11-27", capacity: 5, priceUsd: "130.00" },
+      { night: "2026-12-01", capacity: 5, priceUsd: "120.50" },
+    ]);
   });
 });
 

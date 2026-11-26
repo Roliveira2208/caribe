@@ -288,6 +288,8 @@
     "from": "Desde",
     "to": "Hasta",
     "apply": "Aplicar",
+    "newNight": "Nueva noche",
+    "addNight": "Añadir noche",
     "colNight": "Noche",
     "colCapacity": "Cupo",
     "colReserved": "Reservadas",

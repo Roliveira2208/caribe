@@ -22,6 +22,7 @@ import {
   createCatalogProduct,
   listCatalogAvailability,
   listCatalogProducts,
+  newAvailabilityNight,
   publishCatalogProduct,
   resolveCatalogPanelAccess,
   updateCatalogProduct,
@@ -85,6 +86,8 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
   const [availabilityDraft, setAvailabilityDraft] = useState<
     Record<string, { capacity: string; priceUsd: string }>
   >({});
+  const [newNightOpen, setNewNightOpen] = useState(false);
+  const [newNight, setNewNight] = useState({ night: "", capacity: "", priceUsd: "" });
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
   const generation = useRef(0);
@@ -300,7 +303,32 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
     setAvailabilityRange(range);
     setAvailabilityNights([]);
     setAvailabilityDraft({});
+    setNewNightOpen(false);
+    setNewNight({ night: "", capacity: "", priceUsd: "" });
     void applyAvailability(product, range);
+  }
+
+  function addNewNight(): void {
+    const created = newAvailabilityNight(newNight);
+    if (!created) {
+      setNotice({ kind: "error", message: t("validationError") });
+      return;
+    }
+    if (availabilityNights.some((night) => night.night === created.night)) {
+      setNotice({ kind: "error", message: t("duplicatedNight") });
+      return;
+    }
+    setAvailabilityNights((previous) => [...previous, created]);
+    setAvailabilityDraft((previous) => ({
+      ...previous,
+      [created.night]: {
+        capacity: String(created.capacity),
+        priceUsd: created.priceUsd,
+      },
+    }));
+    setNewNight({ night: "", capacity: "", priceUsd: "" });
+    setNewNightOpen(false);
+    setNotice(null);
   }
 
   async function applyAvailability(
@@ -597,6 +625,45 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
           <Button disabled={busy} onClick={() => void applyAvailability()}>
             {t("apply")}
           </Button>
+        </Space>
+        <Space wrap style={{ marginBottom: 12 }}>
+          <Button disabled={busy} onClick={() => setNewNightOpen((previous) => !previous)}>
+            {t("newNight")}
+          </Button>
+          {newNightOpen ? (
+            <>
+              <label htmlFor="catalog-new-night-night">{t("colNight")}</label>
+              <Input
+                id="catalog-new-night-night"
+                type="date"
+                value={newNight.night}
+                onChange={(event) =>
+                  setNewNight((previous) => ({ ...previous, night: event.target.value }))
+                }
+              />
+              <label htmlFor="catalog-new-night-capacity">{t("colCapacity")}</label>
+              <Input
+                id="catalog-new-night-capacity"
+                inputMode="numeric"
+                value={newNight.capacity}
+                onChange={(event) =>
+                  setNewNight((previous) => ({ ...previous, capacity: event.target.value }))
+                }
+              />
+              <label htmlFor="catalog-new-night-price">{t("colNightPrice")}</label>
+              <Input
+                id="catalog-new-night-price"
+                inputMode="decimal"
+                value={newNight.priceUsd}
+                onChange={(event) =>
+                  setNewNight((previous) => ({ ...previous, priceUsd: event.target.value }))
+                }
+              />
+              <Button disabled={busy} onClick={addNewNight}>
+                {t("addNight")}
+              </Button>
+            </>
+          ) : null}
         </Space>
         <Table
           rowKey="night"
