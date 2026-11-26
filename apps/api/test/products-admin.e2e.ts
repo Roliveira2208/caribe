@@ -657,6 +657,35 @@ describe("products admin", () => {
         title: titleOther,
         attributes: { stars: 4, maxGuests: 2, amenities: ["wifi"], images: [image] },
       });
+
+      // La misma clave en otra agencia tampoco habilita al proveedor de A.
+      const foreign = await call("POST", "/admin/products", providerBCookie, {
+        ...validCreate(),
+        hotelKey,
+        destinationId: destB,
+        roomType: "ajena-b",
+        title: titleB,
+      });
+      expect(foreign.status).toBe(201);
+      const foreignBody = await json<PanelProductBody>(foreign);
+      const directEdit = await call("PUT", `/admin/products/${foreignBody.id}`, provider1Cookie, {
+        title: { es: "Invasor", en: "Invader" },
+      });
+      const missing = await call("GET", `/admin/products/${randomUUID()}`, provider1Cookie);
+      const [directBody, missingBody] = await Promise.all([
+        expectProblem(directEdit, 404, "NOT_FOUND"),
+        expectProblem(missing, 404, "NOT_FOUND"),
+      ]);
+      expect(directBody.detail).toBe(missingBody.detail);
+      const untouchedForeign = await call(
+        "GET",
+        `/admin/products/${foreignBody.id}`,
+        providerBCookie,
+      );
+      await expect(json<PanelProductBody>(untouchedForeign)).resolves.toMatchObject({
+        id: foreignBody.id,
+        title: titleB,
+      });
     });
 
     it("el proveedor no edita el producto de otro proveedor y el admin sí", async () => {
@@ -1016,7 +1045,17 @@ describe("products admin", () => {
       await expectProblem(await write(nights, superCookie), 403, "FORBIDDEN");
       await expectProblem(await write(nights, ""), 401, "UNAUTHENTICATED");
 
-      await expectProblem(await read(draftOther, provider1Cookie), 404, "NOT_FOUND");
+      const foreignRead = await read(draftOther, provider1Cookie);
+      const missingRead = await call(
+        "GET",
+        `/admin/products/${randomUUID()}/availability${range}`,
+        provider1Cookie,
+      );
+      const [foreignBody, missingBody] = await Promise.all([
+        expectProblem(foreignRead, 404, "NOT_FOUND"),
+        expectProblem(missingRead, 404, "NOT_FOUND"),
+      ]);
+      expect(foreignBody.detail).toBe(missingBody.detail);
       await expectProblem(await read(draftAgencyB, adminCookie), 404, "NOT_FOUND");
       await expectProblem(await read(availabilityProductId, agentCookie), 403, "FORBIDDEN");
       await expectProblem(await read(availabilityProductId, ""), 401, "UNAUTHENTICATED");

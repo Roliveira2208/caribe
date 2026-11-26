@@ -20,12 +20,12 @@
 | `exchange-rates` | delta ADDED | 12 | 9 | 3 |
 | `payments` | delta ADDED | 12 | 8 | 4 |
 | `audit` | delta ADDED | 10 | 6 | 4 |
-| `catalog` | delta ADDED | 7 | 7 | 0 |
+| `catalog` | delta ADDED | 8 | 8 | 0 |
 | `auth-access` | delta ADDED | 6 | 6 | 0 |
 | `admin-ui` | spec base nueva | 10 | 7 | 3 |
 | `reports` | spec base nueva | 5 | 5 | 0 |
 | `security` | spec base nueva | 13 | 13 | 0 |
-| **Total** | | **75** | **61** | **14** |
+| **Total** | | **77** | **63** | **14** |
 
 Las specs base nuevas se crean desde el principio (spec primero) para que `tasks.md` pueda referenciar
 dominios existentes y `scripts/check-specs.mjs` siga en verde durante la change. Los deltas se fusionan

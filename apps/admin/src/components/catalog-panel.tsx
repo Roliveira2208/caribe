@@ -541,7 +541,10 @@ export function CatalogPanel({ locale, access: baseAccess, agencyName }: Catalog
             <Input id="catalog-destinationId" />
           </Form.Item>
           <Form.Item name="providerId" label={t("providerId")}>
-            <Input id="catalog-providerId" disabled={modal?.mode === "edit"} />
+            <Input
+              id="catalog-providerId"
+              disabled={modal?.mode === "edit" || access.role === "provider"}
+            />
           </Form.Item>
           <Form.Item name="hotelKey" label={t("hotelKey")}>
             <Input id="catalog-hotelKey" disabled={modal?.mode === "edit"} />

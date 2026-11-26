@@ -79,6 +79,14 @@ describe("catalog › pantalla del panel (T-F2-18)", () => {
     }
   });
 
+  it("el proveedor no puede elegir un proveedor ajeno al crear", () => {
+    const panel = read("src/components/catalog-panel.tsx");
+    expect(panel).toContain('access.role === "provider"');
+    expect(panel).toContain('id="catalog-providerId"');
+    // La API deriva el proveedor de la sesión; sin este guard la UI ofrecería un 403.
+    expect(panel).toContain('disabled={modal?.mode === "edit" || access.role === "provider"}');
+  });
+
   it("el modal de disponibilidad permite dar de alta noches nuevas", () => {
     const panel = read("src/components/catalog-panel.tsx");
     for (const fragment of [

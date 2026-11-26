@@ -26,7 +26,7 @@ tareas de código. Los wireframes se aprueban antes de implementar su pantalla.
 - [x] T-F2-19a Corregir la propagación por `hotel_key`: un Proveedor no modifica productos de otro proveedor. Prueba: `catalog › "Proveedor edita solo sus productos"`.
 - [x] T-F2-19b Alta de noches nuevas en el panel con el wireframe aprobado. Prueba: `catalog › "Disponibilidad por noche"`.
 - [x] T-F2-19c Completar la trazabilidad y las aserciones pendientes del catálogo. Prueba: `catalog › "Publicar y archivar producto"` y `catalog › "Precio como texto decimal"`.
-- [ ] T-F2-19d **PAUSA 3**: verificación independiente del catálogo en sesión limpia. Prueba: los 8 escenarios obligatorios de `catalog` con evidencia; informe en `verify.md`.
+- [x] T-F2-19d **PAUSA 3**: verificación independiente del catálogo en sesión limpia. Prueba: los 8 escenarios obligatorios de `catalog` con evidencia; informe en `verify.md`.
 - [x] T-F2-20 Generar y someter a aprobación `docs/wireframes/panel-usuarios-roles.svg`. Prueba: gate de aprobación antes de T-F2-21.
 - [x] T-F2-21 Usuarios y roles sobre Better Auth. Prueba: `auth-access › "Invitar miembro con segundo factor"`, `"Cambiar rol de un miembro"`, `"Revocar sesión desde el panel"`, `"Organización objetivo ajena"`, `"Super Admin en modo plataforma"` y `"Operación sin agencia activa"`.
 - [ ] T-F2-22 Generar y someter a aprobación `docs/wireframes/panel-reportes.svg`. Prueba: gate de aprobación antes de T-F2-23.

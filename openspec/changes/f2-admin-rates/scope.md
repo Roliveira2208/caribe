@@ -62,7 +62,7 @@ meter un deseable. Las dos pausas (T-F2-10 y T-F2-13) son obligatorias antes de 
 - **Deseable (4)**: Auditoría del override de tasa · Auditoría de la revisión de pagos · Auditoría del
   cambio de rol · Exportación CSV de auditoría.
 
-## catalog (7)
+## catalog (8)
 
 - **Obligatorio (8)**: Alta de producto en el panel · Edición de producto de la agencia · Proveedor
   edita solo sus productos · Publicar y archivar producto · Disponibilidad por noche · Lectura de

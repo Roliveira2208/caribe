@@ -264,3 +264,87 @@ Comprobación: `pnpm --filter @caribe/admin exec vitest run` → 12 archivos / *
 informativas o no bloqueantes; no se ha tocado specs ni dependencias.
 
 **Conclusión:** la PAUSA 2 puede cerrarse en verde. Se autoriza iniciar catálogo y usuarios/roles.
+
+---
+
+# Verificación independiente — PAUSA 3 (T-F2-19d)
+
+**Fecha:** 2026-11-26  
+**Change:** `f2-admin-rates`  
+**Alcance verificado:** catálogo del panel (T-F2-18, T-F2-19 y correctoras T-F2-19a/b/c), antes de
+reportes y de la verificación final.  
+**Veredicto:** **PASS** — 8/8 escenarios obligatorios de `catalog` con evidencia ejecutable, sin
+hallazgos Critical/High/Medium y riesgo residual bajo.  
+**Bloqueos para avanzar:** ninguno.
+
+La primera ejecución de esta pausa fue **FAIL**: H1 (la propagación por `hotel_key` alcanzaba
+productos de otro proveedor) y M1 (el panel solo editaba noches, no las creaba). H1 se cerró con la
+spec/design/tareas en `ebfecca` y el fix en `029d6dd` con rojo→verde documentado; M1 se cerró con el
+wireframe aprobado en `64d41ea` y la UI en `d05c1ec`. La trazabilidad y las aserciones HTTP
+pendientes se cerraron en `815884e`.
+
+La re-verificación la hicieron dos agentes independientes en conversaciones limpias y modo solo
+lectura (auditoría de código + derivación de tests por escenario) sobre `main` @ `815884e`; antes de
+sus informes `git status --short` estaba vacío y ninguno modificó archivos, specs, `tasks.md`,
+dependencias ni historial. Las correcciones posteriores a sus informes se documentan en §4.
+
+## 1. Comandos ejecutados
+
+| Comando | Resultado |
+| --- | --- |
+| `pnpm --filter @caribe/api exec vitest run test/products-admin.e2e.ts test/products-admin.test.ts` | **2 archivos / 48 tests en verde** (29 E2E + 19 unitarios). Sin fallos. |
+| `pnpm --filter @caribe/admin exec vitest run` | **18 archivos / 171 tests en verde** durante la verificación; **172** tras la corrección de §4. |
+| `pnpm --filter @caribe/admin exec vitest run test/catalog-client.test.ts test/catalog-panel.test.ts` | **2 archivos / 25 tests en verde** (26 tras la corrección). |
+| `pnpm --filter @caribe/api exec vitest run test/bookings.e2e.ts -t "retiene cupo en todas las noches"` | **1 test en verde**, 49 omitidos por el filtro. Confirma que la noche de salida no se ocupa. |
+| `pnpm --filter @caribe/api exec vitest run test/catalog-api.e2e.ts test/catalog.e2e.ts` | **43 tests en verde**, incluido el fallback público `es`→`en`. |
+| `pnpm lint` · `pnpm typecheck` | Turbo **4/4** y **5/5 successful**; el auditor además ejecutó `turbo run typecheck --force` → **5/5 sin caché**. |
+| `node scripts/check-specs.mjs` | `OK: 15 specs válidas`. |
+| `pnpm exec openspec validate f2-admin-rates` | `Change 'f2-admin-rates' is valid`. **6 warnings** no bloqueantes por requirements >500 caracteres; **0 errores**. |
+
+Los recuentos se listan como evidencia de cada ejecución, no para sumarlos. Los
+`WARN [ExchangeRateService] ... se usa el respaldo guardado` son el fallback deliberado del stub de
+tasa; ninguna aserción falló.
+
+## 2. `catalog` — 8 escenarios obligatorios
+
+| # | Escenario | Estado | Evidencia |
+| --- | --- | --- | --- |
+| 1 | Alta de producto en el panel | Cubierto | `products-admin.e2e.ts` → alta del Proveedor sin `providerId` (201, `DRAFT`) y alta por Admin; `catalog-client.test.ts` → POST con `basePriceUsd` texto y sin campos calculados; `products-admin.service.ts` fija `tenantId` y estado. |
+| 2 | Edición de producto de la agencia | Cubierto | `products-admin.e2e.ts` → edición y propagación de hotel, 422 a claves calculadas y referencias ajenas; `products-admin.schemas.ts` usa `strictObject`; `catalog-client.test.ts` refleja el estado del servidor. |
+| 3 | Proveedor edita solo sus productos | Cubierto | `products-admin.e2e.ts` → mismo `hotel_key` no propaga a otro proveedor ni a otra agencia, `PUT` directo ajeno da 404 con el mismo `detail` que un UUID inexistente, y publish/archive también 404; `products-admin.service.ts` acota `hotelScope` por `providerId`; la UI oculta acciones por matriz. |
+| 4 | Publicar y archivar producto | Cubierto | `products-admin.e2e.ts` → público 200 → archivado 404 → **re-publicar 200 y visible de nuevo**; Super Admin 403 con estado inalterado; `products.guard.ts` y `catalog-client.test.ts`. |
+| 5 | Disponibilidad por noche | Cubierto | `products-admin.e2e.ts` → alta con `reserved: 0`, actualización de una sola fila conservando `reserved`, 409 `AVAILABILITY_DUPLICATED` sin escritura y 422 a `reserved`/precio numérico/campos calculados; `schema.prisma` con `UNIQUE(productId, night)` y `Decimal(14,2)`; `bookings.e2e.ts` → noche de salida libre. |
+| 6 | Lectura de disponibilidad del panel | Cubierto | `GET /admin/products/:id/availability` con `from`/`to` devuelve `night`, `capacity`, `reserved` y `priceUsd` texto; 404 ajeno con cuerpo indistinguible, 403 agente/Super Admin y 401 anónimo; `catalog-client.test.ts` y el panel consumen el rango. |
+| 7 | Precio como texto decimal | Cubierto | Esquemas `strictObject` y cadena decimal 14,2; `products-admin.test.ts` rechaza el `number`; e2e rechaza `totalUsd`, `totalVes`, `exchangeRate` y `reserved` en producto y disponibilidad; persistencia `DECIMAL(14,2)` y serialización con `formatAmount`. |
+| 8 | Traducciones es y en | Cubierto | 422 con `title.en`/`description.en` faltantes en alta y edición; fallback público a `es`; 48 claves `catalog.*` presentes en ambos idiomas; `catalog-panel.test.ts` comprueba `t(...)`, `htmlFor`/`id` de los cinco controles y ausencia de `onClick` en `div`. |
+
+## 3. Hallazgos y observaciones
+
+| ID | Severidad | Estado | Detalle |
+| --- | --- | --- | --- |
+| F1 | Low | Corregido | `scope.md` y `design.md` seguían con 7/7 y 75/61 frente a los 8/8 y 77/63 vigentes. |
+| F2 | Low | Corregido | El campo `providerId` era editable al crear como Proveedor, aunque la API rechaza cualquier valor distinto del suyo. Ahora está deshabilitado para ese rol; Admin sí puede elegirlo. |
+| F3 | Low | Corregido | El 404 de disponibilidad ajena no comparaba cuerpo con el de un producto inexistente. Ahora ambos comparten el mismo `detail`. |
+| F4 | Low | Informativo | Los tests del panel son inspección de código fuente, no interacción DOM/navegador; limitación ya registrada en PAUSAS 1 y 2. No bloquea. |
+| F5 | Low | Confirmado | Una corrida adicional y no requerida de tres E2E en paralelo agotó el `beforeAll` de `bookings.e2e.ts` (30 s) por carga. Aislado, el test de la noche de salida pasa. No se aumentó ningún timeout. |
+
+No hay hallazgos Critical, High ni Medium. El riesgo residual es bajo (~10/100).
+
+## 4. Corrección posterior a la verificación
+
+Sin cambiar contratos ni decisiones del SDD, se cerraron las observaciones ejecutables de los informes:
+
+- `apps/api/test/products-admin.e2e.ts` añade el caso combinado «otra agencia con el mismo
+  `hotel_key`» y un `PUT` directo del Proveedor sobre ese producto: 404 indistinguible y fila intacta.
+- El mismo archivo compara el cuerpo del 404 de disponibilidad ajena con el de un UUID inexistente.
+- `apps/admin/src/components/catalog-panel.tsx` deshabilita `providerId` para el rol `provider`;
+  `catalog-panel.test.ts` lo afirma como contrato.
+- `scope.md` y `design.md` alinean el inventario con 8 escenarios de `catalog`, 77 totales y 63
+  obligatorios.
+
+Comprobación tras las correcciones: `products-admin.e2e.ts` + `products-admin.test.ts` → **48/48**;
+admin completo → **172/172**; `pnpm lint` y `pnpm typecheck` en verde; el test aislado de la noche de
+salida → **1/1**. Las observaciones F4 y F5 quedan documentadas como no bloqueantes.
+
+**Conclusión:** la PAUSA 3 puede cerrarse en verde. Se autoriza continuar con la fase de reportes
+(T-F2-22 y T-F2-23).
