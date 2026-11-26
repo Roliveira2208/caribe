@@ -663,7 +663,10 @@ describe("products admin", () => {
       const forbidden = await call("PUT", `/admin/products/${draftOther}`, provider1Cookie, {
         basePriceUsd: "99.00",
       });
-      await expectProblem(forbidden, 404, "NOT_FOUND");
+      const forbiddenBody = await expectProblem(forbidden, 404, "NOT_FOUND");
+      const missing = await call("GET", `/admin/products/${randomUUID()}`, provider1Cookie);
+      const missingBody = await expectProblem(missing, 404, "NOT_FOUND");
+      expect(forbiddenBody.detail).toBe(missingBody.detail);
 
       const forbiddenPublish = await call(
         "POST",
@@ -708,6 +711,13 @@ describe("products admin", () => {
       });
       const policyBody = await expectProblem(policy, 422, "VALIDATION_ERROR");
       expect(policyBody.errors?.[0]?.path).toBe("cancellationPolicyId");
+
+      for (const field of ["totalUsd", "totalVes", "exchangeRate"]) {
+        const calculated = await call("PUT", `/admin/products/${draftOwn}`, provider1Cookie, {
+          [field]: "1000.00",
+        });
+        await expectProblem(calculated, 422, "VALIDATION_ERROR");
+      }
     });
   });
 
@@ -730,6 +740,20 @@ describe("products admin", () => {
 
       const hidden = await call("GET", `/products/${draftOwn}`);
       await expectProblem(hidden, 404, "NOT_FOUND");
+
+      const republish = await call("POST", `/admin/products/${draftOwn}/publish`, provider1Cookie);
+      expect(republish.status).toBe(200);
+      await expect(json<PanelProductBody>(republish)).resolves.toMatchObject({
+        status: "PUBLISHED",
+      });
+      const publicAgain = await call("GET", `/products/${draftOwn}`);
+      expect(publicAgain.status).toBe(200);
+
+      const archiveAgain = await call("POST", `/admin/products/${draftOwn}/archive`, provider1Cookie);
+      expect(archiveAgain.status).toBe(200);
+      await expect(json<PanelProductBody>(archiveAgain)).resolves.toMatchObject({
+        status: "ARCHIVED",
+      });
     });
 
     it("el admin publica el producto de otro proveedor y el borrado lógico lo oculta", async () => {
@@ -970,6 +994,8 @@ describe("products admin", () => {
         { night: nightA, capacity: 2, reserved: 1, priceUsd: "120.50" },
         { night: nightA, capacity: 2, priceUsd: 120.5 },
         { night: nightA, capacity: 2, priceUsd: "120.50", totalVes: "100000.00" },
+        { night: nightA, capacity: 2, priceUsd: "120.50", totalUsd: "120.50" },
+        { night: nightA, capacity: 2, priceUsd: "120.50", exchangeRate: "80.0000" },
         { night: nightA, capacity: 0, priceUsd: "120.50" },
         { night: nightA, capacity: 2, priceUsd: "120.50" },
         { night: "no-es-fecha", capacity: 2, priceUsd: "120.50" },

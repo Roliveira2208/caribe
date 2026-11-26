@@ -96,6 +96,22 @@ describe("catalog › pantalla del panel (T-F2-18)", () => {
     expect(panel).not.toContain("reserved: 0");
   });
 
+  it("el rango y la noche nueva tienen etiqueta asociada y son navegables por teclado", () => {
+    const panel = read("src/components/catalog-panel.tsx");
+    for (const id of [
+      "catalog-availability-from",
+      "catalog-availability-to",
+      "catalog-new-night-night",
+      "catalog-new-night-capacity",
+      "catalog-new-night-price",
+    ]) {
+      expect(panel, `falta htmlFor="${id}"`).toContain(`htmlFor="${id}"`);
+      expect(panel, `falta id="${id}"`).toContain(`id="${id}"`);
+    }
+    // Los controles son Button/Input de antd, que exponen foco nativo.
+    expect(panel).not.toMatch(/<div[^>]+onClick=/);
+  });
+
   it("todas las etiquetas usadas por la pantalla salen de es y en", () => {
     const keys = [
       "nav.catalog",

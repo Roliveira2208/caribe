@@ -17,6 +17,8 @@ y `audit` (34) son regresión y no se cuentan aquí.
 
 El delta de `api-errors` se añadió durante T-F2-2 para dar un `code` estable a las respuestas 429 que
 ya exigía la spec `security`; por eso el total pasó de 75 a 76 escenarios y de 61 a 62 obligatorios.
+La PAUSA 3 corrigió el inventario de `catalog`, que tenía 7 escenarios en lugar de los 8 del delta
+(faltaba «Lectura de disponibilidad del panel»): el total vigente es 77 escenarios y 63 obligatorios.
 
 | Spec | Escenarios | Obligatorio | Deseable | Aplazable |
 | --- | ---: | ---: | ---: | ---: |
@@ -24,14 +26,14 @@ ya exigía la spec `security`; por eso el total pasó de 75 a 76 escenarios y de
 | exchange-rates | 12 | 9 | 3 | 0 |
 | payments | 12 | 8 | 4 | 0 |
 | audit | 10 | 6 | 4 | 0 |
-| catalog | 7 | 7 | 0 | 0 |
+| catalog | 8 | 8 | 0 | 0 |
 | auth-access | 6 | 6 | 0 | 0 |
 | admin-ui | 10 | 7 | 3 | 0 |
 | reports | 5 | 5 | 0 | 0 |
 | security | 13 | 13 | 0 | 0 |
-| **Total** | **76** | **62** | **14** | **0** |
+| **Total** | **77** | **63** | **14** | **0** |
 
-**Regla de cierre:** solo los **62 obligatorios** bloquean F2. Ningún obligatorio se recorta para
+**Regla de cierre:** solo los **63 obligatorios** bloquean F2. Ningún obligatorio se recorta para
 meter un deseable. Las dos pausas (T-F2-10 y T-F2-13) son obligatorias antes de catálogo y usuarios.
 
 ## api-errors (1)
@@ -62,9 +64,9 @@ meter un deseable. Las dos pausas (T-F2-10 y T-F2-13) son obligatorias antes de 
 
 ## catalog (7)
 
-- **Obligatorio (7)**: Alta de producto en el panel · Edición de producto de la agencia · Proveedor
-  edita solo sus productos · Publicar y archivar producto · Disponibilidad por noche · Precio como
-  texto decimal · Traducciones es y en.
+- **Obligatorio (8)**: Alta de producto en el panel · Edición de producto de la agencia · Proveedor
+  edita solo sus productos · Publicar y archivar producto · Disponibilidad por noche · Lectura de
+  disponibilidad del panel · Precio como texto decimal · Traducciones es y en.
 
 ## auth-access (6)
 
