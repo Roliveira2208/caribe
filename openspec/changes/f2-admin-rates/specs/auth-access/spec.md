@@ -1,5 +1,25 @@
 # Delta: auth-access — f2-admin-rates
 
+## MODIFIED Requirements
+
+### Requirement: Límite de intentos y sesiones
+Better Auth SHALL limitar intentos en registro e inicio de sesión. La revocación de sesiones desde el
+panel SHALL corresponder solo al Super Admin en modo plataforma mediante `/api/auth/admin/*`; un Admin
+de agencia SHALL NOT ofrecerla ni ejecutarla porque su rol carece de `session:revoke`, y Better Auth
+SHALL responder 403 sin modificar la sesión.
+
+#### Scenario: Revocar sesión
+- GIVEN un Super Admin con TOTP activo en modo plataforma y una sesión activa de un usuario
+- WHEN revoca esa sesión desde el panel por `/api/auth/admin/revoke-user-session`
+- THEN su siguiente solicitud devuelve 401
+- AND `audit_logs` recibe una fila con `tenant_id` NULL, `before` NULL y `after` con el dueño de la sesión
+
+#### Scenario: Revocar sesión desde el panel
+- GIVEN un Admin de agencia con TOTP activo y una sesión activa de un usuario
+- WHEN intenta revocar esa sesión por `/api/auth/admin/revoke-user-session`
+- THEN Better Auth responde 403 y la sesión sigue activa
+- AND el panel de agencia no ofrece la acción de revocar
+
 ## ADDED Requirements
 
 ### Requirement: Gestión de miembros y sesiones desde el panel
