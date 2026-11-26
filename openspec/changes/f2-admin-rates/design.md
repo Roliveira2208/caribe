@@ -83,7 +83,10 @@ la spec base y el e2e de `products-admin` se ajusta en consecuencia. Para que la
 acciones que la API rechazaría sin adivinar la propiedad, el listado `GET /admin/products` devuelve
 `viewerProviderId`: el id del registro de proveedor del actor, o `null` si no lo tiene. El panel
 recalcula su matriz con ese valor; la API sigue siendo la única fuente de verdad y valida cada
-operación. El cuerpo de `POST /admin/products/:id/availability` es `{ nights: [{ night, capacity,
+operación. La propagación de título y atributos compartidos por `hotel_key` se acota al ámbito del
+actor: el Proveedor solo alcanza los productos de su `provider_id`, mientras owner/admin propagan a
+toda la agencia; así un `hotel_key` compartido nunca habilita una escritura cross-provider. El cuerpo
+de `POST /admin/products/:id/availability` es `{ nights: [{ night, capacity,
 priceUsd }] }`: `night` es `YYYY-MM-DD` en `America/Caracas`, `priceUsd` es texto decimal y el servidor
 guarda `reserved` (se conserva al ajustar, cero al crear). Una noche repetida en el cuerpo se detecta
 antes de escribir y responde 409 `AVAILABILITY_DUPLICATED` dentro de la misma transacción. `GET

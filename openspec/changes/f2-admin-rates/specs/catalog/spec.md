@@ -44,6 +44,7 @@ salir de los catálogos es/en y todos los controles SHALL ser accesibles por tec
 - GIVEN un Proveedor con registro en `providers.user_id`
 - WHEN edita un producto propio, uno de otro proveedor de su agencia y uno de otra agencia
 - THEN el propio responde 200 y tanto el de otro proveedor de la misma agencia como el de otra agencia responden 404, sin revelar a quién pertenecen
+- AND la propagación de título y atributos compartidos de un hotel SHALL limitarse a los productos que el actor puede editar: un Proveedor SHALL NOT modificar los productos de otro proveedor aunque compartan `hotel_key`
 - AND el panel no muestra botones de edición sobre productos que la API rechazaría
 
 #### Scenario: Publicar y archivar producto
