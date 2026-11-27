@@ -1,3 +1,5 @@
+import { csvLocale, type CsvLocale } from "../csv/csv.js";
+
 /**
  * Encabezados del CSV del reporte (T-F2-23, delta reports "Exportación CSV").
  *
@@ -6,7 +8,7 @@
  * necesita los suyos para generar el archivo sin depender del admin.
  */
 
-export type ReportLocale = "es" | "en";
+export type ReportLocale = CsvLocale;
 
 export interface ReportCsvLabels {
   method: string;
@@ -38,5 +40,5 @@ export const REPORT_CSV_LABELS: Record<ReportLocale, ReportCsvLabels> = {
 
 /** Sin preferencia explícita, `es` (decisión aprobada antes de T-F2-23). */
 export function reportLocale(value: string | undefined): ReportLocale {
-  return value === "en" ? "en" : "es";
+  return csvLocale(value);
 }

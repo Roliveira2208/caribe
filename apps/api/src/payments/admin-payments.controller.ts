@@ -7,19 +7,21 @@ import {
   Patch,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
 import { attachAuditData, currentAuditTx } from "../audit/audit-storage.js";
 import { Auditable } from "../audit/auditable.js";
+import { csvLocale, type CsvResponse } from "../csv/csv.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
 import { BusinessRateLimit } from "../security/business-rate-limit.js";
 import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { PaymentPermission, PaymentsGuard, paymentActorOf, type PaymentsRequest } from "./payments.guard.js";
+import { paymentsCsv } from "./payments.csv.js";
 import {
   listPaymentsQuerySchema,
   rejectPaymentSchema,
   type ListPaymentsQuery,
-  type PaymentPage,
   type PaymentResponse,
   type RejectPaymentBody,
 } from "./payments.schemas.js";
@@ -37,9 +39,10 @@ import { PaymentsService } from "./payments.service.js";
  * - PATCH /admin/payments/:id/approve
  * - PATCH /admin/payments/:id/reject
  *
- * La aprobación y el rechazo van auditados y comparten la transacción del
- * interceptor: el cambio del pago, el de la reserva y la fila de audit_logs se
- * confirman juntos o ninguno.
+ * `format=csv` entrega por la MISMA ruta los pagos ya filtrados y paginados, con
+ * los encabezados en `lang=es|en`. La aprobación y el rechazo van auditados y
+ * comparten la transacción del interceptor: el cambio del pago, el de la reserva
+ * y la fila de audit_logs se confirman juntos o ninguno.
  */
 @Controller("admin/payments")
 @UseGuards(ActiveMembershipGuard, PaymentsGuard)
@@ -48,11 +51,19 @@ export class AdminPaymentsController {
 
   @Get()
   @PaymentPermission("read")
-  list(
+  async list(
     @Req() request: PaymentsRequest,
     @Query(new ZodValidationPipe(listPaymentsQuerySchema)) query: ListPaymentsQuery,
-  ): Promise<PaymentPage> {
-    return this.paymentsService.listAdmin(paymentActorOf(request), query);
+    @Res() response: CsvResponse,
+  ): Promise<void> {
+    const page = await this.paymentsService.listAdmin(paymentActorOf(request), query);
+    if (query.format === "csv") {
+      response.type("text/csv; charset=utf-8");
+      response.setHeader("Content-Disposition", 'attachment; filename="payments.csv"');
+      response.send(paymentsCsv(page, csvLocale(query.lang)));
+      return;
+    }
+    response.json(page);
   }
 
   @Get(":id")

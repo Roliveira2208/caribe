@@ -7,7 +7,8 @@ export const AUDIT_MAX_LIMIT = 100;
 /**
  * Consulta del visor: esquema estricto para que una clave desconocida o un
  * parámetro repetido respondan 422 en lugar de ignorarse. El cursor se valida
- * en `audit.cursor.ts` y es opaco para la interfaz.
+ * en `audit.cursor.ts` y es opaco para la interfaz. `format=csv` sirve por la
+ * MISMA ruta la página ya filtrada, con encabezados en `lang=es|en`.
  */
 export const listAuditLogsQuerySchema = z
   .strictObject({
@@ -18,6 +19,8 @@ export const listAuditLogsQuerySchema = z
     to: z.iso.datetime({ offset: true }).optional(),
     limit: z.coerce.number().int().min(1).max(AUDIT_MAX_LIMIT).optional(),
     cursor: z.string().min(1).optional(),
+    format: z.enum(["json", "csv"]).optional(),
+    lang: z.enum(["es", "en"]).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.from && value.to && new Date(value.from) > new Date(value.to)) {

@@ -1,5 +1,6 @@
-import { Controller, ForbiddenException, Get, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Query, Req, Res, UseGuards } from "@nestjs/common";
 import type { AuditLog, Prisma } from "../generated/prisma/client.js";
+import { csvLocale, type CsvResponse } from "../csv/csv.js";
 import { ApiProblemException } from "../errors/api-problem.exception.js";
 import { ZodValidationPipe } from "../errors/zod-validation.pipe.js";
 import {
@@ -11,6 +12,7 @@ import { ActiveMembershipGuard } from "../tenant/active-membership.guard.js";
 import { isPlatformRole } from "../tenant/tenant-context.js";
 import { TenantService } from "../tenant/tenant.service.js";
 import { AGENCY_AUDIT_READER_ROLES } from "./audit-access.js";
+import { auditCsv } from "./audit.csv.js";
 import { sanitizeAuditPayload } from "./audit-sanitize.js";
 import { decodeAuditCursor, encodeAuditCursor } from "./audit.cursor.js";
 import {
@@ -44,7 +46,8 @@ interface AuditFilters {
 /**
  * Lectura de auditoria (T-F0-9 y T-F2-15, spec audit "Consulta" + delta
  * f2-admin-rates): filtros por accion, entidad, actor y rango, paginacion
- * keyset `(at, id)` y alcance por agencia/plataforma.
+ * keyset `(at, id)` y alcance por agencia/plataforma. `format=csv` entrega por
+ * la MISMA ruta la pagina ya filtrada, con columnas permitidas y textos es/en.
  *
  * El alcance se resuelve en el handler (no con decoradores de permiso): la
  * lib AND-evalua @UserHasPermission y @MemberHasPermission sobre la misma
@@ -62,41 +65,54 @@ export class AuditController {
   async list(
     @Req() request: AuthenticatedRequest,
     @Query(new ZodValidationPipe(listAuditLogsQuerySchema)) query: ListAuditLogsQuery,
-  ): Promise<AuditLogPage> {
+    @Res() response: CsvResponse,
+  ): Promise<void> {
     const session = request.session;
     if (!session) {
       // El guard global ya exigio sesion; red de seguridad.
       throw new ApiProblemException("UNAUTHENTICATED", "La auditoría requiere una sesión.");
     }
     const filters = toFilters(query);
+    let page: AuditLogPage;
 
     if (isPlatformRole(session.user.role)) {
       // Super Admin: filas de plataforma y de todas las agencias.
-      return this.page(
+      page = this.page(
         await this.tenantService.withPlatform((tx) => this.query(tx, filters)),
         filters.limit,
       );
-    }
-    const membership = await activeMembershipOf(request);
-    if (!membership) {
-      throw activeOrganizationRequired();
-    }
-    if (!AGENCY_AUDIT_READER_ROLES.includes(membership.role)) {
-      // Escenario "Agente consulta auditoría" -> 403.
-      throw new ForbiddenException("Solo los administradores de la agencia consultan la auditoría");
-    }
-    const organizationId = membership.organizationId;
+    } else {
+      const membership = await activeMembershipOf(request);
+      if (!membership) {
+        throw activeOrganizationRequired();
+      }
+      if (!AGENCY_AUDIT_READER_ROLES.includes(membership.role)) {
+        // Escenario "Agente consulta auditoría" -> 403.
+        throw new ForbiddenException(
+          "Solo los administradores de la agencia consultan la auditoría",
+        );
+      }
+      const organizationId = membership.organizationId;
 
-    // RLS (app.tenant_id) garantiza el alcance con el rol de aplicacion y el
-    // WHERE lo fija tambien en la consulta: defensa en profundidad, y el
-    // comportamiento no depende del rol de la conexion (en pruebas la API
-    // conecta como superusuario, que PostgreSQL exime de RLS).
-    return this.page(
-      await this.tenantService.withTenant(organizationId, (tx) =>
-        this.query(tx, filters, { tenantId: organizationId }),
-      ),
-      filters.limit,
-    );
+      // RLS (app.tenant_id) garantiza el alcance con el rol de aplicacion y el
+      // WHERE lo fija tambien en la consulta: defensa en profundidad, y el
+      // comportamiento no depende del rol de la conexion (en pruebas la API
+      // conecta como superusuario, que PostgreSQL exime de RLS).
+      page = this.page(
+        await this.tenantService.withTenant(organizationId, (tx) =>
+          this.query(tx, filters, { tenantId: organizationId }),
+        ),
+        filters.limit,
+      );
+    }
+
+    if (query.format === "csv") {
+      response.type("text/csv; charset=utf-8");
+      response.setHeader("Content-Disposition", 'attachment; filename="audit-logs.csv"');
+      response.send(auditCsv(page, csvLocale(query.lang)));
+      return;
+    }
+    response.json(page);
   }
 
   /** Consulta keyset: pide una fila de mas para saber si hay pagina siguiente. */

@@ -26,13 +26,19 @@ export const PAYMENTS_MAX_LIMIT = 50;
 /** Endpoint que se guarda en `idempotency_keys.endpoint`. */
 export const PAYMENT_CREATE_ENDPOINT = "POST /bookings/:id/payments";
 
-/** Filtros del listado de pagos del panel; el cursor lo valida el servicio. */
+/**
+ * Filtros del listado de pagos del panel; el cursor lo valida el servicio.
+ * `format=csv` sirve por esta MISMA ruta los mismos filtros y paginación, y
+ * `lang=es|en` elige los encabezados (por defecto `es`).
+ */
 export const listPaymentsQuerySchema = z.strictObject({
   status: z.enum(PAYMENT_STATUSES).optional(),
   method: z.enum(PAYMENT_METHODS).optional(),
   bookingId: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(PAYMENTS_MAX_LIMIT).optional(),
   cursor: z.string().min(1).optional(),
+  format: z.enum(["json", "csv"]).optional(),
+  lang: z.enum(["es", "en"]).optional(),
 });
 
 export type ListPaymentsQuery = z.infer<typeof listPaymentsQuerySchema>;
