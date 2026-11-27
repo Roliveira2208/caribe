@@ -410,6 +410,23 @@ describe("reports (reporte de ventas del panel)", () => {
     expect(missing.totals.count).toBe(0);
   });
 
+  it("devuelve el mismo 401/403 en CSV que en JSON sin sesión o con rol sin permiso", async () => {
+    // El delta reports exige que format=csv comparta validaciones y alcance:
+    // el guard corre antes de elegir el formato de respuesta.
+    const jsonNoSession = await call(`?${range}`, "");
+    const csvNoSession = await call(`?${range}&format=csv`, "");
+    expect(csvNoSession.status).toBe(jsonNoSession.status);
+    await expectProblem(csvNoSession, 401, "UNAUTHENTICATED");
+
+    for (const cookie of [agentACookie, providerACookie, memberACookie]) {
+      const json = await call(`?${range}`, cookie);
+      const csv = await call(`?${range}&format=csv`, cookie);
+      expect(csv.status).toBe(json.status);
+      const body = await expectProblem(csv, 403, "FORBIDDEN");
+      expect(body).not.toHaveProperty("totals");
+    }
+  });
+
   it("sirve el CSV por la misma ruta con los mismos filtros, idioma y alcance", async () => {
     const es = await call(`?${range}&format=csv`, adminACookie);
     expect(es.status).toBe(200);

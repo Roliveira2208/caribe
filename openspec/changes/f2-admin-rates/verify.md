@@ -510,7 +510,7 @@ nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `e
 | 47 | reports · Reporte por rango de fechas | T-F2-23 §5; `reports.e2e.ts` → rango inclusivo y CSV por la misma ruta. |
 | 48 | reports · Totales calculados en el servidor | T-F2-23 §5; importes y tasa congelados, `DECIMAL`. |
 | 49 | reports · Desglose por método y estado | T-F2-23 §5; `reports.e2e.ts`. |
-| 50 | reports · Alcance por rol | T-F2-23 §5; owner/admin solo su agencia, Super Admin todas, roles sin permiso 403. |
+| 50 | reports · Alcance por rol | T-F2-23 §5; owner/admin solo su agencia, Super Admin todas, roles sin permiso 403; `reports.e2e.ts` comprueba además que `format=csv` devuelve el mismo 401 sin sesión y el mismo 403 con agente/proveedor/member que el JSON. |
 | 51 | reports · Exportación CSV del reporte | T-F2-23 §5; `reports-csv.test.ts` → prefijo `'` para fórmulas (también con espacios/BOM iniciales) y encabezados es/en. |
 | 52 | security · IP tras proxy de confianza | PAUSA 1 §3; `security.e2e.ts`, `client-ip.test.ts`. |
 | 53 | security · Cabecera de proxy no confiable | PAUSA 1 §3; `security.e2e.ts` → *"Cabecera de proxy no confiable"*. |
@@ -562,9 +562,10 @@ nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `e
   limitación original (solo la primera posición) se endureció con test en rojo → verde y el delta
   `reports` recoge el contrato; ya no depende de que las columnas actuales sean UUID, enumeraciones,
   fechas, IP validada o estados traducidos.
-- **O4 — CSV sin cookie:** no hay una llamada explícita a `?format=csv` sin sesión. El guard actúa por
-  ruta, no por query, y los 52 tests del inventario cubren las dos rutas existentes; los cinco commits
-  no añadieron ningún controlador ni decorador de ruta.
+- **O4 — CSV sin cookie (cerrado tras el cierre de F2):** `reports.e2e.ts` llama explícitamente a
+  `?format=csv` sin sesión (401 `UNAUTHENTICATED`) y con agente/proveedor/member (403 `FORBIDDEN`),
+  y compara ambos estados con la misma llamada JSON. El guard actúa por ruta, no por query, y no se
+  añadió ningún controlador ni decorador de ruta.
 - **O5 — preguntas abiertas previas:** siguen pendientes de decisión del dueño los rangos/direcciones de
   `TRUSTED_PROXIES`, el valor de `TRUSTED_ORIGINS` y las observaciones F4/F5 del catálogo. Ninguna
   bloquea F2 ni fue introducida por T-F2-25/T-F2-26.
