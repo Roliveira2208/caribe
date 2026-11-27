@@ -382,10 +382,10 @@ Evidencia del reporte de ventas y del listado de agencias que puebla su filtro:
 - `apps/admin/test/reports-client.test.ts` y `reports-panel.test.ts` → **16/16**: el selector usa
   `GET /api/v1/admin/organizations`, no las membresías de Better Auth; rechaza respuestas que no sean
   un listado y conserva el `agencyId` elegido en la descarga CSV.
-- Suite completa (verificación final): `pnpm test` → 111 archivos / 1.172 tests; `pnpm lint`,
-  `pnpm typecheck`, `node scripts/check-specs.mjs` (15 specs) y `openspec validate --all`
-  (16 passed, 0 failed) en verde. Las dos comprobaciones añadidas tras el cierre de F2 están
-  descritas arriba y en la verificación final.
+- Suite completa (verificación final, más los tres tests añadidos tras el cierre): `pnpm test` →
+  111 archivos / 1.175 tests; `pnpm lint`, `pnpm typecheck`, `node scripts/check-specs.mjs`
+  (15 specs) y `openspec validate --all` (16 passed, 0 failed) en verde. Las dos comprobaciones
+  añadidas tras el cierre de F2 están descritas arriba y en la verificación final.
 
 Las observaciones F4 y F5 siguen siendo no bloqueantes. `scope.md` queda actualizado en 78 escenarios
 y 64 obligatorios tras añadir el scenario de `auth-access`. `csvCell` (O3) y el CSV sin sesión (O4)
