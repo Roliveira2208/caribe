@@ -339,8 +339,16 @@ describe("reports (reporte de ventas del panel)", () => {
   it("calcula totales DECIMAL de todos los estados sin usar la tasa vigente", async () => {
     const own = await report(`?${range}`);
     expect(own.totals).toEqual({ count: 3, amountUsd: "170.50", amountVes: "153450.00" });
+
+    // Otras suites crean pagos en el mismo rango: el modo plataforma se
+    // comprueba con filtros exactos por agencia y con una vista sin filtrar
+    // que incluye ambas, no con totales globales que dependan del orden.
+    const platformA = await report(`?${range}&agencyId=${orgA}`, superCookie);
+    expect(platformA.totals).toEqual(own.totals);
+    const platformB = await report(`?${range}&agencyId=${orgB}`, superCookie);
+    expect(platformB.totals).toEqual({ count: 1, amountUsd: "200.00", amountVes: "180000.00" });
     const platform = await report(`?${range}`, superCookie);
-    expect(platform.totals).toEqual({ count: 4, amountUsd: "370.50", amountVes: "333450.00" });
+    expect(platform.totals.count).toBeGreaterThanOrEqual(4);
   });
 
   it("desglosa por método y estado sin filas inventarias", async () => {
@@ -393,7 +401,9 @@ describe("reports (reporte de ventas del panel)", () => {
     expect(adminB.totals).toEqual({ count: 1, amountUsd: "200.00", amountVes: "180000.00" });
 
     const superAll = await report(`?${range}`, superCookie);
-    expect(superAll.totals.count).toBe(4);
+    expect(superAll.totals.count).toBeGreaterThanOrEqual(4);
+    const superA = await report(`?${range}&agencyId=${orgA}`, superCookie);
+    expect(superA.totals).toEqual({ count: 3, amountUsd: "170.50", amountVes: "153450.00" });
     const superB = await report(`?${range}&agencyId=${orgB}`, superCookie);
     expect(superB.totals.amountUsd).toBe("200.00");
     const missing = await report(`?${range}&agencyId=${randomUUID()}`, superCookie);

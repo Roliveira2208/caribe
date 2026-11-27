@@ -27,6 +27,13 @@ describe("audit: exportación CSV (T-F2-25)", () => {
   let baseUrl: string;
 
   const suffix = randomUUID().slice(0, 8);
+  // Aislamos el fixture por acción, no por fecha: en la suite completa otros
+  // e2e escriben auditorías «now» que desplazan nuestras filas de la primera
+  // página aunque la consulta acote un rango temporal.
+  const testAction = `csv.test.${suffix}`;
+  const formulaAction = `=SUM(1+1)-${suffix}`;
+  const actionQuery = `action=${encodeURIComponent(testAction)}`;
+  const formulaQuery = `action=${encodeURIComponent(formulaAction)}`;
   let orgA: string = randomUUID();
   let orgB: string = randomUUID();
   const idA1 = randomUUID();
@@ -35,7 +42,6 @@ describe("audit: exportación CSV (T-F2-25)", () => {
   const idB = randomUUID();
   const idPlatform = randomUUID();
   const idFormula = randomUUID();
-  const formulaAction = "=SUM(1+1)";
 
   let adminAId = "";
   let adminACookie = "";
@@ -44,8 +50,6 @@ describe("audit: exportación CSV (T-F2-25)", () => {
   const userIds: string[] = [];
 
   const baseTime = Date.now();
-  const from = new Date(baseTime - 60 * 60_000).toISOString();
-  const to = new Date(baseTime + 60 * 60_000).toISOString();
 
   beforeAll(async () => {
     app = await createApp();
@@ -89,7 +93,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
           id: idA1,
           tenantId: orgA,
           actorId: adminAId,
-          action: "csv.test.review",
+          action: testAction,
           entity: "payment",
           entityId: `a-1-${suffix}`,
           before: { status: "IN_REVIEW", password: "Password123!" },
@@ -101,7 +105,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
           id: idA2,
           tenantId: orgA,
           actorId: adminAId,
-          action: "csv.test.review",
+          action: testAction,
           entity: "payment",
           entityId: `a-2-${suffix}`,
           before: { status: "PENDING_PAYMENT" },
@@ -113,7 +117,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
           id: idA3,
           tenantId: orgA,
           actorId: adminAId,
-          action: "csv.test.review",
+          action: testAction,
           entity: "payment",
           entityId: `a-3-${suffix}`,
           before: { status: "REJECTED" },
@@ -134,7 +138,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
           id: idB,
           tenantId: orgB,
           actorId: randomUUID(),
-          action: "csv.test.review",
+          action: testAction,
           entity: "payment",
           entityId: `b-${suffix}`,
           before: { status: "IN_REVIEW", password: "Password123!" },
@@ -145,7 +149,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
           id: idPlatform,
           tenantId: null,
           actorId: null,
-          action: "csv.test.platform",
+          action: testAction,
           entity: "organization",
           entityId: `platform-${suffix}`,
           at: new Date(baseTime - 30 * 60_000),
@@ -189,7 +193,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
   }
 
   it("aplica los mismos filtros, límite y cursor que el JSON", async () => {
-    const query = `?action=csv.test.review&entity=payment&actor=${adminAId}&from=${from}&to=${to}&limit=2`;
+    const query = `?${actionQuery}&entity=payment&actor=${adminAId}&limit=2`;
     const first = await json(query);
     expect(first.items.map((item) => item.id)).toEqual([idA1, idA2]);
     expect(first.nextCursor).toBeTruthy();
@@ -208,25 +212,28 @@ describe("audit: exportación CSV (T-F2-25)", () => {
   });
 
   it("respeta el alcance por rol y la aislación entre agencias", async () => {
-    const own = await csv("?format=csv");
+    const scoped = `?${actionQuery}&format=csv`;
+    const own = await csv(scoped);
     expect(own).toContain(idA1);
-    expect(own).toContain(idFormula);
     expect(own).not.toContain(idB);
     expect(own).not.toContain(idPlatform);
     expect(own).not.toContain(orgB);
 
-    const platform = await csv("?format=csv", superCookie);
+    const formula = await csv(`?${formulaQuery}&format=csv`);
+    expect(formula).toContain(idFormula);
+
+    const platform = await csv(scoped, superCookie);
     expect(platform).toContain(idB);
     expect(platform).toContain(idPlatform);
     expect(platform).toContain(idA1);
 
-    const agent = await call("?format=csv", agentACookie);
+    const agent = await call(scoped, agentACookie);
     expect(agent.status).toBe(403);
     expect(agent.headers.get("content-type")).not.toContain("text/csv");
   });
 
   it("localiza encabezados y estados, sin secretos ni mensajes internos", async () => {
-    const query = `?action=csv.test.review&entity=payment&actor=${adminAId}&from=${from}&to=${to}`;
+    const query = `?${actionQuery}&entity=payment&actor=${adminAId}`;
     const es = await csv(`${query}&format=csv`);
     expect(es.split(/\r?\n/)[0]).toBe(
       "ID,Fecha,Actor,Acción,Entidad,ID de entidad,Estado anterior,Estado nuevo,IP",
@@ -241,7 +248,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
     expect(en).toContain("Under review,Approved");
     expect(en).toContain("Pending payment,Confirmed");
 
-    for (const body of [es, en, await csv("?format=csv", superCookie)]) {
+    for (const body of [es, en, await csv(`?${actionQuery}&format=csv`, superCookie)]) {
       expect(body).not.toContain("tenantId");
       expect(body).not.toContain("tenant_id");
       expect(body).not.toContain(orgA);
@@ -254,9 +261,7 @@ describe("audit: exportación CSV (T-F2-25)", () => {
   });
 
   it("escapa fórmulas en las celdas controladas por el dato", async () => {
-    const body = await csv(
-      `?action=${encodeURIComponent(formulaAction)}&format=csv&lang=en`,
-    );
+    const body = await csv(`?${formulaQuery}&format=csv&lang=en`);
 
     expect(body).toContain("'=SUM(1+1)");
   });
