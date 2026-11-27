@@ -11,6 +11,13 @@ idioma desde la cabecera SHALL escribirse `user.locale` y preservarse `NEXT_LOCA
 si la escritura falla, SHALL NOT cambiarse la interfaz ni inventarse éxito. El valor SHALL aplicarse a
 la cabecera, al contenido y a los mensajes de error localizados.
 
+#### Scenario: Idioma persistido
+- GIVEN un usuario que elige `en` en la cabecera del panel
+- WHEN navega a otra ruta, recarga la página y cierra e inicia sesión de nuevo
+- THEN `user.locale` y `NEXT_LOCALE` quedan en `en` y la interfaz sigue en `en`, incluidos encabezados, contenido y mensajes de error
+- THEN sin elección previa en el perfil el panel arranca en `es`
+- THEN el selector de idioma indica cuál está activo en todo momento
+
 #### Scenario: Idioma persistido en el perfil y la cookie
 - GIVEN un usuario que elige `en` en la cabecera del panel y después cierra e inicia sesión de nuevo
 - WHEN vuelve a abrir el panel, navega a otra ruta y recarga la página
