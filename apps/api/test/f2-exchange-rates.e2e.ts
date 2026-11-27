@@ -287,7 +287,7 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
     expect(injected.status).toBe(422);
   });
 
-  it("fecha valor futura: no se aplica como vigente antes de esa fecha", async () => {
+  it("fecha valor futura: se anuncia como pendiente sin aplicarse como vigente", async () => {
     const res = await override(ownerACookie, {
       rate: "940.0000",
       reason: "Ajuste programado",
@@ -297,11 +297,15 @@ describe("exchange-rates: panel F2 (T-F2-8/T-F2-9)", () => {
     await expect((await current(ownerACookie)).json()).resolves.toMatchObject({
       rate: "960.0000",
       valueDate: today,
+      pending: { rate: "940.0000", valueDate: future },
     });
     const pending = await prisma.exchangeRate.findFirstOrThrow({
       where: { tenantId: orgA, valueDate: new Date(future) },
     });
     expect(pending.isOverride).toBe(true);
+
+    // El modo plataforma no revela la tasa programada de ninguna agencia.
+    await expect((await current(superCookie)).json()).resolves.toMatchObject({ pending: null });
   });
 
   it("tasa global del Super Admin: tenant NULL sin revelar la de las agencias", async () => {

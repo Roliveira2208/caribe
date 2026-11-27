@@ -7,12 +7,19 @@ import { AuthApiError, isValidRateText } from "@caribe/shared";
  */
 export type RateAccessMode = "agency" | "platform";
 
+export interface PendingRateView {
+  valueDate: string;
+  rate: string;
+}
+
 export interface ExchangeRateView {
   scope: RateAccessMode;
   valueDate: string;
   rate: string;
   source: string;
   isOverride: boolean;
+  /** Primer override con fecha valor futura; nunca sustituye a la vigente. */
+  pending?: PendingRateView | null;
 }
 
 /** Fila del historial: sin `tenantId`, sin secretos y sin campos calculados. */
@@ -98,7 +105,21 @@ export async function getCurrentRate(
     rate: body["rate"],
     source: body["source"],
     isOverride: body["isOverride"],
+    pending: readPending(body["pending"]),
   };
+}
+
+/** Un `pending` mal formado invalida la respuesta: no se inventa una tasa. */
+function readPending(value: unknown): PendingRateView | null {
+  if (value === undefined || value === null) return null;
+  if (
+    !isRecord(value) ||
+    typeof value["valueDate"] !== "string" ||
+    typeof value["rate"] !== "string"
+  ) {
+    throw new AuthApiError(503, "Respuesta de tasa no válida.", "RATE_UNAVAILABLE");
+  }
+  return { valueDate: value["valueDate"], rate: value["rate"] };
 }
 
 /**
@@ -152,16 +173,19 @@ export async function setRateOverride(
 }
 
 /**
- * HISTORIAL desde `GET /admin/audit-logs` (sin endpoint nuevo). Solo se
- * devuelven las filas de override: el visor de la agencia no muestra acciones
- * de otros dominios ni el `tenantId` de la respuesta.
+ * HISTORIAL desde `GET /admin/audit-logs` (sin endpoint nuevo). El filtro de
+ * acción viaja al servidor para no sobreleer auditoría de otros dominios; la
+ * API limita el alcance a la agencia activa. El visor no expone `tenantId`.
  */
 export async function listRateAudits(options: RatesApiOptions = {}): Promise<RateAudit[]> {
   const doFetch = options.fetchImpl ?? globalThis.fetch;
-  const response = await doFetch("/api/v1/admin/audit-logs", {
-    credentials: "same-origin",
-    cache: "no-store",
-  });
+  const response = await doFetch(
+    `/api/v1/admin/audit-logs?action=${encodeURIComponent(RATE_AUDIT_ACTION)}&limit=100`,
+    {
+      credentials: "same-origin",
+      cache: "no-store",
+    },
+  );
   if (!response.ok) throw await readError(response);
   const body: unknown = await response.json().catch(() => null);
   const items = isRecord(body) && Array.isArray(body["items"]) ? body["items"] : [];

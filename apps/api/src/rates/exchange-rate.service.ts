@@ -15,6 +15,7 @@ import type { RateActor } from "./exchange-rates.guard.js";
 import type {
   ExchangeRateView,
   OverrideRateBody,
+  PendingRateView,
   RateScope,
 } from "./exchange-rate.schemas.js";
 import { RateCache } from "./rate-cache.js";
@@ -93,17 +94,26 @@ export class ExchangeRateService {
     private readonly cache: RateCache,
   ) {}
 
-  /** Tasa vigente del ámbito de la sesión (agencia o plataforma). */
+  /**
+   * Tasa vigente del ámbito de la sesión (agencia o plataforma). El panel
+   * además recibe el primer override con fecha valor futura como `pending`:
+   * nunca sustituye a la vigente y no se aplica antes de su fecha.
+   */
   async currentRate(actor: RateActor): Promise<ExchangeRateView> {
     // La lectura intenta asegurar la tasa del día; si el proveedor falla se
     // usa el respaldo guardado y, si tampoco hay, resolve* lanza 503.
     await this.ensureTodayRate().catch(() => undefined);
 
-    return actor.tenantId
-      ? this.tenantService.withTenant(actor.tenantId, (tx) =>
-          this.resolveAgency(tx, actor.tenantId as string),
-        )
-      : this.tenantService.withPlatform((tx) => this.resolveGlobal(tx));
+    if (actor.tenantId) {
+      return this.tenantService.withTenant(actor.tenantId, async (tx) => ({
+        ...(await this.resolveAgency(tx, actor.tenantId as string)),
+        pending: await this.pendingOverride(tx, actor.tenantId as string),
+      }));
+    }
+    return this.tenantService.withPlatform(async (tx) => ({
+      ...(await this.resolveGlobal(tx)),
+      pending: await this.pendingOverride(tx, null),
+    }));
   }
 
   /**
@@ -331,6 +341,29 @@ export class ExchangeRateService {
     const row = await this.agencyRow(tx, tenantId, date);
     if (!row) throw rateUnavailable();
     return toView(row, "agency");
+  }
+
+  /**
+   * Primer override con `value_date` futura del ámbito pedido. Se consulta
+   * explícitamente por `tenant_id` (NULL para plataforma) para que el modo
+   * plataforma no revele tasas programadas de ninguna agencia.
+   */
+  private async pendingOverride(
+    tx: Prisma.TransactionClient,
+    tenantId: string | null,
+  ): Promise<PendingRateView | null> {
+    const row = await tx.exchangeRate.findFirst({
+      where: {
+        tenantId,
+        isOverride: true,
+        valueDate: { gt: dateOf(todayInCaracas()) },
+      },
+      orderBy: { valueDate: "asc" },
+      select: RATE_SELECT,
+    });
+    return row
+      ? { valueDate: formatValueDate(row.valueDate), rate: formatRate(row.rate) }
+      : null;
   }
 
   /** Fila de la agencia (override o respaldo) o la global; `null` si no hay. */

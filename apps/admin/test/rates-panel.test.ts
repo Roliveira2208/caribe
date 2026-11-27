@@ -121,6 +121,15 @@ describe('exchange-rates › panel de tasas (T-F2-8/T-F2-9)', () => {
     expect(closeModal).not.toContain("setRateOverride");
   });
 
+  it("muestra el override pendiente y el par antes → después del historial", () => {
+    const panel = read("src/components/rates-panel.tsx");
+    expect(panel).toContain('t("pendingRate"');
+    expect(panel).toContain("current.pending");
+    expect(panel).toContain('t("rateChange"');
+    expect(panel).toContain('row.before?.["rate"]');
+    expect(panel).toContain('row.after?.["rate"]');
+  });
+
   it("oculta historial y acciones a quien no puede verlos", () => {
     const panel = read("src/components/rates-panel.tsx");
     expect(panel).toContain("access.canOverride");

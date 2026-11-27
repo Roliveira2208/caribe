@@ -36,10 +36,24 @@ function problem(status: number, code: string): Response {
 describe('exchange-rates › "Ver tasa vigente" (T-F2-8)', () => {
   it("lee la tasa del servidor sin calcular nada en el cliente", async () => {
     const fetchImpl = vi.fn(async () => json(rate));
-    await expect(getCurrentRate({ fetchImpl })).resolves.toEqual(rate);
+    await expect(getCurrentRate({ fetchImpl })).resolves.toEqual({ ...rate, pending: null });
     expect(fetchImpl).toHaveBeenCalledWith("/api/v1/admin/exchange-rates/current", {
       credentials: "same-origin",
       cache: "no-store",
+    });
+  });
+
+  it('exchange-rates › "Fecha valor futura": conserva el pendiente sin aplicarlo', async () => {
+    const pending = { valueDate: "2026-11-27", rate: "940.0000" };
+    const fetchImpl = vi.fn(async () => json({ ...rate, pending }));
+    await expect(getCurrentRate({ fetchImpl })).resolves.toEqual({ ...rate, pending });
+  });
+
+  it("rechaza un pendiente mal formado en vez de inventar una tasa", async () => {
+    const fetchImpl = vi.fn(async () => json({ ...rate, pending: { rate: 940 } }));
+    await expect(getCurrentRate({ fetchImpl })).rejects.toMatchObject({
+      status: 503,
+      code: "RATE_UNAVAILABLE",
     });
   });
 
@@ -151,10 +165,10 @@ describe('exchange-rates › "Historial de overrides" (T-F2-9)', () => {
     );
 
     const rows = await listRateAudits({ fetchImpl });
-    expect(fetchImpl).toHaveBeenCalledWith("/api/v1/admin/audit-logs", {
-      credentials: "same-origin",
-      cache: "no-store",
-    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/v1/admin/audit-logs?action=exchange-rate.override&limit=100",
+      { credentials: "same-origin", cache: "no-store" },
+    );
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       id: "audit-1",

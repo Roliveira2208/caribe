@@ -240,6 +240,8 @@
     "colActor": "Actor",
     "actorUnknown": "sistema",
     "pending": "—",
+    "pendingRate": "Pendiente para {valueDate}: {rate} (aún no vigente)",
+    "rateChange": "{before} → {after}",
     "emptyHistory": "Sin overrides registrados todavía.",
     "forbidden": "Tu rol no puede consultar las tasas de esta agencia.",
     "twoFactorRequired": "Activa el segundo factor para ajustar tasas.",

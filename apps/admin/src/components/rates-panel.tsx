@@ -190,7 +190,10 @@ export function RatesPanel({ locale, mode, role, agencyName }: RatesPanelProps) 
       title: t("colRate"),
       key: "rate",
       render: (_value: unknown, row: RateAudit) =>
-        text(row.after?.["rate"] ?? row.before?.["rate"], t("pending")),
+        t("rateChange", {
+          before: text(row.before?.["rate"], t("pending")),
+          after: text(row.after?.["rate"], t("pending")),
+        }),
     },
     {
       title: t("colSource"),
@@ -262,6 +265,16 @@ export function RatesPanel({ locale, mode, role, agencyName }: RatesPanelProps) 
               </Tag>
               <Tag>{t("overrideValue", { value: current.isOverride ? t("yes") : t("no") })}</Tag>
             </Space>
+            {current.pending ? (
+              <Alert
+                type="info"
+                showIcon
+                title={t("pendingRate", {
+                  valueDate: current.pending.valueDate,
+                  rate: current.pending.rate,
+                })}
+              />
+            ) : null}
           </>
         ) : (
           <p>{t("loading")}</p>

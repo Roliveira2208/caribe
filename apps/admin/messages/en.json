@@ -240,6 +240,8 @@
     "colActor": "Actor",
     "actorUnknown": "system",
     "pending": "—",
+    "pendingRate": "Pending for {valueDate}: {rate} (not active yet)",
+    "rateChange": "{before} → {after}",
     "emptyHistory": "No overrides recorded yet.",
     "forbidden": "Your role cannot view the rates for this agency.",
     "twoFactorRequired": "Turn on two-step security to adjust rates.",

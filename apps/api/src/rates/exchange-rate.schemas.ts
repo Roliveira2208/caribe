@@ -37,6 +37,12 @@ export type OverrideRateBody = z.infer<typeof overrideRateSchema>;
 /** Ámbito de la tasa leída: agencia concreta o plataforma (global). */
 export type RateScope = "agency" | "platform";
 
+/** Override con fecha valor futura: pendiente, nunca aplicado todavía. */
+export interface PendingRateView {
+  valueDate: string;
+  rate: string;
+}
+
 /** Tasa vigente serializada: fecha `YYYY-MM-DD` y tasa con 4 decimales. */
 export interface ExchangeRateView {
   scope: RateScope;
@@ -44,6 +50,8 @@ export interface ExchangeRateView {
   rate: string;
   source: string;
   isOverride: boolean;
+  /** Primer override pendiente, si lo hay; no sustituye a la tasa vigente. */
+  pending?: PendingRateView | null;
 }
 
 /**
