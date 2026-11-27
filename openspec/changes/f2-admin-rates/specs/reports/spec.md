@@ -37,7 +37,8 @@ La exportación CSV SHALL aplicar exactamente los mismos filtros, validaciones y
 respuesta JSON, con los mismos totales congelados. SHALL usar codificación UTF-8 y encabezados tomados de
 los mensajes `es`/`en` según el idioma activo. SHALL NOT incluir secretos ni datos de tarjeta. En el MVP
 SHALL NOT imponer un límite de filas ni paginar el CSV; si la petición no trae preferencia explícita de
-idioma, los encabezados SHALL salir de `es`.
+idioma, los encabezados SHALL salir de `es`. La detección de fórmulas SHALL ignorar los espacios y el BOM
+(`U+FEFF`) iniciales sin eliminarlos del valor escrito.
 
 #### Scenario: Exportación CSV del reporte
 - GIVEN un usuario autorizado y un rango con pagos
@@ -45,5 +46,5 @@ idioma, los encabezados SHALL salir de `es`.
 - THEN las filas y los totales coinciden con el JSON del reporte y respetan el alcance por rol
 - THEN los encabezados salen de los mensajes `es` o `en` según el idioma activo, y por defecto de `es` sin preferencia explícita
 - THEN el archivo no contiene números de tarjeta, CVV, tokens, credenciales ni valores de secretos
-- THEN toda celda cuyo primer carácter sea `=`, `+`, `-` o `@` se escribe con un apóstrofo como prefijo para que Excel y Sheets la abran como texto y no como fórmula
+- THEN toda celda cuyo primer carácter no blanco ni BOM sea `=`, `+`, `-` o `@` se escribe con un apóstrofo como prefijo para que Excel y Sheets la abran como texto y no como fórmula, conservando los espacios o el BOM iniciales en el valor
 - THEN en el MVP no hay límite de filas ni paginación del CSV

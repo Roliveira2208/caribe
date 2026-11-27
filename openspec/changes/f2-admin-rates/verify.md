@@ -511,7 +511,7 @@ nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `e
 | 48 | reports · Totales calculados en el servidor | T-F2-23 §5; importes y tasa congelados, `DECIMAL`. |
 | 49 | reports · Desglose por método y estado | T-F2-23 §5; `reports.e2e.ts`. |
 | 50 | reports · Alcance por rol | T-F2-23 §5; owner/admin solo su agencia, Super Admin todas, roles sin permiso 403. |
-| 51 | reports · Exportación CSV del reporte | T-F2-23 §5; `reports-csv.test.ts` → prefijo `'` para fórmulas y encabezados es/en. |
+| 51 | reports · Exportación CSV del reporte | T-F2-23 §5; `reports-csv.test.ts` → prefijo `'` para fórmulas (también con espacios/BOM iniciales) y encabezados es/en. |
 | 52 | security · IP tras proxy de confianza | PAUSA 1 §3; `security.e2e.ts`, `client-ip.test.ts`. |
 | 53 | security · Cabecera de proxy no confiable | PAUSA 1 §3; `security.e2e.ts` → *"Cabecera de proxy no confiable"*. |
 | 54 | security · Rate limit por IP real | PAUSA 1 §3; `security.e2e.ts` → *"Rate limit por IP real"*. |
@@ -557,10 +557,11 @@ nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `e
 - **O2 — Historial de overrides:** cubierto por tests unitarios del cliente y del panel, sin un e2e HTTP
   específico. La API reutiliza `GET /admin/audit-logs`, ya protegido y cubierto por `f2-audit.e2e.ts`;
   no se creó una ruta nueva.
-- **O3 — CSV (baja, informativa):** `csvCell` neutraliza celdas que empiezan por `=`, `+`, `-` o `@` en
-  la primera posición, tal como dice el delta `reports`. No normaliza espacios/BOM iniciales; hoy no es
-  explotable porque todas las columnas son UUID, enumeraciones, fechas, IP validada o estados
-  traducidos. Se documenta, no se cambia el contrato especificado.
+- **O3 — CSV (cerrado tras el cierre de F2):** `csvCell` neutraliza celdas cuyo primer carácter no
+  blanco ni BOM es `=`, `+`, `-` o `@`, y conserva los espacios/BOM iniciales en el valor escrito. La
+  limitación original (solo la primera posición) se endureció con test en rojo → verde y el delta
+  `reports` recoge el contrato; ya no depende de que las columnas actuales sean UUID, enumeraciones,
+  fechas, IP validada o estados traducidos.
 - **O4 — CSV sin cookie:** no hay una llamada explícita a `?format=csv` sin sesión. El guard actúa por
   ruta, no por query, y los 52 tests del inventario cubren las dos rutas existentes; los cinco commits
   no añadieron ningún controlador ni decorador de ruta.

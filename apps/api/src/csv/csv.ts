@@ -1,11 +1,13 @@
 /**
  * Primitivas compartidas de los CSV administrativos (reports, payments, audit).
  *
- * Las celdas que empiezan por `=`, `+`, `-` o `@` se prefijan con `'` para que
- * Excel/Sheets las abran como texto: sin esto, un valor controlado por el dato
- * de negocio se ejecutaría como fórmula al abrir el archivo. El escape de
- * comas, comillas y saltos de línea vive aquí para que las tres exportaciones
- * no puedan divergir en una regla de seguridad.
+ * Las celdas cuyo primer carácter no blanco ni BOM es `=`, `+`, `-` o `@` se
+ * prefijan con `'` para que Excel/Sheets las abran como texto: sin esto, un
+ * valor controlado por el dato de negocio se ejecutaría como fórmula al abrir
+ * el archivo. Los espacios y el BOM iniciales solo se ignoran para decidir el
+ * prefijo; se conservan en el valor escrito. El escape de comas, comillas y
+ * saltos de línea vive aquí para que las tres exportaciones no puedan divergir
+ * en una regla de seguridad.
  */
 
 export type CsvLocale = "es" | "en";
@@ -16,7 +18,8 @@ export function csvLocale(value: string | undefined): CsvLocale {
 }
 
 export function csvCell(value: string): string {
-  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  const significant = value.replace(/^[\s\uFEFF]+/u, "");
+  const safe = /^[=+\-@]/.test(significant) ? `'${value}` : value;
   return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 
