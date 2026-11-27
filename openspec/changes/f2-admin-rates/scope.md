@@ -1,6 +1,6 @@
 # Alcance de f2-admin-rates
 
-Clasificación de los 75 escenarios nuevos de esta change, alineada con los deltas y las tres specs
+Clasificación de los 78 escenarios nuevos de esta change, alineada con los deltas y las tres specs
 base nuevas. El conteo se comprueba con `node scripts/check-specs.mjs` y con un recuento de
 `#### Scenario:` por spec. Los 103 escenarios de las specs base `exchange-rates` (31), `payments` (38)
 y `audit` (34) son regresión y no se cuentan aquí.

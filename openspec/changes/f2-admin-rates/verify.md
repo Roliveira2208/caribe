@@ -401,3 +401,164 @@ Evidencia de los dos escenarios obligatorios de `admin-ui`:
   (`catalog-client.ts` y `catalog-panel.tsx`), nunca por un id elegido por el cliente. El panel F2 no
   tiene pantalla de reservas; la matriz F1 se materializa ocultando cualquier resumen de reservas,
   como indica `design.md:137-139`.
+
+---
+
+# Verificación final — T-F2-25 y T-F2-26
+
+**Fecha:** 2026-11-26  
+**Change:** `f2-admin-rates`  
+**Alcance verificado:** cierre de F2 sobre `main` @ `5f7375a`, con los cinco commits pendientes de
+push (`7658041`, `047d5ce`, `144c319`, `d54a4d8`, `5f7375a`).  
+**Veredicto:** **PASS** — 64/64 escenarios obligatorios y 14/14 deseables con evidencia ejecutable o
+contractual; sin hallazgos Critical/High/Medium y riesgo residual bajo.  
+**Bloqueos para cerrar F2:** ninguno. Las observaciones de la sección 5 son no bloqueantes.
+
+La verificación la hicieron dos agentes independientes en conversaciones limpias y modo solo lectura:
+uno derivó tests por escenario y ejecutó la batería completa; el otro auditó seguridad, secretos,
+tenants y rutas sin sesión. Antes de sus informes `git status --short` estaba vacío; ninguno modificó
+código, specs, `tasks.md`, dependencias ni historial. Ambos informaron **FAIL** por trazabilidad, no
+por el comportamiento: faltaban 19 obligatorios mapeados en este archivo y el delta de `admin-ui`
+omitía el escenario base «Idioma persistido». Las correcciones están en la sección 4.
+
+## 1. Comandos ejecutados
+
+| Comando | Resultado |
+| --- | --- |
+| `pnpm lint` | `eslint .` + Turbo **4/4 successful**, 0 errores. |
+| `pnpm typecheck` | Turbo **5/5 successful**, 0 errores. |
+| `pnpm test` | Turbo **5/5** en **8m21.98s**: API **64 archivos / 734 tests**, admin **23 / 228**, web **19 / 128**, shared **5 / 82**. Total **111 archivos / 1.172 tests**, 0 fallos. Solo warnings esperados del fallback de tasa. |
+| `pnpm --filter @caribe/api exec vitest run test/audit-csv.e2e.ts` | **1 archivo / 4 tests en verde** tras la limpieza del e2e. |
+| `node scripts/check-specs.mjs` | `OK: 15 specs válidas`. |
+| `pnpm exec openspec validate --all` | Tras corregir el delta: `Totals: 16 passed, 0 failed (16 items)`. Los warnings de requisitos largos son preexistentes y no bloquean. |
+| Inventario sin sesión: `two-factor.e2e.ts`, `active-membership.e2e.ts`, `admin-route.test.ts`, `api-errors.e2e.ts` | **4 archivos / 52 tests en verde**. |
+| Foco deseables: 4 archivos de API, 9 de admin y 1 de shared | **22 + 131 + 7 tests en verde**, respectivamente. |
+
+Los recuentos se listan como evidencia de cada ejecución, no para sumarlos. No se añadieron `any`
+nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `expect.any(Object)` en
+`payments-client.test.ts` y una mención literal en `design.md:242`.
+
+## 2. T-F2-25 — 14 deseables
+
+| # | Escenario | Evidencia |
+| --- | --- | --- |
+| 1 | Tasa global del Super Admin | `f2-exchange-rates.e2e.ts` → *"tasa global del Super Admin: tenant NULL sin revelar la de las agencias"*; `rates-client.test.ts` → *"fija la tasa global con la ruta de plataforma"*. |
+| 2 | Fecha valor futura | `f2-exchange-rates.e2e.ts` → *"fecha valor futura: se anuncia como pendiente sin aplicarse como vigente"*; `rates-client.test.ts` → *"conserva el pendiente sin aplicarlo"*. |
+| 3 | Historial de overrides | `rates-client.test.ts` → filtra por `exchange-rate.override`, ordena por fecha valor y deja historial vacío en 403; `rates-panel.test.ts` → actor, motivo y antes→después. Sin e2e HTTP específico del historial (obs. O2). |
+| 4 | Exportación CSV de pagos | `payments-csv.e2e.ts` → *"aplica los mismos filtros, límite y cursor que el JSON"*, *"no mezcla agencias ni expone tenant, tarjeta o CVV"* y *"localiza encabezados con lang y rechaza parámetros no previstos"*; `payments-csv.test.ts` → celdas, idiomas y vacío. |
+| 5 | Columnas configurables | `payments-client.test.ts` → `parsePaymentColumns` fila duplicados/claves prohibidas y `storePaymentColumns`/`loadPaymentColumns` persisten en `localStorage`; `payments-panel.test.ts` → *"exporta CSV y configura columnas sin alterar filtros ni ámbito"*. La interacción de UI es inspección de código (obs. O1). |
+| 6 | Estado vacío | `payments-panel.test.ts` → *"da etiqueta y foco al estado vacío y al error de agencia"* y `it.each` de claves es/en. Confirmación estática del render/foco (obs. O1). |
+| 7 | Estado de error | `payments-client.test.ts` → códigos 401/2FA/403/409/410/422/`ACTIVE_ORGANIZATION_REQUIRED`; `payments-panel.test.ts` → *"da etiqueta y foco..."*. El 404 cae a `genericError`, sin inventar un modo (obs. O1). |
+| 8 | Auditoría del override de tasa | `f2-audit-actions.e2e.ts` → *"Auditoría del override de tasa"*; `audit.e2e.ts` → fila con actor, antes/después, IP y fecha. |
+| 9 | Auditoría de la revisión de pagos | `f2-audit-actions.e2e.ts` → aprobación, rechazo y *"si falla la auditoría se revierte la revisión del pago"*; `payments.e2e.ts` → transacción compartida. |
+| 10 | Auditoría del cambio de rol | `f2-audit-actions.e2e.ts` → *"Auditoría del cambio de rol"* con audit y par `attempt`/`result` con el mismo `correlation_id`. |
+| 11 | Exportación CSV de auditoría | `audit-csv.e2e.ts` → filtros/cursor, alcance por rol, encabezados y estados es/en sin secretos, y escape de fórmulas; `audit-client.test.ts` y `audit-panel.test.ts` → descarga y control accesible. |
+| 12 | Selector de agencia en la cabecera | `panel-access.test.ts` → una, varias y cero membresías, plataforma y `set-active` real; `admin-ui-selectors.test.ts` → cabecera, `set-active` y recarga completa. Interacción de UI estática (obs. O1). |
+| 13 | Bandera del modo de aprobación | `tenant-settings-client.test.ts` → lee `AUTO`/`MANUAL` con la sesión y falla cerrado en 403 o modo desconocido; `admin-ui-selectors.test.ts` y `payments-panel.test.ts` → bandera y gating solo en `MANUAL`. |
+| 14 | Idioma persistido en perfil y cookie | `shared.test.ts` → `preferredLocale`, `replacePathLocale` y `updateUserLocale` por `/api/auth/update-user`; `tenant-settings.e2e.ts` → el perfil cambia a `en` por la ruta self-service; `admin-ui-selectors.test.ts` → escritura antes de navegar, login y 2FA. Sin test DOM de recarga (obs. O1). |
+
+## 3. T-F2-26 — matriz de los 64 obligatorios
+
+| # | Spec · escenario | Evidencia |
+| --- | --- | --- |
+| 1 | api-errors · Límite excedido | `security.e2e.ts` → *"Rate limit por IP real"*; `business-rate-limit.e2e.ts` → 3 límites con `code = RATE_LIMITED`. |
+| 2 | exchange-rates · Ver tasa vigente | PAUSA 1 §2 fila 1; `f2-exchange-rates.e2e.ts`, `rates-client.test.ts`. |
+| 3 | exchange-rates · Override con motivo | PAUSA 1 §2 fila 2; `f2-exchange-rates.e2e.ts`, `rates-panel.test.ts`. |
+| 4 | exchange-rates · Sin segundo factor | PAUSA 1 §2 fila 3; `f2-exchange-rates.e2e.ts`, `rates-client.test.ts`. |
+| 5 | exchange-rates · Sin permiso de tasa | PAUSA 1 §2 fila 4; `f2-exchange-rates.e2e.ts` y matriz `access.ts`. |
+| 6 | exchange-rates · Confirmación antes/después | PAUSA 1 §2 fila 7; `rates-panel.test.ts` → modal explícito. |
+| 7 | exchange-rates · Override de otra agencia | PAUSA 1 §2 fila 8; equivalente aprobado sin ruta por id. |
+| 8 | exchange-rates · Auditoría del override | PAUSA 1 §2 fila 9; `audit.e2e.ts`. |
+| 9 | exchange-rates · Campos calculados del cliente | PAUSA 1 §2 fila 6; `f2-exchange-rates.e2e.ts` → 422. |
+| 10 | exchange-rates · Membresía revocada | PAUSA 1 §2 fila 5; `f2-exchange-rates.e2e.ts` → `ACTIVE_ORGANIZATION_REQUIRED`. |
+| 11 | payments · Listado filtrable | PAUSA 2 §2 fila 1; `payments.e2e.ts`, `payments-client.test.ts`, `payments-panel.test.ts`. |
+| 12 | payments · Aprobar con TOTP | PAUSA 2 §2 fila 2; `payments.e2e.ts`, `two-factor.e2e.ts`. |
+| 13 | payments · Rechazo con motivo | PAUSA 2 §2 fila 3; `payments.e2e.ts`, `payments-client.test.ts`. |
+| 14 | payments · Revisor distinto del pagador | PAUSA 2 §2 fila 4; `canReviewPayment` y botones deshabilitados. |
+| 15 | payments · Par congelado solo lectura | PAUSA 2 §2 fila 5; esquemas `strictObject` y texto decimal del servidor. |
+| 16 | payments · Revisión concurrente | PAUSA 2 §2 fila 6; `PAYMENT_ALREADY_REVIEWED`/`INVALID_STATE_TRANSITION`. |
+| 17 | payments · Sin permiso de lectura | PAUSA 2 §2 fila 7; `payments.guard.ts` y matriz de roles. |
+| 18 | payments · Pago de otra agencia | PAUSA 2 §2 fila 8; `payments.service.ts` acota `tenantId`. |
+| 19 | audit · Filtros y cursor | `f2-audit.e2e.ts` → *"filtra por acción, entidad, actor y rango y recorre el cursor sin duplicados ni huecos"*; `audit-panel.test.ts` → pila de páginas. |
+| 20 | audit · Pestaña de eventos de autenticación | `auth-events.e2e.ts` → alcance por agencia, plataforma, filtros por ruta/`outcome` y cursor. |
+| 21 | audit · Alcance del admin de agencia | `f2-audit.e2e.ts` → *"el admin de agencia ve solo su tenant; agente y member reciben 403"*; `audit.e2e.ts`. |
+| 22 | audit · Modo plataforma del Super Admin | `f2-audit.e2e.ts` → *"el Super Admin lee plataforma y todas las agencias en modo lectura"*; `audit.e2e.ts` → inmutabilidad. |
+| 23 | audit · Sin permiso de auditoría | `f2-audit.e2e.ts` → 403 a agente y member; `audit-panel.test.ts` → sin resumen ni enlaces. |
+| 24 | audit · Sin secretos ni mensajes internos | `f2-audit.e2e.ts` → *"no expone secretos aunque la fila los contuviera antes de redactarse"*; `audit.e2e.ts` → *"record redacta claves sensibles"*. |
+| 25 | catalog · Alta de producto | PAUSA 3 §2 fila 1; `products-admin.e2e.ts`, `catalog-client.test.ts`. |
+| 26 | catalog · Edición de la agencia | PAUSA 3 §2 fila 2; esquemas `strictObject`. |
+| 27 | catalog · Proveedor edita solo sus productos | PAUSA 3 §2 fila 3; 404 indistinguible y `hotelScope` por `providerId`. |
+| 28 | catalog · Publicar y archivar | PAUSA 3 §2 fila 4; republicar y visibilidad pública. |
+| 29 | catalog · Disponibilidad por noche | PAUSA 3 §2 fila 5; `UNIQUE(productId, night)` y bloqueo de cupo. |
+| 30 | catalog · Lectura de disponibilidad del panel | PAUSA 3 §2 fila 6; `GET /admin/products/:id/availability`. |
+| 31 | catalog · Precio como texto decimal | PAUSA 3 §2 fila 7; `DECIMAL(14,2)`. |
+| 32 | catalog · Traducciones es y en | PAUSA 3 §2 fila 8; 422 si falta `en` y fallback público. |
+| 33 | auth-access · Invitar miembro con 2FA | `two-factor.e2e.ts` → sin TOTP 403 antes de validar; `auth.e2e.ts` → invitación 200; `audit.e2e.ts` → fila y evento con `correlation_id`. |
+| 34 | auth-access · Cambiar rol | `f2-audit-actions.e2e.ts` → *"Auditoría del cambio de rol"*; `two-factor.e2e.ts` → ruta existente y 403 sin TOTP. |
+| 35 | auth-access · Revocar sesión desde el panel | `auth.e2e.ts` → *"super admin revoca la sesión... 401 a la víctima"*; `users-panel.test.ts` → la agencia no ofrece la acción. |
+| 36 | auth-access · Organización objetivo ajena | `auth.e2e.ts` → *"una sesión no accede a la organización de otra agencia"*; `two-factor.e2e.ts` → rechazo con `organizationId` ajeno sin filas en B. |
+| 37 | auth-access · Super Admin en modo plataforma | `panel-access.test.ts` → *"entra en modo plataforma aunque el Super Admin tenga membresías"*; `organizations-admin.e2e.ts` y `f2-audit.e2e.ts`. |
+| 38 | auth-access · Operación sin agencia activa | `tenant-settings.e2e.ts` → `ACTIVE_ORGANIZATION_REQUIRED`; `two-factor.e2e.ts` → fallo cerrado; `panel-access.test.ts` → selector/estado vacío. |
+| 39 | auth-access · Listado de agencias para el filtro | `organizations-admin.e2e.ts` → 3 tests (Super Admin ve `id`/`name`/`slug`; owner y admin 403); `reports-panel.test.ts` → selector y CSV con el mismo `agencyId`. |
+| 40 | admin-ui · Tokens Caribe | `visual-identity.test.ts` → *"ConfigProvider aplica la paleta exacta"* y *"no quedan colores genéricos"*. |
+| 41 | admin-ui · Tipografía compartida | `visual-identity.test.ts` → fuentes en un único paquete y cargadas por ambas apps. |
+| 42 | admin-ui · Cabecera del panel | `visual-identity.test.ts` → *"Cabecera del panel: marca, navegación, idioma y sesión desde mensajes"*; `panel-navigation.test.ts`. |
+| 43 | admin-ui · Textos es y en | `accessibility.test.ts` → *"no hay cadenas visibles fijas en los componentes"*; `messages.test.ts` → paridad de claves. |
+| 44 | admin-ui · Accesibilidad básica | `accessibility.test.ts` → foco visible, controles etiquetados, tablas con encabezados y avisos con tipo. |
+| 45 | admin-ui · Matriz F1 en la UI | Verificación §6; `panel-navigation.test.ts` → 11 tests, sin módulo de reservas. |
+| 46 | admin-ui · Sin datos negados por la API | Verificación §6; `denied-data.ts` descarta filas/importes ante 403/404. |
+| 47 | reports · Reporte por rango de fechas | T-F2-23 §5; `reports.e2e.ts` → rango inclusivo y CSV por la misma ruta. |
+| 48 | reports · Totales calculados en el servidor | T-F2-23 §5; importes y tasa congelados, `DECIMAL`. |
+| 49 | reports · Desglose por método y estado | T-F2-23 §5; `reports.e2e.ts`. |
+| 50 | reports · Alcance por rol | T-F2-23 §5; owner/admin solo su agencia, Super Admin todas, roles sin permiso 403. |
+| 51 | reports · Exportación CSV del reporte | T-F2-23 §5; `reports-csv.test.ts` → prefijo `'` para fórmulas y encabezados es/en. |
+| 52 | security · IP tras proxy de confianza | PAUSA 1 §3; `security.e2e.ts`, `client-ip.test.ts`. |
+| 53 | security · Cabecera de proxy no confiable | PAUSA 1 §3; `security.e2e.ts` → *"Cabecera de proxy no confiable"*. |
+| 54 | security · Rate limit por IP real | PAUSA 1 §3; `security.e2e.ts` → *"Rate limit por IP real"*. |
+| 55 | security · Cabeceras de seguridad | PAUSA 1 §3; `security.e2e.ts` → *"Cabeceras de seguridad en la API"*. |
+| 56 | security · CSP sin scripts inline | PAUSA 1 §3; `csp.test.ts` → nonce por petición y sin `unsafe-inline`. |
+| 57 | security · CORS con orígenes permitidos | PAUSA 1 §3; `security.e2e.ts`. |
+| 58 | security · CORS con origen desconocido | PAUSA 1 §3; `security.e2e.ts`. |
+| 59 | security · Límite en creación de reservas | `business-rate-limit.e2e.ts` → *"Límite en creación de reservas"*. |
+| 60 | security · Límite en alta y revisión de pagos | `business-rate-limit.e2e.ts` → *"Límite en alta y revisión de pagos"*. |
+| 61 | security · Límite en descargas | `business-rate-limit.e2e.ts` → *"Límite de descargas"*. |
+| 62 | security · Reembolso idempotente | `refund-idempotency.e2e.ts` → `refundId` y una sola escritura. |
+| 63 | security · Rollback sin reembolso externo | `refund-idempotency.e2e.ts`. |
+| 64 | security · Reconciliación de reembolsos | `refund-idempotency.e2e.ts` → fila pendiente y reconciliación, sin secretos. |
+
+## 4. Correcciones tras los informes independientes
+
+1. **H1 (auditoría, bloqueante de cierre):** este archivo no mapeada 19 obligatorios. La sección 3
+   añade la matriz completa de 64 y la sección 1 registra la batería consolidada posterior a los cinco
+   commits.
+2. **V1 (verificación de tests, bloqueante de DoD):** `openspec validate --all` fallaba porque el delta
+   `admin-ui` omitía el escenario base «Idioma persistido». Se copió al bloque `MODIFIED` con el mismo
+   nombre y se actualizó para reflejar perfil + cookie. Ahora: **16 passed, 0 failed**.
+3. **I1 (limpieza):** `audit-csv.e2e.ts` elimina las organizaciones y los usuarios creados en `afterAll`,
+   igual que `payments-csv.e2e.ts`. Reejecutado: **4/4**.
+4. **I3 (errata):** `scope.md` decía 75 escenarios en el encabezado; ahora dice 78, coherente con el
+   total vigente de 64 obligatorios y 14 deseables.
+
+## 5. Observaciones no bloqueantes
+
+- **O1 — UI estática:** varios tests de panel inspeccionan el código fuente en vez de montar el DOM
+  (estado vacío/error, columnas, selector, bandera e idioma). Las funciones puras y los clientes sí
+  tienen tests ejecutables. Es la limitación ya aceptada en las PAUSAS 1-3 (F4/L2); no se añadió una
+  dependencia de testing de componentes sin justificarlo en `design.md`.
+- **O2 — Historial de overrides:** cubierto por tests unitarios del cliente y del panel, sin un e2e HTTP
+  específico. La API reutiliza `GET /admin/audit-logs`, ya protegido y cubierto por `f2-audit.e2e.ts`;
+  no se creó una ruta nueva.
+- **O3 — CSV (baja, informativa):** `csvCell` neutraliza celdas que empiezan por `=`, `+`, `-` o `@` en
+  la primera posición, tal como dice el delta `reports`. No normaliza espacios/BOM iniciales; hoy no es
+  explotable porque todas las columnas son UUID, enumeraciones, fechas, IP validada o estados
+  traducidos. Se documenta, no se cambia el contrato especificado.
+- **O4 — CSV sin cookie:** no hay una llamada explícita a `?format=csv` sin sesión. El guard actúa por
+  ruta, no por query, y los 52 tests del inventario cubren las dos rutas existentes; los cinco commits
+  no añadieron ningún controlador ni decorador de ruta.
+- **O5 — preguntas abiertas previas:** siguen pendientes de decisión del dueño los rangos/direcciones de
+  `TRUSTED_PROXIES`, el valor de `TRUSTED_ORIGINS` y las observaciones F4/F5 del catálogo. Ninguna
+  bloquea F2 ni fue introducida por T-F2-25/T-F2-26.
+
+**Conclusión:** F2 puede cerrarse. Todos los escenarios obligatorios del `scope.md` están trazados, los
+14 deseables tienen evidencia, la suite completa está en verde y no hay deuda de seguridad Critical,
+High o Medium.

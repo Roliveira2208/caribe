@@ -155,6 +155,8 @@ describe("audit: exportación CSV (T-F2-25)", () => {
   });
 
   afterAll(async () => {
+    await prisma.organization.deleteMany({ where: { id: { in: [orgA, orgB] } } });
+    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     await prisma.$disconnect();
     await app?.close();
   });
