@@ -7,6 +7,7 @@ import { PanelAccessNotice } from "@/components/panel-access-notice";
 import { PaymentsPanel } from "@/components/payments-panel";
 import { loadActiveMemberRole, loadPanelAccess, loadSessionUser } from "@/lib/panel-access";
 import { resolvePaymentPanelAccess } from "@/lib/payments-client";
+import { getTenantSettings } from "@/lib/tenant-settings-client";
 
 interface PaymentsPageProps {
   params: Promise<{ locale: string }>;
@@ -57,9 +58,18 @@ export default async function PaymentsPage({ params }: PaymentsPageProps) {
     );
   }
 
+  const paymentMode = await getTenantSettings(request)
+    .then((settings) => settings.paymentMode)
+    .catch(() => null);
+
   return (
     <div style={{ width: "100%" }}>
-      <PaymentsPanel locale={locale} access={payments} userId={userId} />
+      <PaymentsPanel
+        locale={locale}
+        access={payments}
+        userId={userId}
+        paymentMode={paymentMode}
+      />
     </div>
   );
 }

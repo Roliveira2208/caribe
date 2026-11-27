@@ -21,6 +21,7 @@ import {
   isTwoFactorRequired,
   PAYMENT_METHODS,
   type Locale,
+  type PaymentModeValue,
 } from "@caribe/shared";
 import {
   canReviewPayment,
@@ -48,10 +49,12 @@ interface PaymentsPanelProps {
   access: PaymentPanelAccess;
   /** Id de la sesión resuelto en el servidor; nunca se fía del cliente. */
   userId: string | null;
+  /** Modo leído de la API; `null` oculta las acciones de revisión. */
+  paymentMode: PaymentModeValue | null;
 }
 
 /** Panel de pagos del wireframe aprobado `panel-pagos.svg` (T-F2-11/T-F2-12). */
-export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
+export function PaymentsPanel({ locale, access, userId, paymentMode }: PaymentsPanelProps) {
   const t = useTranslations("payments");
   const router = useRouter();
   const [status, setStatus] = useState<PaymentFilterStatus>("IN_REVIEW");
@@ -281,8 +284,18 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
       key: "actions",
       render: (_value: unknown, row: AdminPayment) => {
         if (row.status !== "IN_REVIEW") return t("noActions");
-        if (!access.canReview || !canReviewPayment(access, row.reportedBy, userId)) {
-          const reason = access.canReview ? t("selfReview") : t("readOnly");
+        const canReviewHere =
+          access.canReview &&
+          paymentMode === "MANUAL" &&
+          canReviewPayment(access, row.reportedBy, userId);
+        if (!canReviewHere) {
+          const reason = !access.canReview
+            ? t("readOnly")
+            : paymentMode === null
+              ? t("modeUnavailable")
+              : paymentMode === "AUTO"
+                ? t("automaticOnly")
+                : t("selfReview");
           return (
             <Space size="small">
               <Button size="small" type="primary" disabled title={reason}>

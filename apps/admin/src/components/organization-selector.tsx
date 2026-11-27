@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Select } from "antd";
 import type { AgencyOption } from "@/lib/panel-access";
 
@@ -13,7 +12,6 @@ interface OrganizationSelectorProps {
 /** Selector de agencia cuando la sesión tiene más de una membresía (T-F1-9b). */
 export function OrganizationSelector({ organizations }: OrganizationSelectorProps) {
   const t = useTranslations("organization");
-  const router = useRouter();
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +30,7 @@ export function OrganizationSelector({ organizations }: OrganizationSelectorProp
         setError(t("selectError"));
         return;
       }
-      router.refresh();
+      window.location.reload();
     } catch {
       setError(t("selectError"));
     } finally {

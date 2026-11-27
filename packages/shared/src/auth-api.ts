@@ -17,6 +17,8 @@ export interface SessionUser {
   name?: string | null;
   role?: string | string[] | null;
   twoFactorEnabled?: boolean | null;
+  /** Idioma persistido por Better Auth (additionalFields); `es` por defecto. */
+  locale?: string | null;
 }
 
 /** Respuesta de GET /api/auth/get-session (sin sesion la API responde null). */

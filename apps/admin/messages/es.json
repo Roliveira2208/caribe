@@ -8,6 +8,7 @@
     "language": "Idioma",
     "spanish": "Español",
     "english": "English",
+    "localeError": "No se pudo guardar el idioma. Inténtalo de nuevo.",
     "payments": "Pagos",
     "catalog": "Catálogo",
     "rates": "Tasas",
@@ -105,6 +106,11 @@
     "platformDescription": "Estás en modo plataforma, sin una agencia activa. El acceso es de solo lectura.",
     "activeAgency": "Agencia activa: {agency}"
   },
+  "paymentMode": {
+    "automatic": "Aprobación automática",
+    "manual": "Aprobación manual",
+    "unavailable": "Modo de aprobación no disponible"
+  },
   "payments": {
     "title": "Revisión de pagos",
     "description": "Pagos reportados por los clientes que esperan revisión de un admin de la agencia.",
@@ -132,6 +138,8 @@
     "loadingMore": "Cargando más pagos…",
     "readOnly": "Tu rol solo puede consultar estos pagos.",
     "selfReview": "No puedes revisar un pago que reportaste tú mismo.",
+    "automaticOnly": "La revisión está desactivada porque la agencia aprobó pagos automáticamente.",
+    "modeUnavailable": "No se pudo determinar el modo de aprobación; las revisiones están desactivadas.",
     "methodMobile": "Pago Móvil",
     "methodCard": "Tarjeta",
     "methodZelle": "Zelle",

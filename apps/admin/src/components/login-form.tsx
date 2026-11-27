@@ -4,7 +4,15 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Form, Input } from "antd";
-import { signInEmail, twoFactorSignInPending, AuthApiError, type Locale } from "@caribe/shared";
+import {
+  AuthApiError,
+  getSession,
+  preferredLocale,
+  replacePathLocale,
+  signInEmail,
+  twoFactorSignInPending,
+  type Locale,
+} from "@caribe/shared";
 
 interface LoginFormProps {
   locale: Locale;
@@ -36,7 +44,9 @@ export function LoginForm({ locale, redirectTo }: LoginFormProps) {
         router.push(`/${locale}/two-factor?redirectTo=${encodeURIComponent(redirectTo)}`);
         return;
       }
-      router.push(redirectTo);
+      // El perfil manda tras el login; sin preferencia válida se abre en `es`.
+      const session = await getSession().catch(() => null);
+      router.push(replacePathLocale(redirectTo, preferredLocale(session?.user.locale)));
     } catch (cause) {
       setError(
         cause instanceof AuthApiError && cause.status === 401

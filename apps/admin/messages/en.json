@@ -8,6 +8,7 @@
     "language": "Language",
     "spanish": "Español",
     "english": "English",
+    "localeError": "Could not save the language. Please try again.",
     "payments": "Payments",
     "catalog": "Catalog",
     "rates": "Rates",
@@ -105,6 +106,11 @@
     "platformDescription": "You are in platform mode, with no active agency. Access is read-only.",
     "activeAgency": "Active agency: {agency}"
   },
+  "paymentMode": {
+    "automatic": "Automatic approval",
+    "manual": "Manual approval",
+    "unavailable": "Approval mode unavailable"
+  },
   "payments": {
     "title": "Payment review",
     "description": "Payments reported by customers and waiting for review by an agency admin.",
@@ -132,6 +138,8 @@
     "loadingMore": "Loading more payments…",
     "readOnly": "Your role can only view these payments.",
     "selfReview": "You cannot review a payment you reported yourself.",
+    "automaticOnly": "Reviews are disabled because this agency approves payments automatically.",
+    "modeUnavailable": "The approval mode could not be determined; reviews are disabled.",
     "methodMobile": "Mobile payment",
     "methodCard": "Card",
     "methodZelle": "Zelle",

@@ -10,6 +10,8 @@ import {
   generateBackupCodes,
   getSession,
   parseOtpauthUri,
+  preferredLocale,
+  replacePathLocale,
   secretFromOtpauthUri,
   twoFactorScreenMode,
   verifyTotp,
@@ -30,6 +32,11 @@ interface PasswordValues {
 
 interface CodeValues {
   code: string;
+}
+
+/** Destino con el idioma guardado en el perfil; sin preferencia válida, `es`. */
+function destinationFor(path: string, session: SessionData | null): string {
+  return replacePathLocale(path, preferredLocale(session?.user.locale));
 }
 
 async function copyToClipboard(value: string): Promise<boolean> {
@@ -69,7 +76,7 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
       .then((session: SessionData | null) => {
         if (!active) return;
         if (twoFactorScreenMode(session) === "done") {
-          router.replace(redirectTo);
+          router.replace(destinationFor(redirectTo, session));
           return;
         }
         setStep(twoFactorScreenMode(session) === "activate" ? "password" : "verify");
@@ -118,7 +125,8 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
       if (step === "qr") {
         setStep("backupCodes");
       } else {
-        router.push(redirectTo);
+        const session = await getSession().catch(() => null);
+        router.push(destinationFor(redirectTo, session));
       }
     } catch (cause) {
       setError(
@@ -341,7 +349,11 @@ export function TwoFactorForm({ redirectTo }: TwoFactorFormProps) {
             type="primary"
             block
             style={{ marginTop: 8 }}
-            onClick={() => router.push(redirectTo)}
+            onClick={() => {
+              void getSession()
+                .then((session) => router.push(destinationFor(redirectTo, session)))
+                .catch(() => router.push(destinationFor(redirectTo, null)));
+            }}
           >
             {t("finish")}
           </Button>

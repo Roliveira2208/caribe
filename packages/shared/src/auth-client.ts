@@ -6,6 +6,7 @@ import {
   type SignInEmailResult,
   type VerifyTotpResult,
 } from "./auth-api";
+import type { Locale } from "./locale";
 
 /**
  * Cliente de la API de autenticacion con fetch crudo (sin el cliente de
@@ -96,6 +97,17 @@ export async function signInEmail(
     { email, password },
     options,
   ) as Promise<SignInEmailResult>;
+}
+
+/**
+ * POST /api/auth/update-user: guarda el idioma del perfil. Es una ruta propia
+ * de Better Auth (self-service), no un plugin ni un endpoint nuevo.
+ */
+export async function updateUserLocale(
+  locale: Locale,
+  options: AuthFetchOptions = {},
+): Promise<void> {
+  await postJson(`${AUTH_BASE_PATH}/update-user`, { locale }, options);
 }
 
 /** POST /api/auth/sign-out. */

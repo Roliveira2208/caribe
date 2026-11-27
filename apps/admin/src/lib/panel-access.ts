@@ -19,6 +19,12 @@ export type PanelAccess =
   | { status: "ready"; organization: AgencyOption }
   | { status: "error" };
 
+/** Vista de la cabecera: no activa nada, solo decide qué selector mostrar. */
+export type OrganizationChoice =
+  | { status: "hidden" }
+  | { status: "choose"; organizations: AgencyOption[] }
+  | { status: "fixed"; organization: AgencyOption };
+
 const SUPER_ADMIN_ROLE = "super_admin";
 
 function isSuperAdmin(user: SessionUser): boolean {
@@ -164,6 +170,32 @@ export async function loadSessionUser(
   if (typeof body !== "object" || body === null) return null;
   const user = (body as { user?: { id?: unknown } }).user;
   return typeof user?.id === "string" && user.id !== "" ? user.id : null;
+}
+
+/**
+ * Estado del selector de la cabecera. No fija la organización activa: las
+ * páginas ya lo hacen con `loadPanelAccess`. Evita una segunda escritura de
+ * `set-active` al renderizar la cabecera en cada ruta.
+ */
+export async function loadOrganizationChoice(
+  options: LoadPanelAccessOptions,
+): Promise<OrganizationChoice> {
+  const sessionResponse = await authRequest("/get-session", options);
+  if (!sessionResponse.ok) return { status: "hidden" };
+  const sessionBody = (await sessionResponse.json().catch(() => null)) as SessionData | null;
+  if (!sessionBody?.user) return { status: "hidden" };
+
+  const organizationsResponse = await authRequest("/organization/list", options);
+  if (!organizationsResponse.ok) return { status: "hidden" };
+  const organizations = parseAgencies(await organizationsResponse.json().catch(() => null));
+  const access = resolvePanelAccess(sessionBody, organizations);
+  if (access.status === "choose") {
+    return { status: "choose", organizations: access.organizations };
+  }
+  if (access.status === "ready" || access.status === "activate") {
+    return { status: "fixed", organization: access.organization };
+  }
+  return { status: "hidden" };
 }
 
 /**

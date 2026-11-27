@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ADMIN_PORT,
   API_PORT,
@@ -7,6 +7,9 @@ import {
   WEB_PORT,
   isLocale,
   localeSchema,
+  preferredLocale,
+  replacePathLocale,
+  updateUserLocale,
 } from "../src/index";
 
 describe("locale", () => {
@@ -24,6 +27,37 @@ describe("locale", () => {
 
   it("usa es como idioma por defecto", () => {
     expect(DEFAULT_LOCALE).toBe("es");
+  });
+
+  it("respeta el idioma válido del perfil y respalda los valores inválidos en es", () => {
+    expect(preferredLocale("en")).toBe("en");
+    expect(preferredLocale("es")).toBe("es");
+    expect(preferredLocale(null)).toBe("es");
+    expect(preferredLocale("fr")).toBe("es");
+  });
+
+  it("cambia solo el prefijo de idioma de una ruta local", () => {
+    expect(replacePathLocale("/en/admin/payments", "es")).toBe("/es/admin/payments");
+    expect(replacePathLocale("/es/admin/payments", "en")).toBe("/en/admin/payments");
+    expect(replacePathLocale("/en", "es")).toBe("/es");
+  });
+});
+
+describe('admin-ui › "Idioma persistido" (T-F2-25)', () => {
+  it("guarda el idioma por /api/auth/update-user antes de navegar", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => ({ status: true }),
+    }));
+    await updateUserLocale("en", { fetch: fetchMock });
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/update-user", {
+      credentials: "same-origin",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: "en" }),
+    });
   });
 });
 

@@ -50,6 +50,8 @@ const paymentKeys = [
   "csvFileName",
   "csvError",
   "organizationError",
+  "modeUnavailable",
+  "automaticOnly",
   "previousPage",
   "nextPage",
   "page",
