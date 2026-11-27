@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Table, Tabs, type TableColumnsType } from "antd";
 import { AuthApiError, isTwoFactorRequired, type Locale } from "@caribe/shared";
 import {
+  downloadAdminAuditCsv,
   isAuditOrganizationError,
   listAdminAuditLogs,
   listAuthEvents,
   type AuditLogItem,
   type AuthEventItem,
 } from "@/lib/audit-client";
+import { saveCsvBlob } from "@/lib/csv-download";
 
 interface AuditLogPanelProps {
   locale: Locale;
@@ -104,6 +106,8 @@ export function AuditLogPanel({ locale, redirectTo }: AuditLogPanelProps) {
     page: number;
   }>({ tab: "audit", cursor: null, page: 0 });
   const [data, setData] = useState<PanelData>({ status: "loading", tab: "audit" });
+  const [downloading, setDownloading] = useState(false);
+  const [csvNotice, setCsvNotice] = useState<string | null>(null);
 
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
@@ -200,6 +204,19 @@ export function AuditLogPanel({ locale, redirectTo }: AuditLogPanelProps) {
     setCursorHistory((previous) => ({ ...previous, [next]: [null] }));
     setPageRequest({ tab: next, cursor: null, page: 0 });
     setData({ status: "loading", tab: next });
+  }
+
+  async function downloadCsv(): Promise<void> {
+    setDownloading(true);
+    setCsvNotice(null);
+    try {
+      const blob = await downloadAdminAuditCsv(applied.audit, locale);
+      saveCsvBlob(blob, t("csvFileName"));
+    } catch {
+      setCsvNotice(t("csvError"));
+    } finally {
+      setDownloading(false);
+    }
   }
 
   function applyFilters(key: TabKey): void {
@@ -474,6 +491,22 @@ export function AuditLogPanel({ locale, redirectTo }: AuditLogPanelProps) {
                     {t("clear")}
                   </Button>
                 </form>
+                <Button
+                  aria-label={t("downloadCsv")}
+                  disabled={downloading}
+                  onClick={() => void downloadCsv()}
+                  style={{ marginTop: 12 }}
+                >
+                  {t("downloadCsv")}
+                </Button>
+                {csvNotice ? (
+                  <Alert
+                    type="error"
+                    showIcon
+                    title={csvNotice}
+                    style={{ marginTop: 12 }}
+                  />
+                ) : null}
                 {data.status === "ready" && data.tab === "audit" ? (
                   <>
                     <Table<AuditLogItem>

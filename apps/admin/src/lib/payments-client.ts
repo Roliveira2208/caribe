@@ -1,4 +1,4 @@
-import { AuthApiError, PAYMENT_METHODS } from "@caribe/shared";
+import { AuthApiError, PAYMENT_METHODS, type Locale } from "@caribe/shared";
 
 /** Métodos y estados que el panel puede filtrar (spec payments). */
 export const PAYMENT_FILTER_STATUSES = ["IN_REVIEW", "APPROVED", "REJECTED"] as const;
@@ -85,6 +85,58 @@ export interface PaymentsApiOptions {
   fetchImpl?: typeof globalThis.fetch;
 }
 
+/**
+ * Columnas configurables: solo campos devueltos por la API. Las acciones no
+ * son un campo de datos y por eso no entran en la preferencia.
+ */
+export const PAYMENT_COLUMN_KEYS = [
+  "id",
+  "bookingId",
+  "reportedBy",
+  "method",
+  "amountUsd",
+  "amountVes",
+  "exchangeRateId",
+  "valueDate",
+  "status",
+] as const;
+export type PaymentColumnKey = (typeof PAYMENT_COLUMN_KEYS)[number];
+const PAYMENT_COLUMN_STORAGE_KEY = "caribe.payments.columns.v1";
+
+/** Una preferencia corrupta vuelve al estado seguro, nunca a columnas ajenas. */
+export function parsePaymentColumns(value: unknown): PaymentColumnKey[] {
+  if (!Array.isArray(value)) return [...PAYMENT_COLUMN_KEYS];
+  const valid = value.filter(
+    (key): key is PaymentColumnKey =>
+      typeof key === "string" && PAYMENT_COLUMN_KEYS.includes(key as PaymentColumnKey),
+  );
+  return valid.length > 0 ? [...new Set(valid)] : [...PAYMENT_COLUMN_KEYS];
+}
+
+export function loadPaymentColumns(
+  storage: Pick<Storage, "getItem"> | undefined,
+): PaymentColumnKey[] {
+  if (!storage) return [...PAYMENT_COLUMN_KEYS];
+  try {
+    const raw = storage.getItem(PAYMENT_COLUMN_STORAGE_KEY);
+    return raw === null ? [...PAYMENT_COLUMN_KEYS] : parsePaymentColumns(JSON.parse(raw));
+  } catch {
+    return [...PAYMENT_COLUMN_KEYS];
+  }
+}
+
+export function storePaymentColumns(
+  keys: readonly PaymentColumnKey[],
+  storage: Pick<Storage, "setItem"> | undefined,
+): void {
+  if (!storage) return;
+  try {
+    storage.setItem(PAYMENT_COLUMN_STORAGE_KEY, JSON.stringify(keys));
+  } catch {
+    // Sin almacenamiento la preferencia solo dura la sesión en memoria.
+  }
+}
+
 /** El motivo del rechazo es obligatorio y acota el cuerpo que acepta la API. */
 export function validRejectionReason(reason: string): boolean {
   const trimmed = reason.trim();
@@ -160,6 +212,30 @@ export async function listAdminPayments(
   });
   if (!response.ok) throw await readError(response);
   return parsePage(await response.json().catch(() => null));
+}
+
+/**
+ * CSV por la MISMA ruta, con los filtros aplicados y el idioma activo. No se
+ * envía cursor: la exportación cubre la página completa permitida por la API.
+ */
+export async function downloadAdminPaymentsCsv(
+  filters: Omit<PaymentFilters, "cursor">,
+  locale: Locale,
+  options: PaymentsApiOptions = {},
+): Promise<Blob> {
+  const query = new URLSearchParams();
+  if (filters.status !== "ALL") query.set("status", filters.status);
+  if (filters.method !== "ALL") query.set("method", filters.method);
+  query.set("limit", "100");
+  query.set("format", "csv");
+  query.set("lang", locale);
+  const doFetch = options.fetchImpl ?? globalThis.fetch;
+  const response = await doFetch(`/api/v1/admin/payments?${query.toString()}`, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!response.ok) throw await readError(response);
+  return response.blob();
 }
 
 /** PATCH /api/v1/admin/payments/:id/(approve|reject). El motivo solo va en el rechazo. */

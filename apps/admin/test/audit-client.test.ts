@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  downloadAdminAuditCsv,
   listAdminAuditLogs,
   listAuthEvents,
   resolveAuditAccess,
@@ -8,6 +9,37 @@ import {
 function fetchJson(body: unknown, status = 200) {
   return vi.fn(async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
 }
+
+describe('audit › "Exportación CSV de auditoría" (T-F2-25)', () => {
+  it("exporta por la misma ruta con los mismos filtros y el idioma activo", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("ID,Fecha\n", { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    const blob = await downloadAdminAuditCsv(
+      { action: "payment.approved", from: "2026-11-01T00:00:00.000Z" },
+      "es",
+      { fetchImpl },
+    );
+
+    const url = String(vi.mocked(fetchImpl).mock.calls[0]?.[0]);
+    const query = new URLSearchParams(url.split("?")[1]);
+    expect([...query.keys()].sort()).toEqual(["action", "format", "from", "lang", "limit"]);
+    expect(query.get("format")).toBe("csv");
+    expect(query.get("lang")).toBe("es");
+    expect(query.get("action")).toBe("payment.approved");
+    expect(blob).toBeInstanceOf(Blob);
+  });
+
+  it("no envía un cursor de exportación que el usuario no eligió", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("", { status: 200 }),
+    ) as unknown as typeof fetch;
+    await downloadAdminAuditCsv({ cursor: "opaco" }, "en", { fetchImpl });
+    const url = String(vi.mocked(fetchImpl).mock.calls[0]?.[0]);
+    expect(new URLSearchParams(url.split("?")[1]).has("cursor")).toBe(false);
+  });
+});
 
 describe("cliente de auditoría del admin (T-F2-15)", () => {
   it("envía solo los filtros permitidos y el cursor opaco a /admin/audit-logs", async () => {

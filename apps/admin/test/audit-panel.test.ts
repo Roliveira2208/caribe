@@ -34,6 +34,20 @@ const auditPage = read("src/app/[locale]/admin/audit/page.tsx");
 const header = read("src/components/site-header.tsx");
 const access = read("src/lib/panel-access.ts");
 
+describe('audit › "Exportación CSV de auditoría" (T-F2-25)', () => {
+  it("exporta la página filtrada desde un control accesible por teclado", () => {
+    expect(panel).toContain("downloadAdminAuditCsv(applied.audit, locale)");
+    expect(panel).toContain("saveCsvBlob(");
+    expect(panel).toContain('aria-label={t("downloadCsv")}');
+    for (const locale of ["es", "en"] as const) {
+      const namespace = messages(locale)["audit"] as Record<string, unknown>;
+      for (const key of ["downloadCsv", "csvFileName", "csvError"]) {
+        expect(namespace[key], `${locale}.${key}`).toBeTruthy();
+      }
+    }
+  });
+});
+
 describe("visor de auditoría del admin (T-F2-15)", () => {
   it("usa el cliente tipado y dos pestañas de solo lectura", () => {
     expect(panel).toContain('from "@/lib/audit-client"');

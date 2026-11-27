@@ -24,17 +24,23 @@ import {
 } from "@caribe/shared";
 import {
   canReviewPayment,
+  downloadAdminPaymentsCsv,
   isReviewConflict,
   listAdminPayments,
+  loadPaymentColumns,
+  PAYMENT_COLUMN_KEYS,
   PAYMENT_FILTER_STATUSES,
   reviewAdminPayment,
+  storePaymentColumns,
   validRejectionReason,
   type AdminPayment,
   type AdminPaymentPage,
+  type PaymentColumnKey,
   type PaymentFilterMethod,
   type PaymentFilterStatus,
   type PaymentPanelAccess,
 } from "@/lib/payments-client";
+import { saveCsvBlob } from "@/lib/csv-download";
 import { deniedStatusOf } from "@/lib/denied-data";
 
 interface PaymentsPanelProps {
@@ -59,7 +65,12 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
+  const [downloading, setDownloading] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState<PaymentColumnKey[]>(() =>
+    loadPaymentColumns(typeof window === "undefined" ? undefined : window.localStorage),
+  );
   const generation = useRef(0);
+  const noticeRef = useRef<HTMLDivElement>(null);
 
   const redirectTo = `/${locale}/admin/payments`;
   const current = pages[pageIndex];
@@ -75,6 +86,11 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
         }
         if (isTwoFactorRequired(cause)) {
           router.replace(`/${locale}/two-factor?redirectTo=${encodeURIComponent(redirectTo)}`);
+          return;
+        }
+        if (cause.code === "ACTIVE_ORGANIZATION_REQUIRED") {
+          setPages([]);
+          setNotice({ kind: "error", message: t("organizationError") });
           return;
         }
         const denied = deniedStatusOf(cause);
@@ -127,6 +143,11 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
     };
   }, [status, method, reload, handleError]);
 
+  // Los avisos de error y el estado vacío reciben el foco y son anunciados.
+  useEffect(() => {
+    if (notice !== null || (!loading && rows.length === 0)) noticeRef.current?.focus();
+  }, [notice, loading, rows.length]);
+
   async function goNext(): Promise<void> {
     if (!nextCursor || loadingMore) return;
     const target = pageIndex + 1;
@@ -177,6 +198,45 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
     if (value === "ZELLE") return t("methodZelle");
     if (value === "BINANCE_PAY") return t("methodBinance");
     return t("methodCard");
+  }
+
+  function columnLabelKey(key: PaymentColumnKey): string {
+    return {
+      id: "colPayment",
+      bookingId: "colBooking",
+      reportedBy: "colCustomer",
+      method: "colMethod",
+      amountUsd: "colAmountUsd",
+      amountVes: "colAmountVes",
+      exchangeRateId: "colRateId",
+      valueDate: "colValueDate",
+      status: "colStatus",
+    }[key];
+  }
+
+  function toggleColumn(key: PaymentColumnKey): void {
+    setSelectedColumns((previous) => {
+      const next = previous.includes(key)
+        ? previous.filter((item) => item !== key)
+        : [...previous, key];
+      // Al menos una columna de datos: la tabla nunca queda sin contenido.
+      if (next.length === 0) return previous;
+      storePaymentColumns(next, typeof window === "undefined" ? undefined : window.localStorage);
+      return next;
+    });
+  }
+
+  async function downloadCsv(): Promise<void> {
+    setDownloading(true);
+    setNotice(null);
+    try {
+      const blob = await downloadAdminPaymentsCsv({ status, method }, locale);
+      saveCsvBlob(blob, t("csvFileName"));
+    } catch {
+      setNotice({ kind: "error", message: t("csvError") });
+    } finally {
+      setDownloading(false);
+    }
   }
 
   const columns: TableColumnsType<AdminPayment> = [
@@ -257,6 +317,11 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
     },
   ];
 
+  // Solo se ocultan columnas de datos; las acciones siguen disponibles.
+  const visibleColumns = columns.filter(
+    (column) => column.key === "actions" || selectedColumns.includes(column.key as PaymentColumnKey),
+  );
+
   return (
     <Card title={t("title")} style={{ width: "100%" }}>
       <p style={{ marginTop: 0, color: "var(--caribe-ink)" }}>{t("description")}</p>
@@ -298,28 +363,68 @@ export function PaymentsPanel({ locale, access, userId }: PaymentsPanelProps) {
           />
         </div>
       </Space>
-      {notice ? (
-        <Alert type={notice.kind} showIcon title={notice.message} style={{ marginBottom: 16 }} />
+      <details style={{ marginBottom: 16 }}>
+        <summary>{t("columnsLabel")}</summary>
+        <p style={{ marginBottom: 8 }}>{t("columnsHint")}</p>
+        <div
+          role="group"
+          aria-label={t("columnsLabel")}
+          style={{ display: "flex", flexWrap: "wrap", gap: 12 }}
+        >
+          {PAYMENT_COLUMN_KEYS.map((key) => (
+            <label key={key} htmlFor={`payments-column-${key}`}>
+              <input
+                id={`payments-column-${key}`}
+                type="checkbox"
+                checked={selectedColumns.includes(key)}
+                onChange={() => toggleColumn(key)}
+              />
+              {t(columnLabelKey(key))}
+            </label>
+          ))}
+        </div>
+      </details>
+      <Button
+        aria-label={t("downloadCsv")}
+        disabled={downloading}
+        onClick={() => void downloadCsv()}
+        style={{ marginBottom: 16 }}
+      >
+        {t("downloadCsv")}
+      </Button>
+      <div ref={noticeRef} tabIndex={-1}>
+        {notice ? (
+          <Alert type={notice.kind} showIcon title={notice.message} style={{ marginBottom: 16 }} />
+        ) : null}
+        {!loading && rows.length === 0 && notice === null ? (
+          <div role="status" style={{ marginBottom: 16 }}>
+            {t("empty")}
+          </div>
+        ) : null}
+      </div>
+      {loading || rows.length > 0 ? (
+        <Table<AdminPayment>
+          rowKey="id"
+          loading={loading}
+          columns={visibleColumns}
+          dataSource={rows}
+          pagination={false}
+          size="small"
+          locale={{ emptyText: t("empty") }}
+        />
       ) : null}
-      <Table<AdminPayment>
-        rowKey="id"
-        loading={loading}
-        columns={columns}
-        dataSource={rows}
-        pagination={false}
-        size="small"
-        locale={{ emptyText: t("empty") }}
-      />
-      <Space wrap style={{ marginTop: 16 }}>
-        <Button disabled={pageIndex === 0 || loading} onClick={() => setPageIndex((v) => v - 1)}>
-          {t("previousPage")}
-        </Button>
-        <span aria-live="polite">{t("page", { current: pageIndex + 1 })}</span>
-        <Button disabled={!nextCursor || loadingMore} onClick={() => void goNext()}>
-          {t("nextPage")}
-        </Button>
-        {loadingMore ? <span role="status">{t("loadingMore")}</span> : null}
-      </Space>
+      {rows.length > 0 ? (
+        <Space wrap style={{ marginTop: 16 }}>
+          <Button disabled={pageIndex === 0 || loading} onClick={() => setPageIndex((v) => v - 1)}>
+            {t("previousPage")}
+          </Button>
+          <span aria-live="polite">{t("page", { current: pageIndex + 1 })}</span>
+          <Button disabled={!nextCursor || loadingMore} onClick={() => void goNext()}>
+            {t("nextPage")}
+          </Button>
+          {loadingMore ? <span role="status">{t("loadingMore")}</span> : null}
+        </Space>
+      ) : null}
       <Modal
         open={rejectingId !== null}
         title={t("rejectTitle")}

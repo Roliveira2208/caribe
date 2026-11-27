@@ -2,10 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthApiError } from "@caribe/shared";
 import {
   canReviewPayment,
+  downloadAdminPaymentsCsv,
   isReviewConflict,
   listAdminPayments,
+  loadPaymentColumns,
+  PAYMENT_COLUMN_KEYS,
+  parsePaymentColumns,
   resolvePaymentPanelAccess,
   reviewAdminPayment,
+  storePaymentColumns,
   validRejectionReason,
 } from "../src/lib/payments-client";
 
@@ -34,6 +39,58 @@ const page = {
   ],
   nextCursor: null,
 };
+
+describe('payments › "Exportación CSV de pagos" (T-F2-25)', () => {
+  it("usa la misma ruta con los filtros aplicados, lang y sin cursor", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("ID,Reserva\n", { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    const blob = await downloadAdminPaymentsCsv(
+      { status: "IN_REVIEW", method: "ZELLE" },
+      "en",
+      { fetchImpl },
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/v1/admin/payments?status=IN_REVIEW&method=ZELLE&limit=100&format=csv&lang=en",
+      { credentials: "same-origin", cache: "no-store" },
+    );
+    expect(blob).toBeInstanceOf(Blob);
+  });
+
+  it("conserva el error de la API si la descarga falla", async () => {
+    const fetchImpl = fetchJson({ status: 403, code: "FORBIDDEN" }, 403);
+    await expect(
+      downloadAdminPaymentsCsv({ status: "ALL", method: "ALL" }, "es", { fetchImpl }),
+    ).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+});
+
+describe('payments › "Columnas configurables" (T-F2-25)', () => {
+  it("acepta solo campos devueltos por la API y sin duplicados", () => {
+    expect(parsePaymentColumns(["status", "tenantId", "status", "amountUsd"])).toEqual([
+      "status",
+      "amountUsd",
+    ]);
+    expect(parsePaymentColumns([])).toEqual([...PAYMENT_COLUMN_KEYS]);
+    expect(parsePaymentColumns(null)).toEqual([...PAYMENT_COLUMN_KEYS]);
+  });
+
+  it("persiste la preferencia y vuelve al estado seguro con almacenamiento corrupto", () => {
+    const setItem = vi.fn();
+    storePaymentColumns(["status", "bookingId"], { setItem });
+    expect(setItem).toHaveBeenCalledWith(
+      "caribe.payments.columns.v1",
+      JSON.stringify(["status", "bookingId"]),
+    );
+
+    const getItem = vi.fn(() => '["amountUsd","tenantId"]');
+    expect(loadPaymentColumns({ getItem })).toEqual(["amountUsd"]);
+    expect(loadPaymentColumns({ getItem: () => "{no es json" })).toEqual([...PAYMENT_COLUMN_KEYS]);
+    expect(loadPaymentColumns(undefined)).toEqual([...PAYMENT_COLUMN_KEYS]);
+  });
+});
 
 describe("cliente de pagos del admin", () => {
   it("filtra por estado y método en la lista", async () => {

@@ -1,4 +1,4 @@
-import { AuthApiError } from "@caribe/shared";
+import { AuthApiError, type Locale } from "@caribe/shared";
 
 /**
  * Cliente del visor de auditoría (T-F2-15). La API es la autoridad: aquí solo
@@ -214,6 +214,33 @@ export async function listAdminAuditLogs(
   });
   if (!response.ok) throw await readError(response);
   return parseAuditPage(await response.json().catch(() => null));
+}
+
+/**
+ * CSV por la misma ruta de auditoría, con los MISMOS filtros aplicados y el
+ * idioma activo. La API decide las columnas y traduce los estados.
+ */
+export async function downloadAdminAuditCsv(
+  filters: AuditLogFilters,
+  locale: Locale,
+  options: AuditApiOptions = {},
+): Promise<Blob> {
+  const query = new URLSearchParams();
+  setIfPresent(query, "action", filters.action);
+  setIfPresent(query, "entity", filters.entity);
+  setIfPresent(query, "actor", filters.actor);
+  setIfPresent(query, "from", filters.from);
+  setIfPresent(query, "to", filters.to);
+  query.set("limit", "100");
+  query.set("format", "csv");
+  query.set("lang", locale);
+  const doFetch = options.fetchImpl ?? globalThis.fetch;
+  const response = await doFetch(`/api/v1/admin/audit-logs?${query.toString()}`, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!response.ok) throw await readError(response);
+  return response.blob();
 }
 
 /** GET /api/v1/admin/auth-events con filtros por ruta, outcome y rango. */

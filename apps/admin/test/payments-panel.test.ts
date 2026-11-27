@@ -44,6 +44,12 @@ const paymentKeys = [
   "colValueDate",
   "colStatus",
   "colActions",
+  "columnsLabel",
+  "columnsHint",
+  "downloadCsv",
+  "csvFileName",
+  "csvError",
+  "organizationError",
   "previousPage",
   "nextPage",
   "page",
@@ -88,6 +94,24 @@ describe("panel de pagos (T-F2-11)", () => {
     expect(panel).toContain("setReload");
     expect(panel).toContain("isTwoFactorRequired(cause)");
     expect(panel).toContain("/two-factor");
+  });
+
+  it("exporta CSV y configura columnas sin alterar filtros ni ámbito", () => {
+    expect(panel).toContain("downloadAdminPaymentsCsv({ status, method }, locale)");
+    expect(panel).toContain("saveCsvBlob(");
+    expect(panel).toContain('aria-label={t("downloadCsv")}');
+    expect(panel).toContain("PAYMENT_COLUMN_KEYS.map(");
+    expect(panel).toContain("storePaymentColumns(");
+    expect(panel).toContain("visibleColumns");
+    expect(panel).not.toContain("tenantId");
+  });
+
+  it("da etiqueta y foco al estado vacío y al error de agencia", () => {
+    expect(panel).toContain("noticeRef");
+    expect(panel).toContain('tabIndex={-1}');
+    expect(panel).toContain('role="status"');
+    expect(panel).toContain('cause.code === "ACTIVE_ORGANIZATION_REQUIRED"');
+    expect(panel).toContain('t("organizationError")');
   });
 
   it("resuelve la matriz y la identidad en el servidor antes de renderizar", () => {
