@@ -65,3 +65,25 @@ Detalle en `docs/workflow.md`. Resumen:
 - No habilites ningún plugin de Better Auth ni autenticación por token (API key, bearer, SSO, OAuth)
   sin una change propia que actualice la clasificación de rutas, el inventario y la política para
   rutas sin sesión.
+
+## Pendientes de producción (consolidado; F2 → F5)
+
+Valores que el despliegue debe decidir o validar. No bloquean F2; pertenecen a `f5-hardening` en
+cuanto esa change se redacte (`openspec/ROADMAP.md`).
+
+- **`TRUSTED_PROXIES`** — Rangos o direcciones del proxy real del hosting; M1 solo acepta
+  `X-Forwarded-For` cuando el socket es de confianza y calcula la IP del cliente para el rate limit y
+  la auditoría (F2 `design.md` §6). Sin este valor se usa la IP del socket.
+- **`TRUSTED_ORIGINS`** — Orígenes exactos autorizados en CORS con credenciales (web y admin por
+  entorno); M2 rechaza el preflight de cualquier otro origen (F2 `design.md` §6).
+- **M1 en producción** — Comprobar tras el despliegue que la IP resuelta es la real detrás del proxy
+  y que el límite de login (60 s / 10 intentos) usa buckets por cliente, no uno global; la
+  implementación quedó probada localmente en T-F2-2.
+- **M2 en producción** — Verificar Helmet/HSTS/CSP y CORS en respuestas de éxito, error y 429 antes
+  de abrir la demo pública; la implementación quedó probada localmente en T-F2-3.
+- **F4 (catálogo, PAUSA 3)** — Los tests del panel son inspección de código fuente, sin interacción
+  DOM/navegador; decidir en F5 si se añade una dependencia de testing de componentes justificándola
+  en `design.md` (F2 `verify.md` §3, obs. F4).
+- **F5 (catálogo, PAUSA 3)** — `bookings.e2e.ts` agotó el `beforeAll` de 30 s en una corrida
+  adicional de tres E2E en paralelo; aislar la ejecución o revisar el timeout al configurar la CI
+  paralela de F5 (F2 `verify.md` §3, obs. F5).

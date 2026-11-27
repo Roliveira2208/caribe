@@ -382,10 +382,10 @@ Evidencia del reporte de ventas y del listado de agencias que puebla su filtro:
 - `apps/admin/test/reports-client.test.ts` y `reports-panel.test.ts` → **16/16**: el selector usa
   `GET /api/v1/admin/organizations`, no las membresías de Better Auth; rechaza respuestas que no sean
   un listado y conserva el `agencyId` elegido en la descarga CSV.
-- Suite completa: `pnpm test` → 111 archivos / 1.172 tests; `pnpm lint`, `pnpm typecheck`,
-  `node scripts/check-specs.mjs` (15 specs) y `openspec validate --all` (16 passed, 0 failed) en verde.
-  Los números de esta sección son los del cierre de la tarea; las dos comprobaciones añadidas tras el
-  cierre de F2 están descritas arriba y en la verificación final.
+- Suite completa (verificación final): `pnpm test` → 111 archivos / 1.172 tests; `pnpm lint`,
+  `pnpm typecheck`, `node scripts/check-specs.mjs` (15 specs) y `openspec validate --all`
+  (16 passed, 0 failed) en verde. Las dos comprobaciones añadidas tras el cierre de F2 están
+  descritas arriba y en la verificación final.
 
 Las observaciones F4 y F5 siguen siendo no bloqueantes. `scope.md` queda actualizado en 78 escenarios
 y 64 obligatorios tras añadir el scenario de `auth-access`. `csvCell` (O3) y el CSV sin sesión (O4)
@@ -587,9 +587,10 @@ nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `e
   `?format=csv` sin sesión (401 `UNAUTHENTICATED`) y con agente/proveedor/member (403 `FORBIDDEN`),
   y compara ambos estados con la misma llamada JSON. El guard actúa por ruta, no por query, y no se
   añadió ningún controlador ni decorador de ruta.
-- **O5 — preguntas abiertas previas:** siguen pendientes de decisión del dueño los rangos/direcciones de
-  `TRUSTED_PROXIES`, el valor de `TRUSTED_ORIGINS` y las observaciones F4/F5 del catálogo. Ninguna
-  bloquea F2 ni fue introducida por T-F2-25/T-F2-26.
+- **O5 — preguntas abiertas previas:** los pendientes de producción (`TRUSTED_PROXIES`,
+  `TRUSTED_ORIGINS`, validación de M1/M2 y observaciones F4/F5 del catálogo) están consolidados con
+  una línea de descripción cada uno en `AGENTS.md` → «Pendientes de producción (consolidado; F2 →
+  F5)». Ninguno bloquea F2 ni fue introducido por T-F2-25/T-F2-26.
 
 **Conclusión:** F2 puede cerrarse. Todos los escenarios obligatorios del `scope.md` están trazados, los
 14 deseables tienen evidencia, la suite completa está en verde y no hay deuda de seguridad Critical,
