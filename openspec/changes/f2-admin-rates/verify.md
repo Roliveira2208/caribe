@@ -363,18 +363,33 @@ Evidencia del reporte de ventas y del listado de agencias que puebla su filtro:
   activa reciben **403** en `GET /admin/organizations`, porque ese selector es solo de plataforma.
 - `apps/api/test/active-membership.e2e.ts` → **2/2** con el inventario sin cambios: la ruta de
   agencias es de plataforma y no consume la agencia activa, así que no pertenece a ese inventario.
-- `apps/api/test/reports-csv.test.ts` → **3/3**: el CSV prefija con `'` las celdas que empiezan por
-  `=`, `+`, `-` o `@`, mantiene el doble comillas y no altera los valores ordinarios. Corrección
-  añadida tras la revisión de T-F2-23, con su THEN en el delta `reports`.
+- `apps/api/test/reports-csv.test.ts` → **5/5**: el CSV prefija con `'` las celdas que empiezan por
+  `=`, `+`, `-` o `@` —incluso precedidas de espacios o BOM, sin eliminarlos del valor—, mantiene el
+  doble comillas y no altera los valores ordinarios. Corrección añadida tras la revisión de T-F2-23,
+  con su THEN en el delta `reports`.
+- `apps/api/test/reports.e2e.ts` → 6/6: además de la matriz anterior, `format=csv` sin sesión responde
+  401 `UNAUTHENTICATED` y con agente/proveedor/member responde 403 `FORBIDDEN`, igual que la versión
+  JSON. El guard corre por ruta, antes de elegir el formato de salida.
+- **Alcance confirmado del reporte de ventas.** No es exclusivo de Super Admin: la spec `reports`
+  aprobada y `design.md:135` dan lectura a owner y admin de su propia agencia, y al Super Admin en modo
+  plataforma sobre todas; el filtro `agencyId` del Super Admin se puebla con
+  `GET /admin/organizations`, que **sí** es una ruta exclusiva de Super Admin sin versión por agencia
+  (organizaciones de plataforma, sin consumir la memberships activa). No se encontró en el historial
+  (`84c9215`, `26d1d04`, `920c764`) ni en la documentación previa una versión del reporte «solo Super
+  Admin en plataforma y sin versión por agencia»: ese alcance no llegó a especificarse ni a implementarse
+  en F2, por lo que no se registra como diferido, sino como idea descartada antes de la aprobación del
+  contrato. Si se quiere un reporte global restringido a plataforma, debe entrar como change nueva.
 - `apps/admin/test/reports-client.test.ts` y `reports-panel.test.ts` → **16/16**: el selector usa
   `GET /api/v1/admin/organizations`, no las membresías de Better Auth; rechaza respuestas que no sean
   un listado y conserva el `agencyId` elegido en la descarga CSV.
-- Suite completa: `pnpm test` → 5/5 tareas y API 59 archivos / 710 tests; `pnpm lint`,
-  `pnpm typecheck`, `node scripts/check-specs.mjs` (15 specs) y `openspec validate --all`
-  (16 passed, 0 failed) en verde.
+- Suite completa: `pnpm test` → 111 archivos / 1.172 tests; `pnpm lint`, `pnpm typecheck`,
+  `node scripts/check-specs.mjs` (15 specs) y `openspec validate --all` (16 passed, 0 failed) en verde.
+  Los números de esta sección son los del cierre de la tarea; las dos comprobaciones añadidas tras el
+  cierre de F2 están descritas arriba y en la verificación final.
 
 Las observaciones F4 y F5 siguen siendo no bloqueantes. `scope.md` queda actualizado en 78 escenarios
-y 64 obligatorios tras añadir el scenario de `auth-access`.
+y 64 obligatorios tras añadir el scenario de `auth-access`. `csvCell` (O3) y el CSV sin sesión (O4)
+quedan cerrados tras el cierre de F2; véase la verificación final.
 
 ## 6. Matriz F1 en la UI (T-F2-24)
 
@@ -557,6 +572,12 @@ nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `e
 - **O2 — Historial de overrides:** cubierto por tests unitarios del cliente y del panel, sin un e2e HTTP
   específico. La API reutiliza `GET /admin/audit-logs`, ya protegido y cubierto por `f2-audit.e2e.ts`;
   no se creó una ruta nueva.
+- **Alcance del reporte (confirmado tras el cierre de F2):** el reporte de ventas **no** es exclusivo de
+  Super Admin: owner/admin ven el de su agencia y el Super Admin ve todas con `agencyId`. La pieza
+  exclusiva de plataforma y sin versión por agencia es el listado `GET /admin/organizations` que puebla
+  el filtro. No hay evidencia en el historial de specs ni en la documentación previa de un reporte
+  global restringido a Super Admin que se haya considerado y diferido en F2; no se registra, por tanto,
+  como pendiente. Si se desea, debe proponerse como change nueva.
 - **O3 — CSV (cerrado tras el cierre de F2):** `csvCell` neutraliza celdas cuyo primer carácter no
   blanco ni BOM es `=`, `+`, `-` o `@`, y conserva los espacios/BOM iniciales en el valor escrito. La
   limitación original (solo la primera posición) se endureció con test en rojo → verde y el delta
