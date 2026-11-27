@@ -222,6 +222,10 @@ cursor. La IP se muestra como «—» cuando sea `null`.
   `GET /admin/reports/sales?format=csv` sin nueva ruta; los totales suman todos los estados del rango;
   en el MVP no hay límite de filas y, sin preferencia explícita de idioma, los encabezados son `es`. El
   delta MODIFIED no añade escenarios nuevos, solo precisa los cinco ya contabilizados.
+- Decisión aprobada para el idioma del panel (T-F2-25): se escribe `user.locale` con la ruta propia
+  de Better Auth `/api/auth/update-user` y se conserva `NEXT_LOCALE` con el mismo valor. El perfil
+  manda al iniciar sesión (con `es` como respaldo) y la cookie/URL manda mientras se navega; si falla
+  la escritura, la interfaz no cambia y muestra un error localizado. No se añade plugin ni ruta nueva.
 - Ajuste aprobado en T-F2-21: la revocación de sesiones queda reservada al Super Admin en modo
   plataforma. `systemUserRole` no tiene `session:revoke` y `admin({ adminRoles: ["super_admin"] })`
   rechazaría al admin de agencia, así que su panel no ofrece la pestaña de sesiones ni el botón de

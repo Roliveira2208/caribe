@@ -145,8 +145,8 @@ mensajes de error localizados.
   traducido como no disponible.
 - Cabecera con `ConfigProvider` sin tokens: la pantalla no se considera terminada; no se permiten
   valores aproximados de la paleta.
-- Pregunta abierta: ¿dónde se persiste el idioma (perfil, sesión o navegador) y qué prevalece si el
-  navegador pide un idioma distinto al guardado?
+- Idioma resuelto (delta `f2-admin-rates`): se persiste en `user.locale` y se refleja en la cookie
+  `NEXT_LOCALE`. El perfil prevalece al iniciar sesión; sin preferencia válida se usa `es`.
 
 ## Acceptance
 
