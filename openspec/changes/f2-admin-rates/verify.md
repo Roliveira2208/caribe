@@ -427,8 +427,8 @@ omitía el escenario base «Idioma persistido». Las correcciones están en la s
 | --- | --- |
 | `pnpm lint` | `eslint .` + Turbo **4/4 successful**, 0 errores. |
 | `pnpm typecheck` | Turbo **5/5 successful**, 0 errores. |
-| `pnpm test` | Turbo **5/5** en **8m21.98s**: API **64 archivos / 734 tests**, admin **23 / 228**, web **19 / 128**, shared **5 / 82**. Total **111 archivos / 1.172 tests**, 0 fallos. Solo warnings esperados del fallback de tasa. |
-| `pnpm --filter @caribe/api exec vitest run test/audit-csv.e2e.ts` | **1 archivo / 4 tests en verde** tras la limpieza del e2e. |
+| `pnpm test` | Turbo **5/5** en **6m21.62s** (rerun tras C1): API **64 archivos / 734 tests**, admin **23 / 228**, web **19 / 128**, shared **5 / 82**. Total **111 archivos / 1.172 tests**, 0 fallos. Solo warnings esperados del fallback de tasa. |
+| `pnpm --filter @caribe/api exec vitest run test/audit-csv.e2e.ts test/reports.e2e.ts` | **2 archivos / 9 tests en verde** tras C1; antes de C1, **1 archivo / 4 tests** tras la limpieza del e2e. |
 | `node scripts/check-specs.mjs` | `OK: 15 specs válidas`. |
 | `pnpm exec openspec validate --all` | Tras corregir el delta: `Totals: 16 passed, 0 failed (16 items)`. Los warnings de requisitos largos son preexistentes y no bloquean. |
 | Inventario sin sesión: `two-factor.e2e.ts`, `active-membership.e2e.ts`, `admin-route.test.ts`, `api-errors.e2e.ts` | **4 archivos / 52 tests en verde**. |
@@ -538,6 +538,15 @@ nuevos ni `@ts-ignore`: las únicas coincidencias en los archivos tocados son `e
    igual que `payments-csv.e2e.ts`. Reejecutado: **4/4**.
 4. **I3 (errata):** `scope.md` decía 75 escenarios en el encabezado; ahora dice 78, coherente con el
    total vigente de 64 obligatorios y 14 deseables.
+5. **C1 (estabilidad de e2e tras el push):** `CI` (`45926839481`) y `web-checks` (`45926839424`)
+   fallaron en `Tests` por `audit-csv.e2e.ts`: al ejecutar la suite completa, otras suites escriben
+   auditorías con `at` en el presente y desplazaban las filas del fixture fuera de la primera página.
+   Acotar el rango temporal no bastó porque la evaluación de módulos retrasa `baseTime`. El fixture
+   usa ahora una acción única por corrida (`csv.test.<suffix>`) y todas sus consultas filtran por
+   esa acción; la fila de fórmula usa `=SUM(1+1)-<suffix)` y se consulta por su propia acción.
+   `reports.e2e.ts` tenía el mismo riesgo en la vista de plataforma: ahora los totales exactos se
+   comprueban con `agencyId` (agencias del fixture) y la vista sin filtrar solo exige que incluya
+   ambas. Reejecutado: **2 archivos / 9 tests en verde**; sin cambios de comportamiento ni de specs.
 
 ## 5. Observaciones no bloqueantes
 
